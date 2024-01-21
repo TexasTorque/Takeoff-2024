@@ -1,5 +1,11 @@
 package org.texastorque;
 
+import org.texastorque.subsystems.*;
+
 public interface Subsystems {
-    // public final SubsystemName subsystemName = SubsystemName.getInstance();
+    public final Drivebase drivebase = Drivebase.getInstance();
+    public final Perception perception = Perception.getInstance();
+    public final Intake intake = Intake.getInstance();
+    public final Shooter shooter = Shooter.getInstance();
+    public final Climber climber = Climber.getInstance();
 }
