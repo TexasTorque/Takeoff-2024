@@ -122,7 +122,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
             Input.getInstance().setRumbleFor(.2);
         }
 
-        if (intake.getState() == Intake.State.SMART_INTAKE || intake.getState() == Intake.State.INTAKE)
+        if (intake.getState() == Intake.State.SMART_INTAKE || intake.getState() == Intake.State.INTAKE && intake.rotaryIsAtState())
             gateState = GateState.IN;
 
         flywheels.setVelocity(desiredState.flywheelSpeed);
