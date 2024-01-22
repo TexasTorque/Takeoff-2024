@@ -57,7 +57,7 @@ public class Intake extends TorqueStatorSubsystem<Intake.State> implements Subsy
     public void initialize(final TorqueMode mode) {
     }
 
-    public boolean rotaryIsAtState() {
+    public boolean isRotaryAtState() {
         return TorqueMath.toleranced(rotary.getPosition(), desiredState.rotaryPosition, ROTARY_TOLERANCE);
     }
 
@@ -79,7 +79,7 @@ public class Intake extends TorqueStatorSubsystem<Intake.State> implements Subsy
         rollers.setVolts(desiredState.rollerSpeed);
         rotary.setPosition(desiredState.rotaryPosition);
 
-        if (mode.isTeleop() && shooter.rotaryIsAtState())
+        if (mode.isTeleop() && shooter.isRotaryAtState())
             desiredState = State.OFF;
 
     }

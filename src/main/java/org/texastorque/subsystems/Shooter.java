@@ -96,7 +96,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
                 TorqueMath.toleranced(rotary.getPosition(), desiredState.rotaryPosition, ROTARY_TOLERANCE);
     }
 
-    public boolean rotaryIsAtState() {
+    public boolean isRotaryAtState() {
         return TorqueMath.toleranced(rotary.getPosition(), desiredState.rotaryPosition, ROTARY_TOLERANCE);
     }
 
@@ -115,16 +115,16 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
             setShotParameter(lookUpTable.get(perception.getDistanceToTarget()));
 
         if ((intake.getState() == Intake.State.SMART_INTAKE || intake.getState() == Intake.State.INTAKE)
-                && !intake.rotaryIsAtState())
+                && !intake.isRotaryAtState())
             desiredState = State.OFF;
 
-        if (readyToShoot()&& desiredState != State.WARMUP) {
+        if (readyToShoot() && desiredState != State.WARMUP && desiredState != State.INTAKE) {
             gateState = GateState.OUT;
             Input.getInstance().setRumbleFor(.2);
         }
 
         if (intake.getState() == Intake.State.SMART_INTAKE
-                || intake.getState() == Intake.State.INTAKE && intake.rotaryIsAtState())
+                || intake.getState() == Intake.State.INTAKE && intake.isRotaryAtState())
             gateState = GateState.IN;
 
         flywheels.setVelocity(desiredState.flywheelSpeed);
@@ -134,8 +134,10 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         rotary.setVolts(
                 rotaryPID.calculate(rotaryEncoder.getAbsolutePosition().getValue(), desiredState.rotaryPosition));
 
-        if (mode.isTeleop())
+        if (mode.isTeleop()) {
             desiredState = State.OFF;
+            gateState = GateState.OFF;
+        }
     }
 
     public static synchronized final Shooter getInstance() {
