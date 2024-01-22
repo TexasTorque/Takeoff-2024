@@ -17,12 +17,14 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
 
     private final TorqueRequestableTimeout rumbleTimeout;
 
-    private final TorqueBoolSupplier resetGyro, speedUp, speedDown, climbUp, climbDown, hookOut, hookIn, runSmartIntake, runDumbIntake,
+    private final TorqueBoolSupplier resetGyro, speedUp, speedDown, climbUp, climbDown, hookOut, hookIn, runSmartIntake,
+            runDumbIntake,
             speakerSmartShot, speakerLayup, speakerSafeZone, amp, trap, speakerWarmup, ampWarmup;
 
     private Input() {
         driver = new TorqueController(0, 0.1);
         operator = new TorqueController(1, 0.1);
+        rumbleTimeout = new TorqueRequestableTimeout();
 
         resetGyro = new TorqueBoolSupplier(driver::isRightCenterButtonDown);
         speedUp = new TorqueClickSupplier(driver::isRightBumperDown);
@@ -34,17 +36,15 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
         speakerSmartShot = new TorqueBoolSupplier(operator::isRightTriggerDown);
         speakerWarmup = new TorqueToggleSupplier(operator::isRightBumperDown);
         speakerLayup = new TorqueBoolSupplier(operator::isYButtonDown);
-        speakerSafeZone = new TorqueBoolSupplier(operator::isXButtonDown);
+        speakerSafeZone = new TorqueBoolSupplier(operator::isAButtonDown);
         amp = new TorqueBoolSupplier(operator::isLeftTriggerDown);
         ampWarmup = new TorqueToggleSupplier(operator::isLeftBumperDown);
-        trap = new TorqueBoolSupplier(operator::isAButtonDown);
+        trap = new TorqueBoolSupplier(operator::isXButtonDown);
 
         climbUp = new TorqueBoolSupplier(driver::isDPADUpDown);
         climbDown = new TorqueBoolSupplier(driver::isDPADDownDown);
         hookOut = new TorqueBoolSupplier(driver::isRightStickClickPressed);
         hookIn = new TorqueBoolSupplier(driver::isLeftStickClickPressed);
-
-        rumbleTimeout = new TorqueRequestableTimeout();
     }
 
     @Override

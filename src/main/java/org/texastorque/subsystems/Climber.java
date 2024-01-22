@@ -62,6 +62,8 @@ public class Climber extends TorqueStatorSubsystem<Climber.State> implements Sub
     public void update(final TorqueMode mode) {
         winch.setPosition(desiredState.position);
         hook.setPosition(desiredHookState.position);
+
+        desiredState = State.DOWN;
     }
 
     public void setHookState(HookState hookState) {

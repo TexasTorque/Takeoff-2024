@@ -74,16 +74,14 @@ public class Intake extends TorqueStatorSubsystem<Intake.State> implements Subsy
         }
 
         if (spiked)
-            desiredState = State.OFF;
-
-        if (desiredState != State.INTAKE && !shooter.rotaryIsAtState())
-            desiredState = State.INTAKE;
+            shooter.setState(Shooter.State.OFF);
 
         rollers.setVolts(desiredState.rollerSpeed);
         rotary.setPosition(desiredState.rotaryPosition);
 
-        if (mode.isTeleop())
+        if (mode.isTeleop() && shooter.rotaryIsAtState())
             desiredState = State.OFF;
+
     }
 
     public static synchronized final Intake getInstance() {
