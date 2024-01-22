@@ -85,12 +85,12 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
         trap.onTrue(() -> shooter.setState(Shooter.State.TRAP));
 
         speakerWarmup.onTrue(() -> {
-            shooter.setState(Shooter.State.SETPOINT);
+            shooter.setState(Shooter.State.WARMUP);
             shooter.setShotParameter(Shooter.SPEAKER_WARMUP);
         });
 
         ampWarmup.onTrue(() -> {
-            shooter.setState(Shooter.State.SETPOINT);
+            shooter.setState(Shooter.State.WARMUP);
             shooter.setShotParameter(Shooter.AMP_WARMUP);
         });
     }

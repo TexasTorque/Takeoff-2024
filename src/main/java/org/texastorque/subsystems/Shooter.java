@@ -21,7 +21,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
     private static volatile Shooter instance;
 
     public static enum State implements TorqueState {
-        OFF(0, 0), INTAKE(20, -20), AMP(30, 10), TRAP(30, 20), SETPOINT, SPEAKER_SMART_SHOT;
+        OFF(0, 0), INTAKE(20, -20), AMP(30, 10), TRAP(30, 20), SETPOINT, SPEAKER_SMART_SHOT, WARMUP;
 
         private double rotaryPosition, flywheelSpeed;
 
@@ -114,15 +114,17 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         if (desiredState == State.SPEAKER_SMART_SHOT)
             setShotParameter(lookUpTable.get(perception.getDistanceToTarget()));
 
-        if ((intake.getState() == Intake.State.SMART_INTAKE || intake.getState() == Intake.State.INTAKE) && !intake.rotaryIsAtState())
+        if ((intake.getState() == Intake.State.SMART_INTAKE || intake.getState() == Intake.State.INTAKE)
+                && !intake.rotaryIsAtState())
             desiredState = State.OFF;
 
-        if (readyToShoot()) {
+        if (readyToShoot()&& desiredState != State.WARMUP) {
             gateState = GateState.OUT;
             Input.getInstance().setRumbleFor(.2);
         }
 
-        if (intake.getState() == Intake.State.SMART_INTAKE || intake.getState() == Intake.State.INTAKE && intake.rotaryIsAtState())
+        if (intake.getState() == Intake.State.SMART_INTAKE
+                || intake.getState() == Intake.State.INTAKE && intake.rotaryIsAtState())
             gateState = GateState.IN;
 
         flywheels.setVelocity(desiredState.flywheelSpeed);
