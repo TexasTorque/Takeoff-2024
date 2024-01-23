@@ -20,7 +20,9 @@ import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.Vector;
 import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.geometry.Twist2d;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.numbers.N3;
@@ -41,7 +43,7 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
 
     private final Toast toast;
 
-    private final SwerveDrivePoseEstimator poseEstimatorWpi;
+    private final SwerveDrivePoseEstimator poseEstimator;
     private final BetterPoseEstimator poseEstimatorMech;
 
     private final TorqueNavXGyro gyro = TorqueNavXGyro.getInstance();
@@ -55,7 +57,7 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
         super(State.VISION);
 
         toast = new Toast();
-        poseEstimatorWpi = new SwerveDrivePoseEstimator(
+        poseEstimator = new SwerveDrivePoseEstimator(
                 drivebase.kinematics,
                 getHeading(),
                 drivebase.getModulePositions(),
@@ -63,32 +65,7 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
 
         poseEstimatorMech = new BetterPoseEstimator(INV_KINEMATICS_STDS);
 
-        final double a = 8.5;
-        final double b = 10.52;
-        final double h = 9.446;
-        final double p = 51;
-        // final double p = 0;
-
-        toast.addCamera(new Camera("sim", Camera.transformInchDeg(b, a, h, 0, p, 0)));
-
-        // toast.addCamera(new Camera("fl", Camera.transformInchDeg(b, a, h, 0, p, 0)));
-        // toast.addCamera(new Camera("fr", Camera.transformInchDeg(b, -a, h, 0, p,
-        // 0)));
-
-        // toast.addCamera(new Camera("ll", Camera.transformInchDeg(-a, b, h, 0, p,
-        // 90)));
-        // toast.addCamera(new Camera("lr", Camera.transformInchDeg(a, b, h, 0, p,
-        // 90)));
-
-        // toast.addCamera(new Camera("bl", Camera.transformInchDeg(-b, a, h, 0, p,
-        // 180)));
-        // toast.addCamera(new Camera("br", Camera.transformInchDeg(-b, -a, h, 0, p,
-        // 180)));
-
-        // toast.addCamera(new Camera("rl", Camera.transformInchDeg(a, -b, h, 0, p,
-        // 270)));
-        // toast.addCamera(new Camera("rr", Camera.transformInchDeg(-a, -b, h, 0, p,
-        // 270)));
+        toast.addCamera(new Camera("sim", new Transform3d()));
 
         toast.iterCams(cam -> cam.addPipeline(new AprilTags(cam.id)));
 
@@ -104,7 +81,7 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
     }
 
     public double getDistanceToTarget() {
-        return poseEstimatorWpi.getEstimatedPosition().getTranslation().getNorm();
+        return poseEstimator.getEstimatedPosition().getTranslation().getNorm();
     }
 
     @Override
@@ -112,10 +89,10 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
         updateInvKinematics();
         updateVision();
 
-        fieldWpi.setRobotPose(poseEstimatorWpi.getEstimatedPosition());
+        fieldWpi.setRobotPose(poseEstimator.getEstimatedPosition());
         fieldMech.setRobotPose(poseEstimatorMech.getLatestPose());
 
-        Debug.log("Pose (WPI)", pose2d2str(poseEstimatorWpi.getEstimatedPosition()));
+        Debug.log("Pose (WPI)", pose2d2str(poseEstimator.getEstimatedPosition()));
         Debug.log("Pose (Mech)", pose2d2str(poseEstimatorMech.getLatestPose()));
         Debug.log("Heading (°)", getHeading().getDegrees());
     }
@@ -129,10 +106,10 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
     }
 
     public void updateInvKinematics() {
-        poseEstimatorWpi.update(getHeading(), drivebase.getModulePositions());
+        poseEstimator.update(getHeading(), drivebase.getModulePositions());
 
         // Calculate delta positions
-        SwerveModulePosition[] wheelDeltas = new SwerveModulePosition[4], modules = drivebase.getModulePositions();
+        final SwerveModulePosition[] wheelDeltas = new SwerveModulePosition[4], modules = drivebase.getModulePositions();
         for (int i = 0; i < 4; i++) {
             wheelDeltas[i] = new SwerveModulePosition(modules[i].distanceMeters - lastModulePositions[i].distanceMeters,
                     modules[i].angle);
@@ -140,18 +117,19 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
         }
 
         // Calculate twist
-        var twist = drivebase.kinematics.toTwist2d(wheelDeltas);
-        var heading = getHeading();
-        twist = new Twist2d(twist.dx, twist.dy, heading.minus(lastHeading).getRadians());
+        final Twist2d twist = drivebase.kinematics.toTwist2d(wheelDeltas);
+        final Rotation2d heading = getHeading();
+        final Twist2d deltaTwist = new Twist2d(twist.dx, twist.dy, heading.minus(lastHeading).getRadians());
         lastHeading = heading;
 
         // Send drivebase data to poseEstimator
-        poseEstimatorMech.addDriveData(compressedTimestamp(), twist);
+        poseEstimatorMech.addDriveData(compressedTimestamp(), deltaTwist);
     }
 
     private final List<TimestampedVisionUpdate> visionUpdates = new ArrayList<>();
 
     public void updateVision() {
+        // Update the toast class
         toast.update();
 
         toast.iterCams((cam) -> {
@@ -165,26 +143,41 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
             visionUpdates.clear();
 
             for (final AprilTagDetection detection : detections) {
+
+                // if
+                // - the detection is not "valid"
+                // - the id is not an id on the field
+                // - the robot is rotating too fast
+                // - or the tag is too far away
+                // then we ignore the detection and move on
                 if (!detection.isValidDetection()
                         || !Field.isIDValid(detection.id)
                         || Math.abs(gyro.getAngularVelocity().getRadians()) > MAX_ANGULAR_VELOCITY
                         || detection.getDistance() > MAX_DISTANCE)
                     continue;
 
-                final var tagPose = fieldMap.getTagPose(detection.id).get(); // should never fail
 
-                final var camPose = tagPose.transformBy(detection.transform.inverse());
+                // get tag pose in world space
+                final Pose3d tagPose = fieldMap.getTagPose(detection.id).get(); // should never fail
 
-                final var estPose = camPose.transformBy(cam.transform).toPose2d();
+                // converting from cam space to robot space by adding the camera->tag transform with the center->camera transform
+                final Transform3d robotSpaceTransform = detection.transform.plus(cam.transform);    
+                
+                // converting robot space to world space using the position of the tag
+                final Pose3d estPose3d = tagPose.transformBy(robotSpaceTransform);
 
+                final Pose2d estPose = estPose3d.toPose2d();
+
+                // if the estimated position is off the field then something is wrong and we must move on
                 if (!Field.isPoseOnField(estPose))
                     continue;
 
-                poseEstimatorWpi.addVisionMeasurement(estPose, detection.timestamp);
+                poseEstimator.addVisionMeasurement(estPose, detection.timestamp);
 
                 visionUpdates.add(
                         new TimestampedVisionUpdate(compressedTimestamp(detection.timestamp), estPose, VISION_STDS));
             }
+
             poseEstimatorMech.addVisionData(visionUpdates);
         });
     }
@@ -202,7 +195,7 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
     }
 
     public void resetPose() {
-        poseEstimatorWpi.resetPosition(getHeading(), drivebase.getModulePositions(), new Pose2d());
+        poseEstimator.resetPosition(getHeading(), drivebase.getModulePositions(), new Pose2d());
         poseEstimatorMech.resetPose(new Pose2d());
     }
 
@@ -211,11 +204,11 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
     }
 
     public Pose2d getPose() {
-        return poseEstimatorWpi.getEstimatedPosition();
+        return poseEstimator.getEstimatedPosition();
     }
 
     public void setPose(Pose2d pose) {
-        poseEstimatorWpi.resetPosition(getHeading(), drivebase.getModulePositions(), pose);
+        poseEstimator.resetPosition(getHeading(), drivebase.getModulePositions(), pose);
     }
 
     public void setGoalPose(Pose2d pose) {

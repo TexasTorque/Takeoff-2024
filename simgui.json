@@ -1,0 +1,13 @@
+{
+  "NTProvider": {
+    "types": {
+      "/FMSInfo": "FMSInfo",
+      "/Shuffleboard/Perception/Field (Mech)": "Field2d",
+      "/Shuffleboard/Perception/Field (WPI)": "Field2d",
+      "/SmartDashboard/Auto List": "String Chooser"
+    }
+  },
+  "NetworkTables Info": {
+    "visible": true
+  }
+}
