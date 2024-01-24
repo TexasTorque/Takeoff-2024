@@ -12,11 +12,16 @@ import org.texastorque.toast.lib.Camera;
 import org.texastorque.toast.lib.Toast;
 import org.texastorque.toast.lib.Util;
 import org.texastorque.toast.lib.pipelines.AprilTags;
+import org.texastorque.toast.lib.pipelines.ObjDetector;
 import org.texastorque.toast.lib.pipelines.AprilTags.AprilTagDetection;
+import org.texastorque.toast.lib.pipelines.ObjDetector.Detectable;
 import org.texastorque.torquelib.base.TorqueMode;
 import org.texastorque.torquelib.base.TorqueState;
 import org.texastorque.torquelib.base.TorqueStatorSubsystem;
 import org.texastorque.torquelib.sensors.TorqueNavXGyro;
+
+import com.fasterxml.jackson.databind.JsonNode;
+
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.Vector;
@@ -84,13 +89,16 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
                 new Pose2d(), ODOMETRY_STDS, VISION_STDS);
 
         // Add toast cameras 
-        toast.addCamera(new Camera("sim", new Transform3d()));
+        toast.addCamera(new Camera("shooter_right", new Transform3d()));
+        toast.addCamera(new Camera("shooter_left", new Transform3d()));
+        toast.addCamera(new Camera("intake_right", new Transform3d()));
+        toast.addCamera(new Camera("intake_left", new Transform3d()));
 
-
-        
-
-        // Register the apriltags pipeline
+        // Register the apriltags pipeline on all cameras
         toast.iterCams(cam -> cam.addPipeline(new AprilTags(cam.id)));
+
+        // Register the object detection pipelines on intake cameras and configure them to detect notes
+        toast.iterCams("intake", cam -> cam.addPipeline(new ObjDetector<Note>(Note::fromJSON)));
 
         // Log the field map to the dashboard 
         Debug.field("Field", field);
@@ -212,10 +220,48 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
         setPose(new Pose2d());
     }
 
+    /**
+     * Get the angle from the robot to the speaker
+     */
+    public Rotation2d getAngleToSpeaker() {
+        return Rotation2d.fromRadians(Math.atan2(
+            Field.SPEAKER_POSE.getY() - getPose().getY(),
+            Field.SPEAKER_POSE.getX() - getPose().getX()))
+            .plus(Rotation2d.fromRadians(Math.PI));
+    }
+
     private static volatile Perception instance;
 
     public static synchronized final Perception getInstance() {
         return instance == null ? instance = new Perception() : instance;
+    }
+
+    /**
+     * Class representing a Note detected by an ObjDetector pipeline.
+     */
+    public static class Note extends Detectable {
+        public final String name;
+        public final double x;
+        public final double angle;
+
+        public static Note fromJSON(final JsonNode det) {
+            final String name = det.get("name").asText("unknown");
+            final double x = det.get("ctr_x").asDouble(0);
+            final double angle = det.get("angle").asDouble(0);
+            final double confidence = det.get("conf").asDouble(0);
+            return new Note(name, x, angle, confidence);
+        }
+
+        public Note(final String name, final double x,final double angle, final double confidence) {
+            this.name = name;
+            this.x = x;
+            this.angle = angle;
+            this.confidence = confidence;
+        }
+
+        public String toString() {
+            return String.format("%s @ %.2f° (%.2f conf)", name, angle, confidence);
+        }
     }
 
 }

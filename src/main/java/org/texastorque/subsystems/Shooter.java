@@ -17,41 +17,30 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
 
     private static volatile Shooter instance;
 
-    public static class Shot {
-        public final double velo, angle;
-
-        public Shot(final double velo, final double angle) {
-            this.velo = velo;
-            this.angle = angle;
-        }
+    public static record Shot(double velo, double angle) { 
+        private static final Shot empty = new Shot(0, 0);
     }
 
     public static enum State implements TorqueState {
-        OFF, 
-        INTAKE(new Shot(1477, 1477)), 
-        AMP(new Shot(1477, 1477)), 
-        TRAP(new Shot(1477, 1477)), 
-        SMART,
+        OFF(false), 
+        INTAKE(new Shot(1477, 1477), false), 
+        AMP(new Shot(1477, 1477), true), 
+        TRAP(new Shot(1477, 1477), false), 
+        SMART(true),
         WARMUP(new Shot(1477, 1477), false),
         LAYUP(new Shot(1477, 1477), true),
         SAFEZONE(new Shot(1477, 1477), true);
 
         public final Shot shot;
-        public final boolean smart;
+        public final boolean allowed2shoot;
 
-        private State() {
-            this.shot = new Shot(0, 0);
-            this.smart = false;
+        private State(final boolean allowed2shoot) {
+            this(Shot.empty, allowed2shoot);
         }
 
-        private State(final Shot shot) {
+        private State(final Shot shot, final boolean allowed2shoot) {
             this.shot = shot;
-            this.smart = true;
-        }
-
-        private State(final Shot shot, final boolean smart) {
-            this.shot = shot;
-            this.smart = smart;
+            this.allowed2shoot = allowed2shoot;
         }
     }
 
@@ -133,20 +122,20 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
             gateState = GateState.IN;
         }
 
-        if (readyToShoot() && desiredState.smart) {
+        if (readyToShoot() && desiredState.allowed2shoot) {
             gateState = GateState.OUT;
             Input.getInstance().setRumbleFor(.2);
         }
 
-        Shot shot = desiredState == State.SMART
+        final Shot shot = desiredState == State.SMART
                 ? shotTable.get(getDistanceToTarget())
                 : desiredState.shot;
 
         flywheels.setVelocity(shot.velo);
+        rotary.setVolts(rotaryPID.calculate(rotaryEncoder.getAbsolutePosition().getValue(), shot.angle));
 
         gate.setVolts(gateState.voltage);
 
-        rotary.setVolts(rotaryPID.calculate(rotaryEncoder.getAbsolutePosition().getValue(), shot.angle));
 
         if (mode.isTeleop()) {
             desiredState = State.OFF;
