@@ -86,6 +86,9 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
         // Add toast cameras 
         toast.addCamera(new Camera("sim", new Transform3d()));
 
+
+        
+
         // Register the apriltags pipeline
         toast.iterCams(cam -> cam.addPipeline(new AprilTags(cam.id)));
 

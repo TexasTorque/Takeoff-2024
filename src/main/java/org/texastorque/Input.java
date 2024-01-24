@@ -13,7 +13,7 @@ import org.texastorque.torquelib.util.TorqueMath;
 public final class Input extends TorqueInput<TorqueController> implements Subsystems {
     private static volatile Input instance;
 
-    private final static double DEADBAND = 0.125;
+    private final static double CONTROLLER_DEADBAND = 0.025; // this should be pretty small
 
     private final TorqueRequestableTimeout rumbleTimeout;
 
@@ -70,15 +70,13 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
 
     public void updateShooter() {
         runSmartIntake.onTrue(() -> shooter.setState(Shooter.State.INTAKE));
-        speakerSmartShot.onTrue(() -> shooter.setState(Shooter.State.SPEAKER_SMART_SHOT));
+        speakerSmartShot.onTrue(() -> shooter.setState(Shooter.State.SMART));
 
         speakerLayup.onTrue(() -> {
-            shooter.setState(Shooter.State.SETPOINT);
-            shooter.setShotParameter(Shooter.SPEAKER_LAYUP);
+            shooter.setState(Shooter.State.LAYUP);
         });
         speakerSafeZone.onTrue(() -> {
-            shooter.setState(Shooter.State.SETPOINT);
-            shooter.setShotParameter(Shooter.SPEAKER_SAFE_ZONE);
+            shooter.setState(Shooter.State.SAFEZONE);
         });
 
         amp.onTrue(() -> shooter.setState(Shooter.State.AMP));
@@ -86,12 +84,10 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
 
         speakerWarmup.onTrue(() -> {
             shooter.setState(Shooter.State.WARMUP);
-            shooter.setShotParameter(Shooter.SPEAKER_WARMUP);
         });
 
         ampWarmup.onTrue(() -> {
             shooter.setState(Shooter.State.WARMUP);
-            shooter.setShotParameter(Shooter.AMP_WARMUP);
         });
     }
 
@@ -100,11 +96,11 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
         speedDown.onTrue(() -> drivebase.getState().shiftDown());
         speedUp.onTrue(() -> drivebase.getState().shiftUp());
 
-        final double xVelocity = TorqueMath.scaledLinearDeadband(driver.getLeftYAxis(), DEADBAND)
+        final double xVelocity = TorqueMath.scaledLinearDeadband(driver.getLeftYAxis(), CONTROLLER_DEADBAND)
                 * Drivebase.MAX_VELOCITY_TELEOP;
-        final double yVelocity = TorqueMath.scaledLinearDeadband(driver.getLeftXAxis(), DEADBAND)
+        final double yVelocity = TorqueMath.scaledLinearDeadband(driver.getLeftXAxis(), CONTROLLER_DEADBAND)
                 * Drivebase.MAX_VELOCITY_TELEOP;
-        final double rotationVelocity = TorqueMath.scaledLinearDeadband(driver.getRightXAxis(), DEADBAND)
+        final double rotationVelocity = TorqueMath.scaledLinearDeadband(driver.getRightXAxis(), CONTROLLER_DEADBAND)
                 * Drivebase.MAX_ANGULAR_VELOCITY;
 
         drivebase.setInputSpeeds(new TorqueSwerveSpeeds(xVelocity, yVelocity, rotationVelocity));
