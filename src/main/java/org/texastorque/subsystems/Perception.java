@@ -29,6 +29,7 @@ import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Transform2d;
 import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.math.util.Units;
@@ -214,20 +215,29 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
     }
 
     /**
-     * Reset the position in the pose estimator to be at the origin.
+     * Reset the position in the pose estimator to be at the origin..
      */
     public void resetPose() {
         setPose(new Pose2d());
     }
 
     /**
-     * Get the angle from the robot to the speaker
+     * Get the angle from the robot to the speaker.
      */
     public Rotation2d getAngleToSpeaker() {
         return Rotation2d.fromRadians(Math.atan2(
             Field.SPEAKER_POSE.getY() - getPose().getY(),
             Field.SPEAKER_POSE.getX() - getPose().getX()))
             .plus(Rotation2d.fromRadians(Math.PI));
+    }
+
+    /**
+     * Get the distance from the robot to the speaker
+     */
+    public double getDistanceToSpeaker() {
+        return Math.sqrt(
+            Math.pow(Field.SPEAKER_POSE.getY() - getPose().getY(), 2)
+            + Math.pow(Field.SPEAKER_POSE.getX() - getPose().getX(), 2));
     }
 
     private static volatile Perception instance;

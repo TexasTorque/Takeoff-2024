@@ -111,10 +111,6 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
     public void initialize(TorqueMode mode) {
     }
 
-    private double getDistanceToTarget() {
-        return 0;
-    }
-
     @Override
     public void update(TorqueMode mode) {
         if (intake.isIntaking()) {
@@ -128,7 +124,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         }
 
         final Shot shot = desiredState == State.SMART
-                ? shotTable.get(getDistanceToTarget())
+                ? shotTable.get(perception.getDistanceToSpeaker())
                 : desiredState.shot;
 
         flywheels.setVelocity(shot.velo);

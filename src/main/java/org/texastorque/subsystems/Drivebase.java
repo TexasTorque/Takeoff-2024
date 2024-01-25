@@ -26,6 +26,9 @@ import edu.wpi.first.math.util.Units;
 public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
         implements Subsystems, TorquePathingDrivebase {
 
+
+
+    // Speed shifter != state for drivebase 
     public enum State implements TorqueState {
         SLOW(.25), MID(.5), FAST(1.0);
 
