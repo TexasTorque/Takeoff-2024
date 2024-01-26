@@ -93,8 +93,8 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
 
     public void updateDrivebase() {
         resetGyro.onTrue(() -> perception.resetGyro());
-        speedDown.onTrue(() -> drivebase.getState().shiftDown());
-        speedUp.onTrue(() -> drivebase.getState().shiftUp());
+        speedDown.onTrue(() -> drivebase.speedSetting.shiftDown());
+        speedUp.onTrue(() -> drivebase.speedSetting.shiftUp());
 
         final double xVelocity = TorqueMath.scaledLinearDeadband(driver.getLeftYAxis(), CONTROLLER_DEADBAND)
                 * Drivebase.MAX_VELOCITY_TELEOP;
