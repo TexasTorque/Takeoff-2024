@@ -6,33 +6,25 @@ import org.texastorque.torquelib.base.TorqueMode;
 import org.texastorque.torquelib.base.TorqueState;
 import org.texastorque.torquelib.base.TorqueStatorSubsystem;
 import org.texastorque.torquelib.motors.TorqueNEO;
+import org.texastorque.torquelib.util.TorqueMath;
 
 public class Climber extends TorqueStatorSubsystem<Climber.State> implements Subsystems {
     private static volatile Climber instance;
 
     public static enum State implements TorqueState {
-        UP(40), DOWN(0);
+        UP(40, 0), DOWN(0,0), TRAP(0, 20);
 
-        private final double position;
+        private final double climberPosition, hookPosition;
 
-        private State(final double position) {
-            this.position = position;
+        private State(final double climberPosition, final double hookPosition) {
+            this.climberPosition = climberPosition;
+            this.hookPosition = hookPosition;
         }
     }
-
-    public static enum HookState implements TorqueState {
-        OUT(20), IN(0);
-
-        private final double position;
-
-        private HookState(final double position) {
-            this.position = position;
-        }
-    }
-
-    private HookState desiredHookState = HookState.IN;
 
     private final TorqueNEO winch, hook;
+
+    private final double WINCH_TOLERANCE = 5;
 
     public Climber() {
         super(State.DOWN);
@@ -55,19 +47,16 @@ public class Climber extends TorqueStatorSubsystem<Climber.State> implements Sub
 
     @Override
     public void initialize(final TorqueMode mode) {
-        
+    }
+
+    public boolean isWinchAtState() {
+        return TorqueMath.toleranced(winch.getPosition(), desiredState.climberPosition, WINCH_TOLERANCE);
     }
 
     @Override
     public void update(final TorqueMode mode) {
-        winch.setPosition(desiredState.position);
-        hook.setPosition(desiredHookState.position);
-
-        desiredState = State.DOWN;
-    }
-
-    public void setHookState(HookState hookState) {
-        this.desiredHookState = hookState;
+        winch.setPosition(desiredState.climberPosition);
+        if (isWinchAtState()) hook.setPosition(desiredState.hookPosition);
     }
 
     public static synchronized final Climber getInstance() {

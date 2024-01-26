@@ -3,7 +3,6 @@ package org.texastorque.subsystems;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 import org.littletonrobotics.junction.Logger;
 import org.texastorque.Debug;
 import org.texastorque.Field;
@@ -19,9 +18,7 @@ import org.texastorque.torquelib.base.TorqueMode;
 import org.texastorque.torquelib.base.TorqueState;
 import org.texastorque.torquelib.base.TorqueStatorSubsystem;
 import org.texastorque.torquelib.sensors.TorqueNavXGyro;
-
 import com.fasterxml.jackson.databind.JsonNode;
-
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.Vector;
@@ -29,7 +26,6 @@ import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.math.geometry.Transform2d;
 import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.math.util.Units;

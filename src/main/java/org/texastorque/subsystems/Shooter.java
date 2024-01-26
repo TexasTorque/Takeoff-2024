@@ -10,29 +10,29 @@ import org.texastorque.torquelib.control.TorqueLookUpTable;
 import org.texastorque.torquelib.motors.TorqueNEO;
 import org.texastorque.torquelib.util.TorqueMath;
 import com.ctre.phoenix6.hardware.CANcoder;
-
 import edu.wpi.first.math.controller.PIDController;
+import edu.wpi.first.math.controller.SimpleMotorFeedforward;
 
 public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Subsystems {
 
     private static volatile Shooter instance;
 
-    public static record Shot(double velo, double angle) { 
+    public static record Shot(double velo, double angle) {
         private static final Shot empty = new Shot(0, 0);
     }
 
     public static enum State implements TorqueState {
-        OFF(false), 
-        INTAKE(new Shot(1477, 1477), false), 
-        AMP(new Shot(1477, 1477), true), 
-        TRAP(new Shot(1477, 1477), false), 
+        OFF(false),
+        INTAKE(new Shot(1477, 1477), false),
+        AMP(new Shot(1477, 1477), true),
+        TRAP(new Shot(1477, 1477), false),
         SMART(true),
         WARMUP(new Shot(1477, 1477), false),
         LAYUP(new Shot(1477, 1477), true),
         SAFEZONE(new Shot(1477, 1477), true);
 
         public final Shot shot;
-        public final boolean allowed2shoot;
+        public final boolean allowedToShoot;
 
         private State(final boolean allowed2shoot) {
             this(Shot.empty, allowed2shoot);
@@ -40,7 +40,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
 
         private State(final Shot shot, final boolean allowed2shoot) {
             this.shot = shot;
-            this.allowed2shoot = allowed2shoot;
+            this.allowedToShoot = allowed2shoot;
         }
     }
 
@@ -58,9 +58,10 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
 
     private final TorqueNEO rotary, flywheels, gate;
 
-    private final CANcoder rotaryEncoder;
+    private final CANcoder rotaryEncoder, flywheelEncoder;
 
-    private final PIDController rotaryPID;
+    private final PIDController rotaryPID, flywheelPID;
+    private final SimpleMotorFeedforward flywheelFF;
 
     private final TorqueLookUpTable<Shot> shotTable;
 
@@ -81,6 +82,9 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         flywheels.addFollower(Ports.FLYWHEEL_RIGHT, true);
         flywheels.setVoltageCompensation(12.6);
         flywheels.setBreakMode(false);
+        flywheelEncoder = new CANcoder(Ports.SHOOTER_FLYWHEEL_ENCODER);
+        flywheelPID = new PIDController(1, 0, 0);
+        flywheelFF = new SimpleMotorFeedforward(0, 0, 0);
 
         gate = new TorqueNEO(Ports.SHOOTER_GATE);
         gate.setVoltageCompensation(12.6);
@@ -90,8 +94,10 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         rotaryPID = new PIDController(1, 0, 0);
 
         shotTable = new TorqueLookUpTable<Shot>(
-            (final Shot me, final Shot other) -> Math.abs(other.angle - me.angle) < 0.1 && Math.abs(other.velo - me.velo) < 0.1, 
-            (final Shot me, final Shot end, final Double t) -> new Shot(lerp(me.velo, end.velo, t), lerp(me.angle, end.angle, t))); 
+                (final Shot me, final Shot other) -> Math.abs(other.angle - me.angle) < 0.1
+                        && Math.abs(other.velo - me.velo) < 0.1,
+                (final Shot me, final Shot end, final Double t) -> new Shot(lerp(me.velo, end.velo, t),
+                        lerp(me.angle, end.angle, t)));
     }
 
     public boolean hasGateSpiked() {
@@ -116,22 +122,24 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         if (intake.isIntaking()) {
             desiredState = State.INTAKE;
             gateState = GateState.IN;
+        } else if (intake.isCurrentSpike()) {
+            desiredState = State.OFF;
+            gateState = GateState.OFF;
         }
 
-        if (readyToShoot() && desiredState.allowed2shoot) {
+        final Shot shot = desiredState == State.SMART ? shotTable.get(perception.getDistanceToSpeaker())
+                : desiredState.shot;
+
+        if (readyToShoot() && desiredState.allowedToShoot) {
             gateState = GateState.OUT;
             Input.getInstance().setRumbleFor(.2);
         }
 
-        final Shot shot = desiredState == State.SMART
-                ? shotTable.get(perception.getDistanceToSpeaker())
-                : desiredState.shot;
-
-        flywheels.setVelocity(shot.velo);
+        flywheels.setVolts(flywheelPID.calculate(flywheelEncoder.getVelocity().getValue(), shot.velo)
+                + flywheelFF.calculate(shot.velo));
         rotary.setVolts(rotaryPID.calculate(rotaryEncoder.getAbsolutePosition().getValue(), shot.angle));
 
         gate.setVolts(gateState.voltage);
-
 
         if (mode.isTeleop()) {
             desiredState = State.OFF;

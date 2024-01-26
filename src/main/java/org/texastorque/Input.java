@@ -13,13 +13,13 @@ import org.texastorque.torquelib.util.TorqueMath;
 public final class Input extends TorqueInput<TorqueController> implements Subsystems {
     private static volatile Input instance;
 
-    private final static double CONTROLLER_DEADBAND = 0.025; // this should be pretty small
+    private final static double CONTROLLER_DEADBAND = 0.025;
 
     private final TorqueRequestableTimeout rumbleTimeout;
 
-    private final TorqueBoolSupplier resetGyro, speedUp, speedDown, climbUp, climbDown, hookOut, hookIn, runSmartIntake,
-            runDumbIntake,
-            speakerSmartShot, speakerLayup, speakerSafeZone, amp, trap, speakerWarmup, ampWarmup;
+    private final TorqueBoolSupplier resetGyro, speedUp, speedDown, climbUp, climbDown, hookOut, runSmartIntake,
+            runDumbIntake, runOuttake, speakerSmartShot, speakerLayup, speakerSafeZone, amp, trap, speakerWarmup,
+            ampWarmup;
 
     private Input() {
         driver = new TorqueController(0, 0.1);
@@ -32,6 +32,7 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
 
         runSmartIntake = new TorqueBoolSupplier(driver::isRightTriggerDown);
         runDumbIntake = new TorqueBoolSupplier(driver::isRightBumperDown);
+        runOuttake = new TorqueBoolSupplier(driver::isLeftTriggerDown);
 
         speakerSmartShot = new TorqueBoolSupplier(operator::isRightTriggerDown);
         speakerWarmup = new TorqueToggleSupplier(operator::isRightBumperDown);
@@ -44,7 +45,6 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
         climbUp = new TorqueBoolSupplier(driver::isDPADUpDown);
         climbDown = new TorqueBoolSupplier(driver::isDPADDownDown);
         hookOut = new TorqueBoolSupplier(driver::isRightStickClickPressed);
-        hookIn = new TorqueBoolSupplier(driver::isLeftStickClickPressed);
     }
 
     @Override
@@ -59,36 +59,27 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
     public void updateClimber() {
         climbUp.onTrue(() -> climber.setState(Climber.State.UP));
         climbDown.onTrue(() -> climber.setState(Climber.State.DOWN));
-        hookOut.onTrue(() -> climber.setHookState(Climber.HookState.OUT));
-        hookIn.onTrue(() -> climber.setHookState(Climber.HookState.IN));
+        hookOut.onTrue(() -> climber.setState(Climber.State.TRAP));
     }
 
     public void updateIntake() {
         runSmartIntake.onTrue(() -> intake.setState(Intake.State.SMART_INTAKE));
         runDumbIntake.onTrue(() -> intake.setState(Intake.State.SMART_INTAKE));
+        runOuttake.onTrue(() -> intake.setState(Intake.State.OUTTAKE));
     }
 
     public void updateShooter() {
-        runSmartIntake.onTrue(() -> shooter.setState(Shooter.State.INTAKE));
         speakerSmartShot.onTrue(() -> shooter.setState(Shooter.State.SMART));
 
-        speakerLayup.onTrue(() -> {
-            shooter.setState(Shooter.State.LAYUP);
-        });
-        speakerSafeZone.onTrue(() -> {
-            shooter.setState(Shooter.State.SAFEZONE);
-        });
+        speakerLayup.onTrue(() -> shooter.setState(Shooter.State.LAYUP));
+        speakerSafeZone.onTrue(() -> shooter.setState(Shooter.State.SAFEZONE));
 
         amp.onTrue(() -> shooter.setState(Shooter.State.AMP));
         trap.onTrue(() -> shooter.setState(Shooter.State.TRAP));
 
-        speakerWarmup.onTrue(() -> {
-            shooter.setState(Shooter.State.WARMUP);
-        });
+        speakerWarmup.onTrue(() -> shooter.setState(Shooter.State.WARMUP));
 
-        ampWarmup.onTrue(() -> {
-            shooter.setState(Shooter.State.WARMUP);
-        });
+        ampWarmup.onTrue(() -> shooter.setState(Shooter.State.WARMUP));
     }
 
     public void updateDrivebase() {

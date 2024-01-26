@@ -61,6 +61,10 @@ public class Intake extends TorqueStatorSubsystem<Intake.State> implements Subsy
         return TorqueMath.toleranced(rotary.getPosition(), desiredState.rotaryPosition, ROTARY_TOLERANCE);
     }
 
+    public boolean isCurrentSpike() {
+        return spiked;
+    }
+
     @Override
     public void update(final TorqueMode mode) {
         if (wantsState(State.SMART_INTAKE)) {
@@ -73,14 +77,13 @@ public class Intake extends TorqueStatorSubsystem<Intake.State> implements Subsy
             spiked = false;
         }
 
-        if (spiked) {
-            shooter.setState(Shooter.State.OFF);
-        }
+        if (spiked && shooter.isRotaryAtState())
+            desiredState = State.OFF;
 
         rollers.setVolts(desiredState.rollerSpeed);
         rotary.setPosition(desiredState.rotaryPosition);
-        
-        if (mode.isTeleop() && shooter.isRotaryAtState()) {
+
+        if (mode.isTeleop()) {
             desiredState = State.OFF;
         }
     }

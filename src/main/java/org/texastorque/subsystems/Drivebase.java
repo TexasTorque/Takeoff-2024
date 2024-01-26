@@ -6,9 +6,7 @@
  */
 package org.texastorque.subsystems;
 
-import java.util.List;
 import java.util.function.DoubleSupplier;
-import org.texastorque.Debug;
 import org.texastorque.Ports;
 import org.texastorque.Subsystems;
 import org.texastorque.torquelib.auto.commands.TorqueFollowPath.TorquePathingDrivebase;
@@ -18,10 +16,6 @@ import org.texastorque.torquelib.base.TorqueStatorSubsystem;
 import org.texastorque.torquelib.swerve.TorqueSwerveSpeeds;
 import org.texastorque.torquelib.swerve.TorqueSwerveX;
 import org.texastorque.torquelib.util.TorqueMath;
-import com.pathplanner.lib.controllers.PPHolonomicDriveController;
-import com.pathplanner.lib.path.PathPlannerPath;
-import com.pathplanner.lib.path.PathPlannerTrajectory;
-import com.pathplanner.lib.util.PIDConstants;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -31,7 +25,6 @@ import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.math.util.Units;
-import edu.wpi.first.wpilibj.Timer;
 
 public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
         implements Subsystems, TorquePathingDrivebase {
@@ -69,10 +62,8 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
 
     public static final double WIDTH = Units.inchesToMeters(58 / 3);
 
-    public static final Pose2d INITIAL_POS = new Pose2d(0, 0, Rotation2d.fromRadians(0));
-
     public final static double MAX_VELOCITY_TELEOP = 4.6, MAX_ACCELERATION = 2,
-            MAX_ANGULAR_VELOCITY = 6;
+            MAX_ANGULAR_VELOCITY = 6, ANGULAR_VELOCITY_COEFFICIENT = .05;
 
     public static synchronized final Drivebase getInstance() {
         return instance == null ? instance = new Drivebase() : instance;
@@ -87,31 +78,15 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
 
     private final TorqueSwerveX fl, fr, bl, br;
 
+    private final PIDController teleopOmegaController;
+
     private SwerveModuleState[] swerveStates;
 
     public TorqueSwerveSpeeds inputSpeeds;
 
     public SpeedSetting speedSetting = SpeedSetting.FAST;
 
-    public double ANGULAR_VELOCITY_COEFFICIENT = .05;
-
     private final PIDController alignPID;
-
-    public boolean flag1 = false;
-
-    List<Translation2d> bezierPoints;
-
-    PathPlannerPath path;
-
-    private final PPHolonomicDriveController controller;
-
-    private final PIDConstants translationConstants = new PIDConstants(1, 0, 0);
-    private final PIDConstants rotationConstants = new PIDConstants(Math.PI * 2.5, 0, 0);
-    private PathPlannerTrajectory trajectory;
-
-    private final Timer pathTimer = new Timer();
-
-    private final PIDController teleopOmegaController = new PIDController(.5 * Math.PI, 0, 0);
 
     private Drivebase() {
         super(State.FIELD_RELATIVE);
@@ -129,13 +104,10 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
         for (int i = 0; i < swerveStates.length; i++)
             swerveStates[i] = new SwerveModuleState();
 
-        Debug.log("Angular Velocity Coeff", ANGULAR_VELOCITY_COEFFICIENT);
-
         alignPID = new PIDController(.15, 0, 0);
         alignPID.enableContinuousInput(0, 360);
 
-        controller = new PPHolonomicDriveController(translationConstants, rotationConstants, 3,
-                WIDTH / 2);
+        teleopOmegaController = new PIDController(.5 * Math.PI, 0, 0);
     }
 
     @Override
@@ -146,14 +118,13 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
 
         mode.onTeleop(() -> {
             desiredState = State.FIELD_RELATIVE;
-            flag1 = false;
         });
     }
 
     public SwerveModulePosition[] getModulePositions() {
-        return new SwerveModulePosition[] { 
-            fl.getPosition(), fr.getPosition(),
-            bl.getPosition(), br.getPosition() 
+        return new SwerveModulePosition[] {
+                fl.getPosition(), fr.getPosition(),
+                bl.getPosition(), br.getPosition()
         };
     }
 
@@ -180,13 +151,16 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
 
     @Override
     public final void update(final TorqueMode mode) {
-        Debug.log("flag1", flag1);
-
         if (mode.isTeleop()) {
             // correctHeading();
             inputSpeeds = inputSpeeds
                     .toFieldRelativeSpeeds(perception.getHeading());
             // .plus(perception.getAngularVelocity().times(ANGULAR_VELOCITY_COEFFICIENT)))
+        }
+
+        if (wantsState(State.ALIGN_TO_ANGLE)) {
+            inputSpeeds.omegaRadiansPerSecond = TorqueMath.constrain(
+                    alignPID.calculate(perception.getHeading().getDegrees(), alignTarget.getAsDouble()), .75);
         }
 
         swerveStates = kinematics.toSwerveModuleStates(inputSpeeds);

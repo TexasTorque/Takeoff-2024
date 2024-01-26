@@ -12,15 +12,16 @@ public final class Ports {
     public static final int FLYWHEEL_RIGHT = 14;
     public static final int SHOOTER_ROTARY = 15;
     public static final int SHOOTER_ROTARY_ENCODER = 16;
-    public static final int SHOOTER_GATE = 25;
+    public static final int SHOOTER_FLYWHEEL_ENCODER = 17;
+    public static final int SHOOTER_GATE = 18;
 
-    public static final int INTAKE_ROTARY_LEFT = 16;
-    public static final int INTAKE_ROTARY_RIGHT = 17;
-    public static final int INTAKE_ROLLERS = 27;
+    public static final int INTAKE_ROTARY_LEFT = 19;
+    public static final int INTAKE_ROTARY_RIGHT = 20;
+    public static final int INTAKE_ROLLERS = 21;
 
-    public static final int CLIMBER_LEFT = 18;
-    public static final int CLIMBER_RIGHT = 19;
-    public static final int HOOK = 20;
+    public static final int CLIMBER_LEFT = 22;
+    public static final int CLIMBER_RIGHT =23;
+    public static final int HOOK = 24;
 
     public static final int LIGHTS_SUPERSTRUCTURE = 0;
 }
