@@ -104,7 +104,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         return gate.getCurrent() >= GATE_CURRENT_SPIKE;
     }
 
-    public boolean readyToShoot() {
+    public boolean isReadyToShoot() {
         return TorqueMath.toleranced(flywheels.getVelocity(), desiredState.shot.velo, FLYWHEEL_TOLERANCE) &&
                 TorqueMath.toleranced(rotary.getPosition(), desiredState.shot.angle, ROTARY_TOLERANCE);
     }
@@ -130,7 +130,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         final Shot shot = desiredState == State.SMART ? shotTable.get(perception.getDistanceToSpeaker())
                 : desiredState.shot;
 
-        if (readyToShoot() && desiredState.allowedToShoot) {
+        if (isReadyToShoot() && desiredState.allowedToShoot) {
             gateState = GateState.OUT;
             Input.getInstance().setRumbleFor(.2);
         }

@@ -12,11 +12,15 @@ import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.apriltag.AprilTagFields;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.util.Units;
 
 public final class Field {
     public static final double LENGTH = Units.inchesToMeters(651.25);
     public static final double WIDTH = Units.inchesToMeters(315.5);
+
+    public static final Rotation2d ROT_FWD = Rotation2d.fromDegrees(0);
+    public static final Rotation2d ROT_BACK = Rotation2d.fromDegrees(180);
 
     public static boolean isPoseOnField(final Pose2d pose) {
         return TorqueMath.constrained(pose.getX(), 0, LENGTH)
@@ -37,4 +41,23 @@ public final class Field {
             return null;
         }
     }
+
+    public static Pose2d getNotePose(int note) {
+        return new Pose2d();
+    }
+
+    public static Pose2d HOMING_HIGH = new Pose2d(new Translation2d(7., 7.3), ROT_FWD);
+    public static Pose2d HOMING_LOW= new Pose2d(new Translation2d(7., 0.7), ROT_FWD);
+
+
+    /**
+     * Get the angle from pose to the speaker.
+     */
+    public static Rotation2d getAngleToSpeaker(final Pose2d pose) {
+        return Rotation2d.fromRadians(Math.atan2(
+            Field.SPEAKER_POSE.getY() - pose.getY(),
+            Field.SPEAKER_POSE.getX() - pose.getX()))
+            .plus(Rotation2d.fromRadians(Math.PI));
+    }
+
 }

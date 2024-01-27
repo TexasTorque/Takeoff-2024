@@ -46,8 +46,7 @@ public class Climber extends TorqueStatorSubsystem<Climber.State> implements Sub
     }
 
     @Override
-    public void initialize(final TorqueMode mode) {
-    }
+    public void initialize(final TorqueMode mode) {}
 
     public boolean isWinchAtState() {
         return TorqueMath.toleranced(winch.getPosition(), desiredState.climberPosition, WINCH_TOLERANCE);

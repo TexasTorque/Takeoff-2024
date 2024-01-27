@@ -3,7 +3,6 @@ package org.texastorque.subsystems;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import org.littletonrobotics.junction.Logger;
 import org.texastorque.Debug;
 import org.texastorque.Field;
 import org.texastorque.Subsystems;
@@ -171,7 +170,6 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
         });
 
         // Serializes and pushes the seen tags to networktables so we can view detections on advantagescop
-        Logger.recordOutput("Perception/TagPoses", tagsInView.values().toArray(new Pose3d[tagsInView.values().size()]));
     }
 
     /**
@@ -221,10 +219,7 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
      * Get the angle from the robot to the speaker.
      */
     public Rotation2d getAngleToSpeaker() {
-        return Rotation2d.fromRadians(Math.atan2(
-            Field.SPEAKER_POSE.getY() - getPose().getY(),
-            Field.SPEAKER_POSE.getX() - getPose().getX()))
-            .plus(Rotation2d.fromRadians(Math.PI));
+        return Field.getAngleToSpeaker(getPose());
     }
 
     /**
@@ -236,10 +231,22 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
             + Math.pow(Field.SPEAKER_POSE.getX() - getPose().getX(), 2));
     }
 
+    public Pose2d getCorrectHomingPosition() {
+        return getPose().getY() > Field.SPEAKER_POSE.getY() ? Field.HOMING_HIGH : Field.HOMING_LOW;
+    }
+
     private static volatile Perception instance;
 
     public static synchronized final Perception getInstance() {
         return instance == null ? instance = new Perception() : instance;
+    }
+
+    public List<Note> getNoteDetections() {
+
+        toast.iterCams("intake", cam -> cam.
+
+
+
     }
 
     /**
