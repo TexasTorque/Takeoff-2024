@@ -14,7 +14,8 @@ import org.texastorque.torquelib.base.TorqueMode;
 import org.texastorque.torquelib.base.TorqueState;
 import org.texastorque.torquelib.base.TorqueStatorSubsystem;
 import org.texastorque.torquelib.swerve.TorqueSwerveSpeeds;
-import org.texastorque.torquelib.swerve.TorqueSwerveX;
+import org.texastorque.torquelib.swerve.TorqueSwerveModuleX.SwerveConfig;
+import org.texastorque.torquelib.swerve.TorqueSwerveModuleX;
 import org.texastorque.torquelib.util.TorqueMath;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.geometry.Pose2d;
@@ -76,7 +77,7 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
 
     public final SwerveDriveKinematics kinematics;
 
-    private final TorqueSwerveX fl, fr, bl, br;
+    private final TorqueSwerveModuleX fl, fr, bl, br;
 
     private final PIDController teleopOmegaController;
 
@@ -91,10 +92,14 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
     private Drivebase() {
         super(State.FIELD_RELATIVE);
 
-        fl = new TorqueSwerveX("Front Left", Ports.FL_MOD);
-        fr = new TorqueSwerveX("Front Right", Ports.FR_MOD);
-        bl = new TorqueSwerveX("Back Left", Ports.BL_MOD);
-        br = new TorqueSwerveX("Back Right", Ports.BR_MOD);
+        final SwerveConfig swerveConfig = SwerveConfig.defaultConfig;
+
+        swerveConfig.driveGearRatio = 2;
+
+        fl = new TorqueSwerveModuleX("Front Left", Ports.FL_MOD, swerveConfig);
+        fr = new TorqueSwerveModuleX("Front Right", Ports.FR_MOD, swerveConfig);
+        bl = new TorqueSwerveModuleX("Back Left", Ports.BL_MOD, swerveConfig);
+        br = new TorqueSwerveModuleX("Back Right", Ports.BR_MOD, swerveConfig);
 
         inputSpeeds = new TorqueSwerveSpeeds(0, 0, 0);
 
