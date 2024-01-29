@@ -4,6 +4,7 @@ import org.texastorque.auto.AutoManager;
 import org.texastorque.torquelib.base.*;
 
 public final class Robot extends TorqueRobotBase implements Subsystems {
+
     public Robot() {
         super(Input.getInstance(), AutoManager.getInstance());
         addSubsystem(climber);

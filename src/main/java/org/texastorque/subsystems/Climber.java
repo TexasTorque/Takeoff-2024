@@ -54,6 +54,7 @@ public class Climber extends TorqueStatorSubsystem<Climber.State> implements Sub
 
     @Override
     public void update(final TorqueMode mode) {
+        // TODO: gyro leveling
         winch.setPosition(desiredState.climberPosition);
         if (isWinchAtState()) hook.setPosition(desiredState.hookPosition);
     }

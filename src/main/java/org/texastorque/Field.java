@@ -47,8 +47,10 @@ public final class Field {
     }
 
     public static Pose2d HOMING_HIGH = new Pose2d(new Translation2d(7., 7.3), ROT_FWD);
-    public static Pose2d HOMING_LOW= new Pose2d(new Translation2d(7., 0.7), ROT_FWD);
+    public static Pose2d HOMING_LOW = new Pose2d(new Translation2d(7., 0.7), ROT_FWD);
 
+    public static Pose2d SHOOT_HIGH = new Pose2d(3.8, 5.7, ROT_FWD);
+    public static Pose2d SHOOT_LOW = new Pose2d(2.5, 3.5, ROT_FWD);
 
     /**
      * Get the angle from pose to the speaker.

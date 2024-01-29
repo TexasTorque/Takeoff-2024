@@ -1,8 +1,11 @@
 package org.texastorque.subsystems;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+
 import org.texastorque.Debug;
 import org.texastorque.Field;
 import org.texastorque.Subsystems;
@@ -85,16 +88,17 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
                 new Pose2d(), ODOMETRY_STDS, VISION_STDS);
 
         // Add toast cameras 
-        toast.addCamera(new Camera("shooter_right", new Transform3d()));
-        toast.addCamera(new Camera("shooter_left", new Transform3d()));
-        toast.addCamera(new Camera("intake_right", new Transform3d()));
-        toast.addCamera(new Camera("intake_left", new Transform3d()));
+        toast.addCamera(new Camera("SHTR_R", new Transform3d()));
+        toast.addCamera(new Camera("SHTR_L", new Transform3d()));
+        toast.addCamera(new Camera("INTK_R", new Transform3d()));
+        toast.addCamera(new Camera("INTK_L", new Transform3d()));
 
         // Register the apriltags pipeline on all cameras
         toast.iterCams(cam -> cam.addPipeline(new AprilTags(cam.id)));
 
         // Register the object detection pipelines on intake cameras and configure them to detect notes
-        toast.iterCams("intake", cam -> cam.addPipeline(new ObjDetector<Note>(Note::fromJSON)));
+        toast.getCamera("INTK_R").get().addPipeline(new ObjDetector<Note>(Note::fromJSONRight));
+        toast.getCamera("INTK_L").get().addPipeline(new ObjDetector<Note>(Note::fromJSONLeft));
 
         // Log the field map to the dashboard 
         Debug.field("Field", field);
@@ -231,8 +235,8 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
             + Math.pow(Field.SPEAKER_POSE.getX() - getPose().getX(), 2));
     }
 
-    public Pose2d getCorrectHomingPosition() {
-        return getPose().getY() > Field.SPEAKER_POSE.getY() ? Field.HOMING_HIGH : Field.HOMING_LOW;
+    public boolean isAboveSpeakerOnY() {
+        return getPose().getY() > Field.SPEAKER_POSE.getY();
     }
 
     private static volatile Perception instance;
@@ -242,27 +246,50 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
     }
 
     public List<Note> getNoteDetections() {
+        final List<Note> detRight = toast.getCamera("INKT_R").get().getPipeline(ObjDetector.class).get().getDetections();
+        final List<Note> detLeft = toast.getCamera("INKT_L").get().getPipeline(ObjDetector.class).get().getDetections();
+        detRight.addAll(detLeft);
+        return detRight;
+    }
 
-        toast.iterCams("intake", cam -> cam.
-
-
-
+    public Optional<Note> getBestDetection() {
+        return ObjDetector.getBestDetection(getNoteDetections());
     }
 
     /**
      * Class representing a Note detected by an ObjDetector pipeline.
      */
     public static class Note extends Detectable {
+
+        public static final Note EMPTY = new Note("empty", 0, 0, 0);
+
+        public static final double F = 70, W = 640, D = 100;
+
         public final String name;
         public final double x;
         public final double angle;
 
-        public static Note fromJSON(final JsonNode det) {
+        private static double calculateAngle(final double x) {
+            return (x / (2 * W * D) - 0.5) * (2 * F - (D * F) / W);
+        }
+
+        private static Note parseJSON(final JsonNode det) {
             final String name = det.get("name").asText("unknown");
             final double x = det.get("ctr_x").asDouble(0);
-            final double angle = det.get("angle").asDouble(0);
             final double confidence = det.get("conf").asDouble(0);
-            return new Note(name, x, angle, confidence);
+            return new Note(name, x, 180, confidence);
+        }
+
+        public static Note fromJSONRight(final JsonNode det) {
+            final Note parsed = parseJSON(det);
+            final double angle = calculateAngle(parsed.x + W - D);
+            return new Note(parsed.name, parsed.x, angle, parsed.confidence);
+        }
+
+        public static Note fromJSONLeft(final JsonNode det) {
+            final Note parsed = parseJSON(det);
+            final double angle = calculateAngle(parsed.x);
+            return new Note(parsed.name, parsed.x, angle, parsed.confidence);
         }
 
         public Note(final String name, final double x,final double angle, final double confidence) {

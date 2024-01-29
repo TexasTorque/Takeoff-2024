@@ -7,6 +7,8 @@
 package org.texastorque.subsystems;
 
 import java.util.function.DoubleSupplier;
+import java.util.function.Supplier;
+
 import org.texastorque.Ports;
 import org.texastorque.Subsystems;
 import org.texastorque.torquelib.auto.commands.TorqueFollowPath.TorquePathingDrivebase;
@@ -133,18 +135,22 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
         };
     }
 
-    private DoubleSupplier alignTarget = () -> 0;
+    private Supplier<Rotation2d> alignTarget = () -> Rotation2d.fromDegrees(0);
 
-    public void setAlignTarget(final double target) {
+    public void setAlignTarget(final Rotation2d target) {
         alignTarget = () -> target;
     }
 
-    public void setAlignTarget(final DoubleSupplier target) {
+    public void setAlignTargetRelative(final Rotation2d target) {
+        alignTarget = () -> target.plus(perception.getHeading());
+    }
+
+    public void setAlignTarget(final Supplier<Rotation2d> target) {
         alignTarget = target;
     }
 
     private double getAlignTarget() {
-        return TorqueMath.constrain0to360(alignTarget.getAsDouble());
+        return TorqueMath.constrain0to360(alignTarget.get().getDegrees());
     }
 
     public boolean isAligned() {
@@ -165,7 +171,7 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
 
         if (wantsState(State.ALIGN_TO_ANGLE)) {
             inputSpeeds.omegaRadiansPerSecond = TorqueMath.constrain(
-                    alignPID.calculate(perception.getHeading().getDegrees(), alignTarget.getAsDouble()), .75);
+                    alignPID.calculate(perception.getHeading().getDegrees(), getAlignTarget()), .75);
         }
 
         swerveStates = kinematics.toSwerveModuleStates(inputSpeeds);

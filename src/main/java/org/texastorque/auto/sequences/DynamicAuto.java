@@ -2,15 +2,14 @@ package org.texastorque.auto.sequences;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.function.BooleanSupplier;
-import java.util.function.DoubleSupplier;
+import java.util.Optional;
 import java.util.function.IntSupplier;
 import java.util.function.Supplier;
-
+import org.texastorque.Debug;
 import org.texastorque.Field;
 import org.texastorque.Subsystems;
 import org.texastorque.subsystems.*;
+import org.texastorque.subsystems.Perception.Note;
 import org.texastorque.torquelib.auto.TorqueSequence;
 import org.texastorque.torquelib.auto.commands.TorqueFollowPath;
 import org.texastorque.torquelib.auto.commands.TorqueRun;
@@ -19,21 +18,16 @@ import org.texastorque.torquelib.auto.commands.TorqueSwitch;
 import org.texastorque.torquelib.auto.commands.TorqueWaitTime;
 import org.texastorque.torquelib.auto.commands.TorqueWaitUntil;
 import org.texastorque.torquelib.auto.commands.TorqueWhile;
-import org.texastorque.torquelib.control.TorqueCondition;
-
+import org.texastorque.torquelib.swerve.TorqueSwerveSpeeds;
 import com.pathplanner.lib.path.GoalEndState;
 import com.pathplanner.lib.path.PathConstraints;
 import com.pathplanner.lib.path.PathPlannerPath;
-import com.pathplanner.lib.path.PathPlannerTrajectory;
 import com.pathplanner.lib.path.PathPoint;
 import com.pathplanner.lib.path.RotationTarget;
-
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
-import edu.wpi.first.networktables.DoubleSubscriber;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 public class DynamicAuto extends TorqueSequence implements Subsystems {
 
@@ -97,6 +91,7 @@ public class DynamicAuto extends TorqueSequence implements Subsystems {
      
         points.add(createPoint(currentPose));
 
+        // TODO: revisit this
         if (homingPosition.getY() == Field.HOMING_LOW.getY()) {
             points.add(createPoint(new Pose2d(4, 2.5, Field.ROT_FWD))); // waypoint for lower homing position 
         }
@@ -106,10 +101,27 @@ public class DynamicAuto extends TorqueSequence implements Subsystems {
         return PathPlannerPath.fromPathPoints(points, PATH_CONST, endState(points));
     }
 
+    public static PathPlannerPath generateShootingPosition(final Supplier<Pose2d> shootPositionSupplier)  {
+
+        // This could def be generalized w/ the above method but its fine for now
+
+        final Pose2d shootingPosition = shootPositionSupplier.get();
+
+        final Pose2d currentPose = perception.getPose();
+        
+        List<PathPoint> points = new ArrayList<>();
+     
+        points.add(createPoint(currentPose));
+
+        points.add(createPoint(shootingPosition.getTranslation(), Field.ROT_FWD));
+
+        return PathPlannerPath.fromPathPoints(points, PATH_CONST, endState(points));
+    }
+
+
     public static TorqueFollowPath followPath(final PathPlannerPath path) {
         return new TorqueFollowPath(path, drivebase, new ChassisSpeeds(0, 0, 0), perception.getHeading(), 3);
     }
-
     
     public static class Shoot extends TorqueSequence {
         private final double waitTime = .5;
@@ -136,14 +148,44 @@ public class DynamicAuto extends TorqueSequence implements Subsystems {
    public static class HandleCenterLineNotes extends TorqueSequence {
 
         private Pose2d homingPose = new Pose2d(); // this can be safely set to nothing because...
+        private Pose2d shootingPose = new Pose2d(); // (same thing here)
 
-        public HandleCenterLineNotes(final AutoConfig config) {
-            addBlock(new TorqueRun(() -> homingPose = perception.getCorrectHomingPosition())); //... this line will pass
+        private Note bestNote = Note.EMPTY;
+
+        private boolean stopIntaking() {
+            return shooter.hasGateSpiked() || perception.getPose().getX() >= Field.LENGTH / 2 + 0;
+        }
+
+        public HandleCenterLineNotes() {
+            addBlock(new TorqueRun(() -> homingPose = perception.isAboveSpeakerOnY() ? Field.HOMING_HIGH : Field.HOMING_LOW)); //... this line will pass
+            
             addBlock(followPath(generateHomingPosition(() -> homingPose)));
 
-            addBlock()
+            // TODO: evaluate fail conditions
+            addBlock(new TorqueWaitUntil(() -> {
+                final Optional<Note> noteOpt = perception.getBestDetection();
+                if (noteOpt.isPresent()) {
+                    bestNote = noteOpt.get();
+                    return true;
+                }
+                return false;
+            }));
 
+            addBlock(shooter.yieldState(Shooter.State.SMART));
 
+            addBlock(new TorqueRun(() -> drivebase.setAlignTargetRelative(Rotation2d.fromDegrees(bestNote.angle))));
+            addBlock(drivebase.yieldState(Drivebase.State.ALIGN_TO_ANGLE));
+            addBlock(new TorqueWaitUntil(() -> drivebase.isAligned()));
+            addBlock(drivebase.yieldState(Drivebase.State.ROBOT_RELATIVE));
+            addBlock(new TorqueRun(() -> drivebase.setInputSpeeds(new TorqueSwerveSpeeds(0, 0, 0))));
+            addBlock(new TorqueWaitUntil(this::stopIntaking));
+            addBlock(shooter.yieldState(Shooter.State.WARMUP));
+
+            addBlock(new TorqueRun(() -> shootingPose = perception.isAboveSpeakerOnY() ? Field.SHOOT_HIGH : Field.SHOOT_LOW)); 
+            // and the above line will also pass
+            addBlock(followPath(generateShootingPosition(() -> shootingPose)));
+
+            addBlock(new TorqueRunSequence(new Shoot()));
         }
     }
 
@@ -163,14 +205,8 @@ public class DynamicAuto extends TorqueSequence implements Subsystems {
 
         addBlock(new TorqueWhile(config::hasNext, new GetAndScoreCloseNote(config)));
 
-        addBlock(new TorqueSwitch(config::isDoingCenter, new HandleCenterLineNotes(config)));
-
-        
-
-
-
+        addBlock(new TorqueSwitch(config::isDoingCenter, new HandleCenterLineNotes()));
     }
-
 
 
     public static class AutoConfig {
@@ -206,9 +242,14 @@ public class DynamicAuto extends TorqueSequence implements Subsystems {
         }
 
         public static AutoConfig getConfigFromNT() {
-            // TODO: implement
-
-            return new AutoConfig(new ArrayList<Integer>(List.of(1, 2, 3)), true);
+            final String command = Debug.getAutoCommandEntry().getString("");
+            final List<Integer> notes = new ArrayList<>();
+            for (int i = 0; i < command.length(); i++) {
+                char ch = command.charAt(i);
+                if (ch >= '0' && ch <= '9') notes.add(ch - '0');
+            }
+            final boolean doingCenter = !command.contains("X");
+            return new AutoConfig(notes, doingCenter);
         }
     }
 }
