@@ -17,8 +17,12 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
 
     private static volatile Shooter instance;
 
-    public static record Shot(double velo, double angle) {
-        private static final Shot empty = new Shot(0, 0);
+    public static record Shot(double topVelocity, double bottomVelocity, double angle) {
+        public Shot(double velocity, double angle) {
+            this(velocity, velocity, angle);
+        }
+
+        private static final Shot empty = new Shot(0, 0, 0);
     }
 
     public static enum State implements TorqueState {
@@ -34,13 +38,13 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         public final Shot shot;
         public final boolean allowedToShoot;
 
-        private State(final boolean allowed2shoot) {
-            this(Shot.empty, allowed2shoot);
+        private State(final boolean allowedToShoot) {
+            this(Shot.empty, allowedToShoot);
         }
 
-        private State(final Shot shot, final boolean allowed2shoot) {
+        private State(final Shot shot, final boolean allowedToShoot) {
             this.shot = shot;
-            this.allowedToShoot = allowed2shoot;
+            this.allowedToShoot = allowedToShoot;
         }
     }
 
@@ -56,9 +60,9 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
 
     private static final double FLYWHEEL_TOLERANCE = 100, ROTARY_TOLERANCE = 5, GATE_CURRENT_SPIKE = 10;
 
-    private final TorqueNEO rotary, flywheels, gate;
+    private final TorqueNEO rotary, flywheelTop, flywheelBottom, gate;
 
-    private final CANcoder rotaryEncoder, flywheelEncoder;
+    private final CANcoder rotaryEncoder, flywheelTopEncoder, flywheelBottomEncoder;
 
     private final PIDController rotaryPID, flywheelPID;
     private final SimpleMotorFeedforward flywheelFF;
@@ -77,12 +81,21 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         rotary = new TorqueNEO(Ports.SHOOTER_ROTARY);
         rotary.setVoltageCompensation(12.6);
         rotary.setBreakMode(true);
+        rotary.burnFlash();
 
-        flywheels = new TorqueNEO(Ports.FLYWHEEL_LEFT);
-        flywheels.addFollower(Ports.FLYWHEEL_RIGHT, true);
-        flywheels.setVoltageCompensation(12.6);
-        flywheels.setBreakMode(false);
-        flywheelEncoder = new CANcoder(Ports.SHOOTER_FLYWHEEL_ENCODER);
+        flywheelTop = new TorqueNEO(Ports.FLYWHEEL_TOP);
+        flywheelTop.setVoltageCompensation(12.6);
+        flywheelTop.setBreakMode(false);
+        flywheelTop.burnFlash();
+
+        flywheelTopEncoder = new CANcoder(Ports.FLYWHEEL_TOP_ENCODER);
+        flywheelBottomEncoder = new CANcoder(Ports.FLYWHEEL_BOTTOM_ENCODER);
+
+        flywheelBottom = new TorqueNEO(Ports.FLYWHEEL_BOTTOM);
+        flywheelBottom.setVoltageCompensation(12.6);
+        flywheelBottom.setBreakMode(false);
+        flywheelBottom.burnFlash();
+
         flywheelPID = new PIDController(1, 0, 0);
         flywheelFF = new SimpleMotorFeedforward(0, 0, 0);
 
@@ -95,8 +108,8 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
 
         shotTable = new TorqueLookUpTable<Shot>(
                 (final Shot me, final Shot other) -> Math.abs(other.angle - me.angle) < 0.1
-                        && Math.abs(other.velo - me.velo) < 0.1,
-                (final Shot me, final Shot end, final Double t) -> new Shot(lerp(me.velo, end.velo, t),
+                        && Math.abs(other.topVelocity - me.topVelocity) < 0.1,
+                (final Shot me, final Shot end, final Double t) -> new Shot(lerp(me.topVelocity, end.topVelocity, t),
                         lerp(me.angle, end.angle, t)));
     }
 
@@ -105,8 +118,9 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
     }
 
     public boolean isReadyToShoot() {
-        return TorqueMath.toleranced(flywheels.getVelocity(), desiredState.shot.velo, FLYWHEEL_TOLERANCE) &&
-                TorqueMath.toleranced(rotary.getPosition(), desiredState.shot.angle, ROTARY_TOLERANCE);
+        return TorqueMath.toleranced(flywheelTop.getVelocity(), desiredState.shot.topVelocity, FLYWHEEL_TOLERANCE)
+                && TorqueMath.toleranced(flywheelBottom.getVelocity(), desiredState.shot.bottomVelocity, FLYWHEEL_TOLERANCE)
+                && TorqueMath.toleranced(rotary.getPosition(), desiredState.shot.angle, ROTARY_TOLERANCE);
     }
 
     public boolean isRotaryAtState() {
@@ -135,8 +149,11 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
             Input.getInstance().setRumbleFor(.2);
         }
 
-        flywheels.setVolts(flywheelPID.calculate(flywheelEncoder.getVelocity().getValue(), shot.velo)
-                + flywheelFF.calculate(shot.velo));
+        flywheelTop.setVolts(flywheelPID.calculate(flywheelTopEncoder.getVelocity().getValue(), shot.topVelocity)
+                + flywheelFF.calculate(shot.topVelocity));
+
+        flywheelBottom.setVolts(flywheelPID.calculate(flywheelBottomEncoder.getVelocity().getValue(), shot.bottomVelocity)
+                        + flywheelFF.calculate(shot.bottomVelocity));
         rotary.setVolts(rotaryPID.calculate(rotaryEncoder.getAbsolutePosition().getValue(), shot.angle));
 
         gate.setVolts(gateState.voltage);
