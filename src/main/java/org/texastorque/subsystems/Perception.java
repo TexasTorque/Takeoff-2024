@@ -35,20 +35,24 @@ import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 
 /**
  * Robot perception subsystem, handles sensors that the robot uses
- * to contextualize it's surroundings. 
+ * to contextualize it's surroundings.
  * 
  * 
  * Other perception subsystems are below for reference:
- * - https://github.com/TexasTorque/Bravo-2024/blob/21ab2550dfbc8c3d1c73813b9feec5aa52dac205/src/main/java/org/texastorque/subsystems/Perception.java
- * - https://github.com/TexasTorque/Banana-2024/blob/0d04f9470ef629f2e7fc1128fed3fcafd0b1d2bf/src/main/java/org/texastorque/subsystems/Perception.java
+ * -
+ * https://github.com/TexasTorque/Bravo-2024/blob/21ab2550dfbc8c3d1c73813b9feec5aa52dac205/src/main/java/org/texastorque/subsystems/Perception.java
+ * -
+ * https://github.com/TexasTorque/Banana-2024/blob/0d04f9470ef629f2e7fc1128fed3fcafd0b1d2bf/src/main/java/org/texastorque/subsystems/Perception.java
  * 
- * @author Justus 
+ * @author Justus
  */
 public final class Perception extends TorqueStatorSubsystem<Perception.State> implements Subsystems {
 
-    public enum State implements TorqueState { VISION; }
-    
-     /**
+    public enum State implements TorqueState {
+        VISION;
+    }
+
+    /**
      * Standard deviations of model states. Increase these numbers to trust your
      * model's state estimates less. This matrix is in the form [x, y, theta]ᵀ,
      * with units in meters and radians, then meters.
@@ -64,11 +68,12 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
     private static final Vector<N3> VISION_STDS = VecBuilder.fill(.1, .1, Units.degreesToRadians(5));
 
     /**
-     * The maximum angular velocity of the robot (in radians per second) and maximum distance from
-     * the camera to the april tag (in meters) where we trust the vision measurements. 
+     * The maximum angular velocity of the robot (in radians per second) and maximum
+     * distance from
+     * the camera to the april tag (in meters) where we trust the vision
+     * measurements.
      */
     private static final double MAX_ANGULAR_VELOCITY_RADS = Math.PI * 2, MAX_DISTANCE = 6;
-
 
     private final Toast toast;
     private final SwerveDrivePoseEstimator poseEstimator;
@@ -87,7 +92,7 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
                 drivebase.getModulePositions(),
                 new Pose2d(), ODOMETRY_STDS, VISION_STDS);
 
-        // Add toast cameras 
+        // Add toast cameras
         toast.addCamera(new Camera("SHTR_R", new Transform3d()));
         toast.addCamera(new Camera("SHTR_L", new Transform3d()));
         toast.addCamera(new Camera("INTK_R", new Transform3d()));
@@ -96,16 +101,18 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
         // Register the apriltags pipeline on all cameras
         toast.iterCams(cam -> cam.addPipeline(new AprilTags(cam.id)));
 
-        // Register the object detection pipelines on intake cameras and configure them to detect notes
+        // Register the object detection pipelines on intake cameras and configure them
+        // to detect notes
         toast.getCamera("INTK_R").get().addPipeline(new ObjDetector<Note>(Note::fromJSONRight));
         toast.getCamera("INTK_L").get().addPipeline(new ObjDetector<Note>(Note::fromJSONLeft));
 
-        // Log the field map to the dashboard 
+        // Log the field map to the dashboard
         Debug.field("Field", field);
     }
 
     @Override
-    public void initialize(final TorqueMode mode) { }
+    public void initialize(final TorqueMode mode) {
+    }
 
     @Override
     public void update(final TorqueMode mode) {
@@ -123,7 +130,7 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
         poseEstimator.update(getHeading(), drivebase.getModulePositions());
     }
 
-    private final Map<Integer, Pose3d> tagsInView = new HashMap<>(); 
+    private final Map<Integer, Pose3d> tagsInView = new HashMap<>();
 
     public void updateVisionLocalization() {
         toast.update(); // Updates all the vision pipelines.
@@ -153,18 +160,22 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
                 // get tag pose in world space
                 final Pose3d tagPose = fieldMap.getTagPose(detection.id).get(); // should never fail
 
-                // we see this tag so we add it to the tagsInView map. this is so we can log the detections on advantagescope
-                if (!tagsInView.containsKey(detection.id)) tagsInView.put(detection.id, tagPose);
+                // we see this tag so we add it to the tagsInView map. this is so we can log the
+                // detections on advantagescope
+                if (!tagsInView.containsKey(detection.id))
+                    tagsInView.put(detection.id, tagPose);
 
-                // converting from cam space to robot space by adding the camera->tag transform with the center->camera transform
-                final Transform3d robotSpaceTransform = detection.transform.plus(cam.transform);    
-                
+                // converting from cam space to robot space by adding the camera->tag transform
+                // with the center->camera transform
+                final Transform3d robotSpaceTransform = detection.transform.plus(cam.transform);
+
                 // converting robot space to world space using the position of the tag
                 final Pose3d estPose3d = tagPose.transformBy(robotSpaceTransform);
 
                 final Pose2d estPose = estPose3d.toPose2d();
 
-                // if the estimated position is off the field then something is wrong and we must move on
+                // if the estimated position is off the field then something is wrong and we
+                // must move on
                 if (!Field.isPoseOnField(estPose))
                     continue;
 
@@ -173,7 +184,8 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
             }
         });
 
-        // Serializes and pushes the seen tags to networktables so we can view detections on advantagescop
+        // Serializes and pushes the seen tags to networktables so we can view
+        // detections on advantagescop
     }
 
     /**
@@ -198,7 +210,7 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
         gyro.setOffsetCW(Rotation2d.fromRadians(0));
     }
 
-     /**
+    /**
      * Returns the current perceived position of the robot.
      */
     public Pose2d getPose() {
@@ -231,8 +243,8 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
      */
     public double getDistanceToSpeaker() {
         return Math.sqrt(
-            Math.pow(Field.SPEAKER_POSE.getY() - getPose().getY(), 2)
-            + Math.pow(Field.SPEAKER_POSE.getX() - getPose().getX(), 2));
+                Math.pow(Field.SPEAKER_POSE.getY() - getPose().getY(), 2)
+                        + Math.pow(Field.SPEAKER_POSE.getX() - getPose().getX(), 2));
     }
 
     public boolean isAboveSpeakerOnY() {
@@ -246,7 +258,8 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
     }
 
     public List<Note> getNoteDetections() {
-        final List<Note> detRight = toast.getCamera("INKT_R").get().getPipeline(ObjDetector.class).get().getDetections();
+        final List<Note> detRight = toast.getCamera("INKT_R").get().getPipeline(ObjDetector.class).get()
+                .getDetections();
         final List<Note> detLeft = toast.getCamera("INKT_L").get().getPipeline(ObjDetector.class).get().getDetections();
         detRight.addAll(detLeft);
         return detRight;
@@ -292,7 +305,7 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
             return new Note(parsed.name, parsed.x, angle, parsed.confidence);
         }
 
-        public Note(final String name, final double x,final double angle, final double confidence) {
+        public Note(final String name, final double x, final double angle, final double confidence) {
             this.name = name;
             this.x = x;
             this.angle = angle;
@@ -302,6 +315,10 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
         public String toString() {
             return String.format("%s @ %.2f° (%.2f conf)", name, angle, confidence);
         }
+    }
+
+    @Override
+    public void clean(TorqueMode mode) {
     }
 
 }

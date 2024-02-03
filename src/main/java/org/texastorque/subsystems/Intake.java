@@ -62,7 +62,7 @@ public class Intake extends TorqueStatorSubsystem<Intake.State> implements Subsy
     }
 
     public boolean isRotaryAtState() {
-        return TorqueMath.toleranced(rotary.getPosition(), desiredState.rotaryPosition, ROTARY_TOLERANCE);
+        return TorqueMath.toleranced(Math.abs(rotary.getPosition()), desiredState.rotaryPosition, ROTARY_TOLERANCE);
     }
 
     public boolean isCurrentSpike() {
@@ -90,9 +90,6 @@ public class Intake extends TorqueStatorSubsystem<Intake.State> implements Subsy
         rollers.setVolts(desiredState.rollerSpeed);
         rotary.setPosition(desiredState.rotaryPosition);
 
-        if (mode.isTeleop()) {
-            desiredState = State.OFF;
-        }
     }
 
     public boolean isIntaking() {
@@ -105,5 +102,12 @@ public class Intake extends TorqueStatorSubsystem<Intake.State> implements Subsy
 
     public static synchronized final Intake getInstance() {
         return instance == null ? instance = new Intake() : instance;
+    }
+
+    @Override
+    public void clean(TorqueMode mode) {
+        if (mode.isTeleop()) {
+            desiredState = State.OFF;
+        }
     }
 }

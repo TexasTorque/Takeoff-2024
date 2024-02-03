@@ -236,4 +236,8 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
         return inputSpeeds;
     }
 
+    @Override
+    public void clean(TorqueMode mode) {
+    }
+
 }
