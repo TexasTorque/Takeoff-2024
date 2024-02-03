@@ -93,8 +93,8 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
                 new Pose2d(), ODOMETRY_STDS, VISION_STDS);
 
         // Add toast cameras
-        toast.addCamera(new Camera("SHTR_R", new Transform3d()));
-        toast.addCamera(new Camera("SHTR_L", new Transform3d()));
+        toast.addCamera(new Camera("SHTR_R", Camera.transformInchDeg(-6.9, 11.75, 9.3, 0, 0, 0)));
+        toast.addCamera(new Camera("SHTR_L", Camera.transformInchDeg(-6.9, -11.75, 9.3, 0, 0, 0)));
         toast.addCamera(new Camera("INTK_R", new Transform3d()));
         toast.addCamera(new Camera("INTK_L", new Transform3d()));
 
@@ -176,8 +176,8 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
 
                 // if the estimated position is off the field then something is wrong and we
                 // must move on
-                if (!Field.isPoseOnField(estPose))
-                    continue;
+                // if (!Field.isPoseOnField(estPose))
+                // continue;
 
                 // add the processed vision messurement to the pose estimator
                 poseEstimator.addVisionMeasurement(estPose, detection.timestamp);

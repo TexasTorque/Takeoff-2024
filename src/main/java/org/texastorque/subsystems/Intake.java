@@ -89,7 +89,6 @@ public class Intake extends TorqueStatorSubsystem<Intake.State> implements Subsy
 
         rollers.setVolts(desiredState.rollerSpeed);
         rotary.setPosition(desiredState.rotaryPosition);
-
     }
 
     public boolean isIntaking() {

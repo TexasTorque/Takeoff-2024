@@ -26,6 +26,7 @@ import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.math.util.Units;
+import edu.wpi.first.wpilibj.Timer;
 
 public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
         implements Subsystems, TorquePathingDrivebase {
@@ -40,7 +41,7 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
     }
 
     public enum SpeedSetting {
-        SLOW(.25), MID(.5), FAST(1.0);
+        SLOW(.25), MID(.5), FAST(1.0), SEQ(1);
 
         private static final SpeedSetting[] vals = values();
 
@@ -56,6 +57,25 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
 
         public SpeedSetting shiftDown() {
             return vals[Math.max((this.ordinal() - 1), 0)];
+        }
+    }
+
+    public static class SpeedSequence {
+        final double initSpeed, finalSpeed, duration, startTime, speedDeceleration;
+
+        // Linearly decreases the speed every second for a duration of time
+        public SpeedSequence(final SpeedSetting initSpeed, final SpeedSetting finalSpeed,
+                final double duration) {
+            this.initSpeed = initSpeed.speed;
+            this.finalSpeed = finalSpeed.speed;
+            this.duration = duration;
+            speedDeceleration = (this.initSpeed - this.finalSpeed) / duration;
+            startTime = Timer.getFPGATimestamp();
+        }
+
+        public double get() {
+            return Math.max(initSpeed - speedDeceleration * (Timer.getFPGATimestamp() - startTime),
+                    finalSpeed);
         }
     }
 
@@ -86,6 +106,8 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
     public TorqueSwerveSpeeds inputSpeeds;
 
     public SpeedSetting speedSetting = SpeedSetting.FAST;
+
+    public SpeedSequence speedSequence = new SpeedSequence(speedSetting, speedSetting, -1);
 
     private final PIDController alignPID;
 
@@ -156,14 +178,13 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
                 getAlignTarget(), 5);
     }
 
-    public boolean isRotationLocked = true;
-
     @Override
     public final void update(final TorqueMode mode) {
         if (mode.isTeleop()) {
             // correctHeading();
             inputSpeeds = inputSpeeds
-                    .toFieldRelativeSpeeds(perception.getHeading());
+                    .toFieldRelativeSpeeds(perception.getHeading()).times(speedSetting == SpeedSetting.SEQ ? speedSequence.get()
+                    : speedSetting.speed);
             // .plus(perception.getAngularVelocity().times(ANGULAR_VELOCITY_COEFFICIENT)))
         }
 
@@ -206,7 +227,7 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
     public void correctHeading() {
         final double realRotationRadians = perception.getHeading().getRadians();
 
-        if (isRotationLocked && !inputSpeeds.hasRotationalVelocity() && inputSpeeds.hasTranslationalVelocity()) {
+        if (!inputSpeeds.hasRotationalVelocity() && inputSpeeds.hasTranslationalVelocity()) {
             final double omega = teleopOmegaController.calculate(realRotationRadians, lastRotationRadians);
             inputSpeeds.omegaRadiansPerSecond = omega;
         } else
