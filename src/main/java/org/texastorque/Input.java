@@ -57,14 +57,14 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
     }
 
     public void updateClimber() {
-        climbUp.onTrue(() -> climber.setState(Climber.State.UP));
-        climbDown.onTrue(() -> climber.setState(Climber.State.DOWN));
-        hookOut.onTrue(() -> climber.setState(Climber.State.TRAP));
+        // climbUp.onTrue(() -> climber.setState(Climber.State.UP));
+        // climbDown.onTrue(() -> climber.setState(Climber.State.DOWN));
+        // hookOut.onTrue(() -> climber.setState(Climber.State.TRAP));
     }
 
     public void updateIntake() {
         runSmartIntake.onTrue(() -> intake.setState(Intake.State.SMART_INTAKE));
-        runDumbIntake.onTrue(() -> intake.setState(Intake.State.SMART_INTAKE));
+        runDumbIntake.onTrue(() -> intake.setState(Intake.State.INTAKE));
         runOuttake.onTrue(() -> intake.setState(Intake.State.OUTTAKE));
     }
 

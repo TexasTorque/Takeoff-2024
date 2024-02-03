@@ -1,5 +1,6 @@
 package org.texastorque.subsystems;
 
+import org.texastorque.Debug;
 import org.texastorque.Input;
 import org.texastorque.Ports;
 import org.texastorque.Subsystems;
@@ -13,7 +14,7 @@ import org.texastorque.torquelib.util.TorqueMath;
 public class Intake extends TorqueStatorSubsystem<Intake.State> implements Subsystems {
     private static volatile Intake instance;
 
-    private static final double ROTARY_DOWN = 1;
+    private static final double ROTARY_DOWN = 14;
 
     public static enum State implements TorqueState {
         OFF(0, 0), INTAKE(ROTARY_DOWN, 12),
@@ -39,16 +40,19 @@ public class Intake extends TorqueStatorSubsystem<Intake.State> implements Subsy
         super(State.OFF);
 
         rotary = new TorqueNEO(Ports.INTAKE_ROTARY_LEFT);
-        rotary.addFollower(Ports.INTAKE_ROTARY_RIGHT, true);
+        rotary.addFollower(Ports.INTAKE_ROTARY_RIGHT, false);
         rotary.setVoltageCompensation(12.6);
-        rotary.setBreakMode(false);
+        rotary.setBreakMode(true);
+        rotary.invertMotor(true);
         rotary.setPIDFeedbackDevice(rotary.encoder);
-        rotary.configurePIDF(1, 0, 0, 0);
+        rotary.configurePIDF(.05, 0, 0, 0);
         rotary.burnFlash();
 
         rollers = new TorqueNEO(Ports.INTAKE_ROLLERS);
         rollers.setVoltageCompensation(12.6);
         rollers.setBreakMode(false);
+        rollers.invertMotor(true);
+        rollers.burnFlash();
 
         spikeTimeout = new TorqueRequestableTimeout();
     }
@@ -67,6 +71,9 @@ public class Intake extends TorqueStatorSubsystem<Intake.State> implements Subsy
 
     @Override
     public void update(final TorqueMode mode) {
+        Debug.log("Intake State", desiredState.toString());
+        Debug.log("Intake Rotary", rotary.getPosition());
+
         if (wantsState(State.SMART_INTAKE)) {
             if (!spikeTimeout.get() && shooter.hasGateSpiked()) {
                 Input.getInstance().setRumbleFor(.2);

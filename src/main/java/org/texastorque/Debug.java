@@ -8,9 +8,6 @@ package org.texastorque;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.function.Supplier;
-
-import org.texastorque.auto.AutoManager;
 import org.texastorque.torquelib.util.TorqueUtil;
 
 import edu.wpi.first.networktables.GenericEntry;
@@ -32,9 +29,6 @@ public final class Debug implements Subsystems {
         Shuffleboard.update();
 
         final ShuffleboardTab dashboard = Shuffleboard.getTab("COMPETITION");
-
-        // dashboard.add("AUTO SELECTOR", AutoManager.getInstance().getAutoSelector())
-                // .withPosition(7, 0).withSize(4, 2);
 
         autoCommandEntry = dashboard.add("Auto Command", "").getEntry();
     }

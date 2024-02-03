@@ -6,9 +6,7 @@
  */
 package org.texastorque.subsystems;
 
-import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
-
 import org.texastorque.Ports;
 import org.texastorque.Subsystems;
 import org.texastorque.torquelib.auto.commands.TorqueFollowPath.TorquePathingDrivebase;
