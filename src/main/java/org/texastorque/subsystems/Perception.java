@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Supplier;
 
 import org.texastorque.Debug;
 import org.texastorque.Field;
@@ -29,6 +30,7 @@ import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Transform3d;
+import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
@@ -93,8 +95,8 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
                 new Pose2d(), ODOMETRY_STDS, VISION_STDS);
 
         // Add toast cameras
-        toast.addCamera(new Camera("SHTR_R", Camera.transformInchDeg(-6.9, 11.75, 9.3, 0, 0, 0)));
-        toast.addCamera(new Camera("SHTR_L", Camera.transformInchDeg(-6.9, -11.75, 9.3, 0, 0, 0)));
+        toast.addCamera(new Camera("SHTR_R", Camera.transformInchDeg(-6.9, -11.75, 9.3, 0, 30, 180)));
+        toast.addCamera(new Camera("SHTR_L", Camera.transformInchDeg(-6.9, 11.75, 9.3, 0, 30, 180)));
         toast.addCamera(new Camera("INTK_R", new Transform3d()));
         toast.addCamera(new Camera("INTK_L", new Transform3d()));
 
@@ -167,7 +169,12 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
 
                 // converting from cam space to robot space by adding the camera->tag transform
                 // with the center->camera transform
-                final Transform3d robotSpaceTransform = detection.transform.plus(cam.transform);
+                Transform3d robotSpaceTransform = detection.transform.plus(cam.transform);
+
+                robotSpaceTransform = new Transform3d(new Translation3d(
+                        robotSpaceTransform.getX(),
+                        -robotSpaceTransform.getY(),
+                        -robotSpaceTransform.getZ()), robotSpaceTransform.getRotation());
 
                 // converting robot space to world space using the position of the tag
                 final Pose3d estPose3d = tagPose.transformBy(robotSpaceTransform);
@@ -215,6 +222,10 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
      */
     public Pose2d getPose() {
         return poseEstimator.getEstimatedPosition();
+    }
+
+    public Supplier<Pose2d> supplyPose() {
+        return () -> getPose();
     }
 
     /**

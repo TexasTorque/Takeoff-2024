@@ -24,7 +24,7 @@ public final class Field {
 
     public static boolean isPoseOnField(final Pose2d pose) {
         return TorqueMath.constrained(pose.getX(), 0, LENGTH)
-            && TorqueMath.constrained(pose.getY(), 0, WIDTH);
+                && TorqueMath.constrained(pose.getY(), 0, WIDTH);
     }
 
     public static boolean isIDValid(final int id) {
@@ -43,7 +43,16 @@ public final class Field {
     }
 
     public static Pose2d getNotePose(int note) {
-        return new Pose2d();
+        switch (note) {
+            case 1:
+                return new Pose2d(2.9, 7, ROT_FWD);
+            case 2:
+                return new Pose2d(2.9, 5.55, ROT_FWD);
+            case 3:
+                return new Pose2d(2.9, 4.1, ROT_FWD);
+            default:
+                return new Pose2d();
+        }
     }
 
     public static Pose2d HOMING_HIGH = new Pose2d(new Translation2d(7., 7.3), ROT_FWD);
@@ -57,9 +66,9 @@ public final class Field {
      */
     public static Rotation2d getAngleToSpeaker(final Pose2d pose) {
         return Rotation2d.fromRadians(Math.atan2(
-            Field.SPEAKER_POSE.getY() - pose.getY(),
-            Field.SPEAKER_POSE.getX() - pose.getX()))
-            .plus(Rotation2d.fromRadians(Math.PI));
+                Field.SPEAKER_POSE.getY() - pose.getY(),
+                Field.SPEAKER_POSE.getX() - pose.getX()))
+                .plus(Rotation2d.fromRadians(Math.PI));
     }
 
 }

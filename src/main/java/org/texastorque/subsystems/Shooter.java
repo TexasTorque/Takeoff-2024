@@ -127,7 +127,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
     }
 
     public boolean hasGateSpiked() {
-        return gate.getCurrent() >= GATE_CURRENT_SPIKE;
+        return gate.getCurrent() >= GATE_CURRENT_SPIKE || true;
     }
 
     public boolean isReadyToShoot() {
@@ -178,6 +178,8 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         // final Shot shot = desiredState == State.SMART ?
         // shotTable.get(perception.getDistanceToSpeaker())
         // : desiredState.shot;
+        desiredState = State.OFF;
+
         Shot shot = desiredState.shot;
 
         double topPID = flywheelTopPID.calculate(getTopFlywheelVelocity(),
@@ -191,6 +193,8 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
             gateState = GateState.OUT;
             // Input.getInstance().setRumbleFor(.2);
         }
+
+        
 
         flywheelTop.setVolts(topPID);
         flywheelBottom.setVolts(bottomPID);

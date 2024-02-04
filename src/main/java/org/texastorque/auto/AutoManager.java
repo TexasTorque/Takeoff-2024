@@ -1,6 +1,7 @@
 package org.texastorque.auto;
 
-// import org.texastorque.auto.sequences.DynamicAuto;
+import org.texastorque.auto.sequences.DynamicAuto;
+import org.texastorque.auto.sequences.PathTest;
 import org.texastorque.torquelib.auto.*;
 
 public final class AutoManager extends TorqueAutoManager {
@@ -9,6 +10,9 @@ public final class AutoManager extends TorqueAutoManager {
     @Override
     public final void init() {
         // setConstAuto(new DynamicAuto()); // for now this is the only we will run
+
+        addSequence(new DynamicAuto());
+        addSequence(new PathTest());
     }
 
     /**

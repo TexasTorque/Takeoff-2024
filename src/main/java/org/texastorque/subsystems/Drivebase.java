@@ -116,8 +116,6 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
 
         final SwerveConfig swerveConfig = SwerveConfig.defaultConfig;
 
-        swerveConfig.driveGearRatio = 2;
-
         fl = new TorqueSwerveModuleX("Front Left", Ports.FL_MOD, swerveConfig);
         fr = new TorqueSwerveModuleX("Front Right", Ports.FR_MOD, swerveConfig);
         bl = new TorqueSwerveModuleX("Back Left", Ports.BL_MOD, swerveConfig);
@@ -140,7 +138,7 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
     @Override
     public final void initialize(final TorqueMode mode) {
         mode.onAuto(() -> {
-            desiredState = State.ROBOT_RELATIVE;
+            desiredState = State.FIELD_RELATIVE;
         });
 
         mode.onTeleop(() -> {
@@ -149,6 +147,7 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
     }
 
     public SwerveModulePosition[] getModulePositions() {
+
         return new SwerveModulePosition[] {
                 fl.getPosition(), fr.getPosition(),
                 bl.getPosition(), br.getPosition()
@@ -180,11 +179,12 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
 
     @Override
     public final void update(final TorqueMode mode) {
-        if (mode.isTeleop()) {
+        if (wantsState(State.FIELD_RELATIVE)) {
             // correctHeading();
             inputSpeeds = inputSpeeds
-                    .toFieldRelativeSpeeds(perception.getHeading()).times(speedSetting == SpeedSetting.SEQ ? speedSequence.get()
-                    : speedSetting.speed);
+                    .toFieldRelativeSpeeds(perception.getHeading())
+                    .times(speedSetting == SpeedSetting.SEQ ? speedSequence.get()
+                            : speedSetting.speed);
             // .plus(perception.getAngularVelocity().times(ANGULAR_VELOCITY_COEFFICIENT)))
         }
 
