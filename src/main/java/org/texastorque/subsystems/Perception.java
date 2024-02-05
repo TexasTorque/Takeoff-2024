@@ -17,11 +17,18 @@ import org.texastorque.toast.lib.pipelines.AprilTags;
 import org.texastorque.toast.lib.pipelines.ObjDetector;
 import org.texastorque.toast.lib.pipelines.AprilTags.AprilTagDetection;
 import org.texastorque.toast.lib.pipelines.ObjDetector.Detectable;
+import org.texastorque.torquelib.auto.commands.TorqueFollowPath;
 import org.texastorque.torquelib.base.TorqueMode;
 import org.texastorque.torquelib.base.TorqueState;
 import org.texastorque.torquelib.base.TorqueStatorSubsystem;
 import org.texastorque.torquelib.sensors.TorqueNavXGyro;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.pathplanner.lib.path.GoalEndState;
+import com.pathplanner.lib.path.PathConstraints;
+import com.pathplanner.lib.path.PathPlannerPath;
+import com.pathplanner.lib.path.PathPoint;
+import com.pathplanner.lib.path.RotationTarget;
+
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.Vector;
@@ -30,6 +37,7 @@ import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Transform3d;
+import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.math.util.Units;
@@ -330,6 +338,96 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
 
     @Override
     public void clean(TorqueMode mode) {
+    }
+
+
+    public static final PathConstraints PATH_CONST = new PathConstraints(1, 1, Math.PI, Math.PI);
+
+    public PathPoint createPoint(final Pose2d pose) {
+        return createPoint(pose.getTranslation(), pose.getRotation());
+    }
+
+    public PathPoint createPoint(final Translation2d trl, final Rotation2d rot) {
+        final RotationTarget target = new RotationTarget(0, rot);
+        return new PathPoint(trl, target, PATH_CONST);
+    }
+
+    public GoalEndState endState(List<PathPoint> points) {
+        return new GoalEndState(0, points.get(points.size() - 1).rotationTarget.getTarget());
+    }
+
+    public PathPlannerPath generateInitial(final int note) {
+
+        // final Pose2d currentPose = new Pose2d(1.1, 5.75, Field.ROT_FWD);
+        final Pose2d currentPose = getPose();
+
+        final Pose2d notePose = Field.getNotePose(note);
+
+        List<PathPoint> points = new ArrayList<>();
+
+        points.add(createPoint(currentPose));
+        points.add(createPoint(notePose.getTranslation(), Field.ROT_FWD));
+
+        for (int i = 0; i < points.size(); i++)
+            Debug.log("Point " + i,
+                    Util.pose2d2str(new Pose2d(points.get(i).position, points.get(i).rotationTarget.getTarget())));
+
+        return PathPlannerPath.fromPathPoints(points, PATH_CONST, endState(points));
+    }
+
+    public PathPlannerPath generateNextOmar(final int note) {
+
+        final Pose2d currentPose = getPose();
+
+        final Pose2d notePose = Field.getNotePose(note);
+
+        List<PathPoint> points = new ArrayList<>();
+
+        final Rotation2d targetRotation = Field.getAngleToSpeaker(notePose);
+
+        final Translation2d midPointLocation = new Translation2d(
+                notePose.getX() - Math.abs(notePose.getY() - currentPose.getY()), // target x - distance from current y
+                                                                                  // to target y
+                (currentPose.getY() + notePose.getY()) / 2f); // y coord between current y and target y
+
+        points.add(createPoint(currentPose));
+        points.add(createPoint(midPointLocation, targetRotation));
+        points.add(createPoint(notePose.getTranslation(), targetRotation));
+
+        return PathPlannerPath.fromPathPoints(points, PATH_CONST, endState(points));
+    }
+
+    public PathPlannerPath generateHomingPosition(final Pose2d homingPosition) {
+
+        final Pose2d currentPose = perception.getPose();
+
+        List<PathPoint> points = new ArrayList<>();
+
+        points.add(createPoint(currentPose));
+
+        // TODO: revisit this
+        if (homingPosition.getY() == Field.HOMING_LOW.getY()) {
+            points.add(createPoint(new Pose2d(4, 2.5, Field.ROT_FWD))); // waypoint for lower homing position
+        }
+
+        points.add(createPoint(homingPosition.getTranslation(), Field.ROT_FWD));
+
+        return PathPlannerPath.fromPathPoints(points, PATH_CONST, endState(points));
+    }
+
+    public PathPlannerPath generateShootingPosition(final Pose2d shootingPosition) {
+
+        // This could def be generalized w/ the above method but its fine for now
+
+        final Pose2d currentPose = perception.getPose();
+
+        List<PathPoint> points = new ArrayList<>();
+
+        points.add(createPoint(currentPose));
+
+        points.add(createPoint(shootingPosition.getTranslation(), Field.ROT_FWD));
+
+        return PathPlannerPath.fromPathPoints(points, PATH_CONST, endState(points));
     }
 
 }
