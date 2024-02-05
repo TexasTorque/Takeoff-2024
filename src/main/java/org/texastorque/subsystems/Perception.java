@@ -10,6 +10,7 @@ import java.util.function.Supplier;
 import org.texastorque.Debug;
 import org.texastorque.Field;
 import org.texastorque.Subsystems;
+import org.texastorque.Field.CenterLineAttempt;
 import org.texastorque.toast.lib.Camera;
 import org.texastorque.toast.lib.Toast;
 import org.texastorque.toast.lib.Util;
@@ -361,23 +362,19 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
 
         final Pose2d notePose = Field.getNotePose(note);
 
-        List<PathPoint> points = new ArrayList<>();
+        List<Translation2d> bezierPoints = PathPlannerPath.bezierFromPoses(
+            currentPose,
+            new Pose2d(notePose.getTranslation(), Field.ROT_FWD)); 
 
-        points.add(createPoint(currentPose));
-        points.add(createPoint(notePose.getTranslation(), Field.ROT_FWD));
+        final GoalEndState endState = new GoalEndState(0, Field.ROT_FWD);
 
-        for (int i = 0; i < points.size(); i++)
-            System.out.println("Point " + i + ": " + Util.pose2d2str(new Pose2d(points.get(i).position, points.get(i).rotationTarget.getTarget())));
-
-        return PathPlannerPath.fromPathPoints(points, PATH_CONST, endState(points));
+        return new PathPlannerPath(bezierPoints, PATH_CONST, endState);
     }
 
     public PathPlannerPath generateNextOmar(final int note) {
         final Pose2d currentPose = getPose();
 
         final Pose2d notePose = Field.getNotePose(note);
-
-        List<PathPoint> points = new ArrayList<>();
 
         final Rotation2d targetRotation = Field.getAngleToSpeaker(notePose);
 
@@ -386,44 +383,42 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
                                                                                   // to target y
                 (currentPose.getY() + notePose.getY()) / 2f); // y coord between current y and target y
 
-        points.add(createPoint(currentPose));
-        points.add(createPoint(midPointLocation, targetRotation));
-        points.add(createPoint(notePose.getTranslation(), targetRotation));
+        List<Translation2d> bezierPoints = PathPlannerPath.bezierFromPoses(
+            currentPose,
+            new Pose2d(midPointLocation, targetRotation),
+            new Pose2d(notePose.getTranslation(), targetRotation));
 
-        return PathPlannerPath.fromPathPoints(points, PATH_CONST, endState(points));
+        final GoalEndState endState = new GoalEndState(0, targetRotation);
+
+        return new PathPlannerPath(bezierPoints, PATH_CONST, endState);
     }
 
-    public PathPlannerPath generateHomingPosition(final Pose2d homingPosition) {
+    public PathPlannerPath generateHomingPosition(final CenterLineAttempt attempt) {
 
         final Pose2d currentPose = perception.getPose();
 
-        List<PathPoint> points = new ArrayList<>();
+        List<Translation2d> bezierPoints = attempt.getBezierToHoming(currentPose);
 
-        points.add(createPoint(currentPose));
+        final GoalEndState endState = new GoalEndState(0, Field.ROT_FWD);
 
-        // TODO: revisit this
-        if (homingPosition.getY() == Field.HOMING_LOW.getY()) {
-            points.add(createPoint(new Pose2d(4, 2.5, Field.ROT_FWD))); // waypoint for lower homing position
-        }
-
-        points.add(createPoint(homingPosition.getTranslation(), Field.ROT_FWD));
-
-        return PathPlannerPath.fromPathPoints(points, PATH_CONST, endState(points));
+        return new PathPlannerPath(bezierPoints, PATH_CONST, endState);
     }
 
-    public PathPlannerPath generateShootingPosition(final Pose2d shootingPosition) {
-
-        // This could def be generalized w/ the above method but its fine for now
-
+    public PathPlannerPath generateShootingPosition(final CenterLineAttempt attempt) {
+      
         final Pose2d currentPose = perception.getPose();
 
-        List<PathPoint> points = new ArrayList<>();
+        List<Translation2d> bezierPoints = attempt.getBezierToShooting(currentPose);
 
-        points.add(createPoint(currentPose));
+        final Rotation2d targetRot = Field.getAngleToSpeaker(attempt.shooting());
 
-        points.add(createPoint(shootingPosition.getTranslation(), Field.ROT_FWD));
+        final GoalEndState endState = new GoalEndState(0, targetRot);
 
-        return PathPlannerPath.fromPathPoints(points, PATH_CONST, endState(points));
+        return new PathPlannerPath(bezierPoints, PATH_CONST, endState);
+    }
+
+    public CenterLineAttempt getCorrectCenterLineAttempt() {
+        return isAboveSpeakerOnY() ? Field.CenterLineAttempt.HIGH : Field.CenterLineAttempt.LOW;
     }
 
 }

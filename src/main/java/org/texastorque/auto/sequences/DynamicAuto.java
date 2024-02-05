@@ -8,6 +8,7 @@ import java.util.function.Supplier;
 import org.texastorque.Debug;
 import org.texastorque.Field;
 import org.texastorque.Subsystems;
+import org.texastorque.Field.CenterLineAttempt;
 import org.texastorque.subsystems.*;
 import org.texastorque.subsystems.Perception.Note;
 import org.texastorque.toast.lib.Util;
@@ -64,8 +65,8 @@ public class DynamicAuto extends TorqueSequence implements Subsystems {
 
     public class HandleCenterLineNotes extends TorqueSequence {
 
-        private Pose2d homingPose = new Pose2d(); // this can be safely set to nothing because...
-        private Pose2d shootingPose = new Pose2d(); // (same thing here)
+        // this can be safely set to nothing because...
+        private CenterLineAttempt attempt = Field.CenterLineAttempt.EMPTY; 
 
         private Note bestNote = Note.EMPTY;
 
@@ -75,10 +76,9 @@ public class DynamicAuto extends TorqueSequence implements Subsystems {
 
         public HandleCenterLineNotes() {
             // ... this line will pass
-            addBlock(new TorqueRun(() -> homingPose = perception.isAboveSpeakerOnY() ? Field.HOMING_HIGH : Field.HOMING_LOW)); 
-            addBlock(followPath(
-                () -> perception.generateHomingPosition(homingPose)
-            ));
+            addBlock(new TorqueRun(() -> attempt = perception.getCorrectCenterLineAttempt()));
+
+            addBlock(followPath(() -> perception.generateHomingPosition(attempt)));
 
             // TODO: evaluate fail conditions
             addBlock(new TorqueWaitUntil(() -> {
@@ -100,10 +100,8 @@ public class DynamicAuto extends TorqueSequence implements Subsystems {
             addBlock(new TorqueWaitUntil(this::stopIntaking));
             addBlock(shooter.yieldState(Shooter.State.WARMUP));
 
-            addBlock(new TorqueRun(
-                    () -> shootingPose = perception.isAboveSpeakerOnY() ? Field.SHOOT_HIGH : Field.SHOOT_LOW));
             // and the above line will also pass
-            addBlock(followPath(() -> perception.generateShootingPosition(shootingPose)));
+            addBlock(followPath(() -> perception.generateShootingPosition(attempt)));
 
             addBlock(new TorqueRunSequence(new Shoot()));
         }
@@ -115,7 +113,7 @@ public class DynamicAuto extends TorqueSequence implements Subsystems {
         config = getConfigFromNT();
 
         // This is debug only
-        // addBlock(new TorqueRun(() -> perception.setPose(new Pose2d(1.1, 5.75, Field.ROT_FWD))));
+        addBlock(new TorqueRun(() -> perception.setPose(new Pose2d(1.1, 5.75, Field.ROT_FWD))));
 
         // addBlock(shooter.yieldState(Shooter.State.WARMUP));
         addBlock(new TorqueRunSequence(new Shoot()));

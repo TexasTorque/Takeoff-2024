@@ -7,7 +7,13 @@
 package org.texastorque;
 
 import java.io.IOException;
+import java.util.List;
+
+import org.texastorque.Field.CenterLineAttempt;
 import org.texastorque.torquelib.util.TorqueMath;
+
+import com.pathplanner.lib.path.PathPlannerPath;
+
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.apriltag.AprilTagFields;
 import edu.wpi.first.math.geometry.Pose2d;
@@ -55,11 +61,30 @@ public final class Field {
         }
     }
 
-    public static Pose2d HOMING_HIGH = new Pose2d(new Translation2d(7., 7.3), ROT_FWD);
-    public static Pose2d HOMING_LOW = new Pose2d(new Translation2d(7., 0.7), ROT_FWD);
+    public static record CenterLineAttempt(Pose2d midpoint , Pose2d homing, Pose2d shooting) {
+        public static CenterLineAttempt HIGH = new CenterLineAttempt(
+            new Pose2d(4.75, 6, ROT_FWD), // midpoint
+            new Pose2d(6.5, 6.25, ROT_FWD), // homing
+            new Pose2d(3.8, 5.7, ROT_FWD) // shooting
+        );
 
-    public static Pose2d SHOOT_HIGH = new Pose2d(3.8, 5.7, ROT_FWD);
-    public static Pose2d SHOOT_LOW = new Pose2d(2.5, 3.5, ROT_FWD);
+        public static CenterLineAttempt LOW = new CenterLineAttempt(
+            new Pose2d(4.75, 1.75, ROT_FWD), // midpoint
+            new Pose2d(6.5, 1.5, ROT_FWD), // homing
+            new Pose2d(2.5, 3.5, ROT_FWD) // shooting
+        );
+
+        public static CenterLineAttempt EMPTY = new CenterLineAttempt(
+            new Pose2d(), new Pose2d(), new Pose2d()
+        );
+
+        public List<Translation2d> getBezierToHoming(final Pose2d current) { 
+            return PathPlannerPath.bezierFromPoses(current, midpoint, homing);
+        }
+        public List<Translation2d> getBezierToShooting(final Pose2d current) { 
+            return PathPlannerPath.bezierFromPoses(current, shooting);
+        }
+    }
 
     /**
      * Get the angle from pose to the speaker.
