@@ -357,8 +357,6 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
     }
 
     public PathPlannerPath generateInitial(final int note) {
-
-        // final Pose2d currentPose = new Pose2d(1.1, 5.75, Field.ROT_FWD);
         final Pose2d currentPose = getPose();
 
         final Pose2d notePose = Field.getNotePose(note);
@@ -369,14 +367,12 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
         points.add(createPoint(notePose.getTranslation(), Field.ROT_FWD));
 
         for (int i = 0; i < points.size(); i++)
-            Debug.log("Point " + i,
-                    Util.pose2d2str(new Pose2d(points.get(i).position, points.get(i).rotationTarget.getTarget())));
+            System.out.println("Point " + i + ": " + Util.pose2d2str(new Pose2d(points.get(i).position, points.get(i).rotationTarget.getTarget())));
 
         return PathPlannerPath.fromPathPoints(points, PATH_CONST, endState(points));
     }
 
     public PathPlannerPath generateNextOmar(final int note) {
-
         final Pose2d currentPose = getPose();
 
         final Pose2d notePose = Field.getNotePose(note);

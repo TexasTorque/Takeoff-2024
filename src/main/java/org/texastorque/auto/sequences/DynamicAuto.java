@@ -114,12 +114,11 @@ public class DynamicAuto extends TorqueSequence implements Subsystems {
     public DynamicAuto() {
         config = getConfigFromNT();
 
-        addBlock(new TorqueRun(() -> System.out.println("here")));
+        // This is debug only
+        // addBlock(new TorqueRun(() -> perception.setPose(new Pose2d(1.1, 5.75, Field.ROT_FWD))));
 
         // addBlock(shooter.yieldState(Shooter.State.WARMUP));
         addBlock(new TorqueRunSequence(new Shoot()));
-
-        addBlock(new TorqueRun(() -> System.out.println("here")));
 
         addBlock(intake.yieldState(Intake.State.SMART_INTAKE));
 
@@ -166,9 +165,8 @@ public class DynamicAuto extends TorqueSequence implements Subsystems {
         }
 
         public int getNextNote() {
-            // Debug.log("next note", notes.get(0));
-            // return notes.remove(0);
-            return 2;
+            System.out.println(notes.get(0));
+            return notes.remove(0);
         }
 
         public boolean hasNext() {
