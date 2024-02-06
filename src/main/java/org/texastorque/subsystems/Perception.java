@@ -341,7 +341,6 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
     public void clean(TorqueMode mode) {
     }
 
-
     public static final PathConstraints PATH_CONST = new PathConstraints(1, 1, Math.PI, Math.PI);
 
     public PathPoint createPoint(final Pose2d pose) {
@@ -363,10 +362,10 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
         final Pose2d notePose = Field.getNotePose(note);
 
         List<Translation2d> bezierPoints = PathPlannerPath.bezierFromPoses(
-            currentPose,
-            new Pose2d(notePose.getTranslation(), Field.ROT_FWD)); 
+                currentPose,
+                new Pose2d(notePose.getTranslation(), Field.ROT_BACK));
 
-        final GoalEndState endState = new GoalEndState(0, Field.ROT_FWD);
+        final GoalEndState endState = new GoalEndState(0, Rotation2d.fromDegrees(1));
 
         return new PathPlannerPath(bezierPoints, PATH_CONST, endState);
     }
@@ -384,9 +383,11 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
                 (currentPose.getY() + notePose.getY()) / 2f); // y coord between current y and target y
 
         List<Translation2d> bezierPoints = PathPlannerPath.bezierFromPoses(
-            currentPose,
-            new Pose2d(midPointLocation, targetRotation),
-            new Pose2d(notePose.getTranslation(), targetRotation));
+                new Pose2d(currentPose.getTranslation(), Field.ROT_BACK),
+                new Pose2d(midPointLocation, targetRotation),
+                new Pose2d(notePose.getTranslation(), targetRotation.plus(Field.ROT_BACK)));
+
+        Debug.log("Goal Pose", new Pose2d(notePose.getTranslation(), targetRotation).toString());
 
         final GoalEndState endState = new GoalEndState(0, targetRotation);
 
@@ -405,7 +406,7 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
     }
 
     public PathPlannerPath generateShootingPosition(final CenterLineAttempt attempt) {
-      
+
         final Pose2d currentPose = perception.getPose();
 
         List<Translation2d> bezierPoints = attempt.getBezierToShooting(currentPose);

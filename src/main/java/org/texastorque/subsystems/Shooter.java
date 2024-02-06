@@ -85,7 +85,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         rotary.invertMotor(true);
         rotary.burnFlash();
 
-        rotaryPID = new PIDController(100, 0, 0);
+        rotaryPID = new PIDController(70, 0, 0);
         rotaryEncoder = new CANcoder(Ports.SHOOTER_ROTARY_ENCODER);
 
         flywheelTop = new TorqueNEO(Ports.FLYWHEEL_TOP);
@@ -127,7 +127,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
     }
 
     public boolean hasGateSpiked() {
-        return gate.getCurrent() >= GATE_CURRENT_SPIKE || true;
+        return gate.getCurrent() >= GATE_CURRENT_SPIKE;
     }
 
     public boolean isReadyToShoot() {
@@ -165,7 +165,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         Debug.log("Shooter Gate Current", gate.getCurrent());
         Debug.log("Shooter is Ready", isReadyToShoot());
 
-        if (intake.isIntaking() && intake.isRotaryAtState()) {
+        if (intake.isIntaking()) {
             desiredState = State.INTAKE;
             gateState = GateState.IN;
         } else if (intake.isCurrentSpike()) {
@@ -178,7 +178,6 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         // final Shot shot = desiredState == State.SMART ?
         // shotTable.get(perception.getDistanceToSpeaker())
         // : desiredState.shot;
-        desiredState = State.OFF;
 
         Shot shot = desiredState.shot;
 
@@ -189,24 +188,14 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         double bottomPID = flywheelBottomPID.calculate(-getBottomFlywheelVelocity(),
                 shot.bottomVelocity) + flywheelFF.calculate(shot.bottomVelocity);
 
-        if (isReadyToShoot() && desiredState.isAShot) {
+        if (isReadyToShoot() && desiredState.isAShot)
             gateState = GateState.OUT;
-            // Input.getInstance().setRumbleFor(.2);
-        }
-
-        
 
         flywheelTop.setVolts(topPID);
         flywheelBottom.setVolts(bottomPID);
 
-        double pidVolts = rotaryPID.calculate(rotaryEncoder.getAbsolutePosition().getValue(), shot.angle);
-
-        Debug.log("Shooter Top Roller Voltage ", flywheelTop.getVolts());
-        Debug.log("Shooter Bottom Roller Voltage ", flywheelBottom.getVolts());
-
-        Debug.log("PID Volts", pidVolts);
-
-        rotary.setVolts(TorqueMath.constrain(pidVolts, 8));
+        rotary.setVolts(TorqueMath.constrain(rotaryPID.calculate(rotaryEncoder.getAbsolutePosition().getValue(),
+                shot.angle), 8));
 
         gate.setVolts(gateState.voltage);
 
