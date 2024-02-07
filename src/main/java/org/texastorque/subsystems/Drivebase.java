@@ -7,6 +7,8 @@
 package org.texastorque.subsystems;
 
 import java.util.function.Supplier;
+
+import org.texastorque.Debug;
 import org.texastorque.Ports;
 import org.texastorque.Subsystems;
 import org.texastorque.torquelib.auto.commands.TorqueFollowPath.TorquePathingDrivebase;
@@ -129,7 +131,7 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
         for (int i = 0; i < swerveStates.length; i++)
             swerveStates[i] = new SwerveModuleState();
 
-        alignPID = new PIDController(.15, 0, 0);
+        alignPID = new PIDController(.2, 0, 0);
         alignPID.enableContinuousInput(0, 360);
 
         teleopOmegaController = new PIDController(.5 * Math.PI, 0, 0);
@@ -174,11 +176,17 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
 
     public boolean isAligned() {
         return TorqueMath.toleranced(perception.getHeading().getDegrees(),
-                getAlignTarget(), 5);
+                getAlignTarget(), 4);
     }
 
     @Override
     public final void update(final TorqueMode mode) {
+        Debug.log("isAligned", isAligned());
+        if (shooter.wantsState(Shooter.State.SMART)) {
+            desiredState = State.ALIGN_TO_ANGLE;
+        } else
+            desiredState = State.FIELD_RELATIVE;
+
         if (wantsState(State.FIELD_RELATIVE)) {
             // correctHeading();
             inputSpeeds = inputSpeeds
@@ -189,7 +197,7 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
         }
 
         if (wantsState(State.ALIGN_TO_ANGLE)) {
-            inputSpeeds.omegaRadiansPerSecond = TorqueMath.constrain(
+            inputSpeeds.omegaRadiansPerSecond = -TorqueMath.constrain(
                     alignPID.calculate(perception.getHeading().getDegrees(), getAlignTarget()), .75);
         }
 
