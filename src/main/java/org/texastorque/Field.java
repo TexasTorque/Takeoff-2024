@@ -8,12 +8,8 @@ package org.texastorque;
 
 import java.io.IOException;
 import java.util.List;
-
-import org.texastorque.Field.CenterLineAttempt;
 import org.texastorque.torquelib.util.TorqueMath;
-
 import com.pathplanner.lib.path.PathPlannerPath;
-
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.apriltag.AprilTagFields;
 import edu.wpi.first.math.geometry.Pose2d;
@@ -51,7 +47,6 @@ public final class Field {
     public static Pose2d getNotePose(int note) {
         switch (note) {
             case 1:
-                return new Pose2d(2.9, 7, ROT_FWD);
             case 2:
                 return new Pose2d(2.9, 5.55, ROT_FWD);
             case 3:
@@ -91,8 +86,8 @@ public final class Field {
      */
     public static Rotation2d getAngleToSpeaker(final Pose2d pose) {
         return Rotation2d.fromRadians(Math.atan2(
-                Field.SPEAKER_POSE.getY() - pose.getY(),
-                Field.SPEAKER_POSE.getX() - pose.getX()))
+                pose.getY() - Field.SPEAKER_POSE.getY(),
+                pose.getX() - Field.SPEAKER_POSE.getX()))
                 .plus(Rotation2d.fromRadians(Math.PI));
     }
 

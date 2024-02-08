@@ -46,26 +46,15 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
         ampWarmup = new TorqueToggleSupplier(operator::isLeftBumperDown);
         trap = new TorqueBoolSupplier(operator::isXButtonDown);
         manualGateOut = new TorqueBoolSupplier(operator::isDPADUpDown);
-        manualGateIn = new TorqueBoolSupplier(operator::isDPADUpDown);
-
-        // climbUp = new TorqueBoolSupplier(driver::isDPADUpDown);
-        // climbDown = new TorqueBoolSupplier(driver::isDPADDownDown);
-        // hookOut = new TorqueBoolSupplier(driver::isRightStickClickPressed);
+        manualGateIn = new TorqueBoolSupplier(operator::isDPADDownDown);
     }
 
     @Override
     public final void update() {
         updateDrivebase();
-        updateClimber();
         updateIntake();
         updateShooter();
         updateRumble();
-    }
-
-    public void updateClimber() {
-        // climbUp.onTrue(() -> climber.setState(Climber.State.UP));
-        // climbDown.onTrue(() -> climber.setState(Climber.State.DOWN));
-        // hookOut.onTrue(() -> climber.setState(Climber.State.TRAP));
     }
 
     public void updateIntake() {
@@ -88,6 +77,7 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
         ampWarmup.onTrue(() -> shooter.setState(Shooter.State.WARMUP));
 
         manualGateOut.onTrue(() -> shooter.setGateState(Shooter.GateState.OUT));
+        manualGateIn.onTrue(() -> shooter.setGateState(Shooter.GateState.IN));
     }
 
     public void updateDrivebase() {
@@ -95,13 +85,9 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
         speedDown.onTrue(() -> drivebase.speedSetting.shiftDown());
         speedUp.onTrue(() -> drivebase.speedSetting.shiftUp());
 
-        slowlySlowDownClick.onTrue(() -> 
-            drivebase.speedSequence = new SpeedSequence(Drivebase.SpeedSetting.FAST,
-                    Drivebase.SpeedSetting.SLOW, 1)
-        );
-        slowlySlowDownHold.onTrue(() -> 
-            drivebase.speedSetting = SpeedSetting.SEQ
-        );
+        slowlySlowDownClick.onTrue(() -> drivebase.speedSequence = new SpeedSequence(Drivebase.SpeedSetting.FAST,
+                Drivebase.SpeedSetting.SLOW, 1));
+        slowlySlowDownHold.onTrue(() -> drivebase.speedSetting = SpeedSetting.SEQ);
 
         if (!slowlySlowDownHold.get())
             drivebase.speedSetting = Drivebase.SpeedSetting.FAST;

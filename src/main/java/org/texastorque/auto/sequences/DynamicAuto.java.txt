@@ -39,9 +39,9 @@ public class DynamicAuto extends TorqueSequence implements Subsystems {
     public static TorqueFollowPath followPath(final Supplier<PathPlannerPath> path) {
         return new TorqueFollowPath(path, drivebase, 3);
     }
-  
+
     public class Shoot extends TorqueSequence {
-        private final double waitTime = .5;
+        // private final double waitTime = .5;
 
         public Shoot() {
             // addBlock(shooter.yieldState(Shooter.State.SMART));
@@ -49,16 +49,17 @@ public class DynamicAuto extends TorqueSequence implements Subsystems {
             // addBlock(new TorqueWaitTime(waitTime));
             // addBlock(shooter.yieldState(Shooter.State.OFF));
             // addBlock(intake.yieldState(Intake.State.OFF));
-            addBlock(new TorqueWaitTime(1));
+            addBlock(new TorqueWaitTime(2));
         }
     }
 
     public class GetAndScoreCloseNote extends TorqueSequence {
         // TODO: this may have to be supplier, idk
         public GetAndScoreCloseNote(final AutoConfig config) {
-            addBlock(intake.yieldState(Intake.State.SMART_INTAKE));
+            addBlock(intake.yieldState(Intake.State.INTAKE));
             addBlock(followPath(() -> perception.generateNextOmar(config.getNextNote())));
             addBlock(new TorqueWaitUntil(shooter::hasGateSpiked));
+            addBlock(intake.yieldState(Intake.State.OFF));
             addBlock(new TorqueRunSequence(new Shoot()));
         }
     }
@@ -66,7 +67,7 @@ public class DynamicAuto extends TorqueSequence implements Subsystems {
     public class HandleCenterLineNotes extends TorqueSequence {
 
         // this can be safely set to nothing because...
-        private CenterLineAttempt attempt = Field.CenterLineAttempt.EMPTY; 
+        private CenterLineAttempt attempt = Field.CenterLineAttempt.EMPTY;
 
         private Note bestNote = Note.EMPTY;
 
@@ -118,9 +119,11 @@ public class DynamicAuto extends TorqueSequence implements Subsystems {
         // addBlock(shooter.yieldState(Shooter.State.WARMUP));
         addBlock(new TorqueRunSequence(new Shoot()));
 
-        addBlock(intake.yieldState(Intake.State.SMART_INTAKE));
+        addBlock(intake.yieldState(Intake.State.INTAKE));
 
         addBlock(followPath(() -> perception.generateInitial(config.getNextNote())));
+
+        addBlock(intake.yieldState(Intake.State.OFF));
 
         addBlock(new TorqueWaitUntil(shooter::hasGateSpiked));
 
@@ -128,7 +131,7 @@ public class DynamicAuto extends TorqueSequence implements Subsystems {
 
         addBlock(new TorqueWhile(config::hasNext, new GetAndScoreCloseNote(config)));
 
-        addBlock(new TorqueSwitch(config::isDoingCenter, new HandleCenterLineNotes()));
+        // addBlock(new TorqueSwitch(config::isDoingCenter, new HandleCenterLineNotes()));
     }
 
     public AutoConfig getConfigFromNT() {
