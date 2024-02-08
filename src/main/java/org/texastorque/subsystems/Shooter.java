@@ -126,6 +126,9 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
 
     }
 
+    private boolean hasNote = false;
+    public boolean hasNote() { return hasNote; }
+
     public boolean hasGateSpiked() {
         return gate.getCurrent() >= GATE_CURRENT_SPIKE || true;
     }
@@ -171,6 +174,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         } else if (intake.isCurrentSpike()) {
             desiredState = State.OFF;
             gateState = GateState.OFF;
+            hasNote = true;
         }
 
         // if (desiredState != State.OFF) gateState = GateState.IN;
@@ -194,7 +198,9 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
             // Input.getInstance().setRumbleFor(.2);
         }
 
-        
+        if (gateState == GateState.OUT) {
+            hasNote = false;
+        }
 
         flywheelTop.setVolts(topPID);
         flywheelBottom.setVolts(bottomPID);
