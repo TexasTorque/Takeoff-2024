@@ -28,7 +28,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
 
     public static enum State implements TorqueState {
         OFF(new Shot(0, .32), false),
-        INTAKE(new Shot(-1500, .54), false),
+        INTAKE(new Shot(-1000, .54), false),
         AMP(new Shot(1230, .1728), true),
         TRAP(new Shot(0, .3), false),
         WARMUP(new Shot(1500, .32), false),
@@ -59,7 +59,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         }
     }
 
-    private static final double FLYWHEEL_TOLERANCE = 120, ROTARY_TOLERANCE = .1, GATE_CURRENT_SPIKE = 19;
+    private static final double FLYWHEEL_TOLERANCE = 120, ROTARY_TOLERANCE = .05, GATE_CURRENT_SPIKE = 10;
 
     private final TorqueNEO rotary, flywheelTop, flywheelBottom, gate;
 
@@ -153,22 +153,18 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
                 TorqueMath.toleranced(Math.abs(getBottomFlywheelVelocity()), shot.bottomVelocity,
                 FLYWHEEL_TOLERANCE)
                 && TorqueMath.toleranced(rotaryEncoder.getAbsolutePosition().getValue(), shot.angle,
-                ROTARY_TOLERANCE)
-                && wantsState(State.SMART) ? drivebase.isAligned() : true;
+                ROTARY_TOLERANCE) && !wantsState(State.OFF);
+                // && wantsState(State.SMART) ? drivebase.isAligned() : true;
     }
 
     public boolean isRotaryAtState() {
         return TorqueMath.toleranced(rotary.getPosition(), desiredState.shot.angle, ROTARY_TOLERANCE);
     }
 
-    public boolean goingToAmp() {
-        return wantsState(State.AMP) && TorqueMath.toleranced(rotaryEncoder.getAbsolutePosition().getValue(), .1);
-    }
-
     @Override
     protected void onStateChange() {
         if (wantsState(State.SMART)) {
-            drivebase.setAlignTarget(perception.getAngleToSpeaker());
+            drivebase.setAlignTarget(perception.getHeading().plus(perception.getAngleToSpeaker()));
             shot = shotTable.get(perception.getDistanceToSpeaker());
         }
     }
@@ -196,7 +192,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
                 ROTARY_TOLERANCE));
         Debug.log("drivebase ready", wantsState(State.SMART) ? drivebase.isAligned() : true);
 
-        if (intake.isIntaking()) {
+        if (intake.isIntaking() && intake.isRotaryDownEnough() && !intake.isCurrentSpike()) {
             desiredState = State.INTAKE;
             gateState = GateState.IN;
         } else if (intake.isCurrentSpike()) {
@@ -227,7 +223,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
                 + flywheelFF.calculate(shot.bottomVelocity));
 
         rotary.setVolts(TorqueMath.constrain(rotaryPID.calculate(rotaryEncoder.getAbsolutePosition().getValue(),
-                shot.angle), goingToAmp() ? 2 : 8));
+                shot.angle),  wantsState(State.AMP) ? 2 : 8));
 
         gate.setVolts(gateState.voltage);
 
