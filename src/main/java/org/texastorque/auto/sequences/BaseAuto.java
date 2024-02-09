@@ -105,11 +105,12 @@ public class BaseAuto extends TorqueSequence implements Subsystems {
         private final double waitTime = .5;
 
         public Shoot() {
-            addBlock(shooter.yieldState(Shooter.State.SMART));
-            addBlock(new TorqueWaitUntil(shooter::isReadyToShoot));
-            addBlock(new TorqueWaitTime(waitTime));
-            addBlock(shooter.yieldState(Shooter.State.OFF));
-            addBlock(intake.yieldState(Intake.State.OFF));
+            // addBlock(shooter.yieldState(Shooter.State.SMART));
+            // addBlock(new TorqueWaitUntil(shooter::isReadyToShoot));
+            // addBlock(new TorqueWaitTime(waitTime));
+            // addBlock(shooter.yieldState(Shooter.State.OFF));
+            // addBlock(intake.yieldState(Intake.State.OFF));
+            addBlock(new TorqueWaitTime(1));
         }
     }
 
