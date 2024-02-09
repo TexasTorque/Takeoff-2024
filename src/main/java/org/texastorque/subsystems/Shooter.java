@@ -34,7 +34,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         WARMUP(new Shot(1500, .32), false),
         LAYUP(new Shot(5000, .145), true),
         SAFEZONE(new Shot(5000, .25), true),
-        SMART(true),;
+        SMART(true);
 
         public final Shot shot;
         public final boolean isAShot;
@@ -127,7 +127,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         gate.setBreakMode(true);
 
         shotTable = new TorqueLookUpTable<Shot>(
-                (final Shot me, final Shot other) -> Math.abs(other.angle - me.angle) < 0.1
+                (final Shot me, final Shot other) -> Math.abs(other.angle - me.angle) < 0.01
                         && Math.abs(other.topVelocity - me.topVelocity) < 0.1,
                 (final Shot me, final Shot end, final Double t) -> new Shot(lerp(me.topVelocity, end.topVelocity, t),
                         lerp(me.angle, end.angle, t)));
@@ -149,20 +149,12 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
     public void initialize(TorqueMode mode) {
     }
 
-    private boolean hasNote = false;
-    public boolean hasNote() { return hasNote; }
-
     public boolean hasGateSpiked() {
         return gate.getCurrent() >= GATE_CURRENT_SPIKE;
     }
 
     public boolean isReadyToShoot() {
-        return TorqueMath.toleranced(Math.abs(getTopFlywheelVelocity()), shot.topVelocity,
-                FLYWHEEL_TOLERANCE) &&
-                TorqueMath.toleranced(Math.abs(getBottomFlywheelVelocity()), shot.bottomVelocity,
-                        FLYWHEEL_TOLERANCE)
-                && isRotaryAtState();
-        // && wantsState(State.SMART) ? drivebase.isAligned() : true;
+        return isTopFlywheelReady() && isBottomFlywheelReady() && isReadyToShoot() && isRotatryReady();
     }
 
     public boolean isRotaryAtState() {
@@ -171,6 +163,26 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
 
     public double getRotaryEncoder() {
         return rotaryEncoder.getAbsolutePosition().getValue();
+    }
+
+    private double getTopFlywheelVelocity() {
+        return flywheelTopEncoder.getVelocity().getValue() * 60;
+    }
+
+    private double getBottomFlywheelVelocity() {
+        return flywheelBottomEncoder.getVelocity().getValue() * 60;
+    }
+
+    private boolean isTopFlywheelReady() {
+        return TorqueMath.toleranced(Math.abs(getTopFlywheelVelocity()), shot.topVelocity, FLYWHEEL_TOLERANCE);
+    }
+
+    private boolean isBottomFlywheelReady() {
+        return TorqueMath.toleranced(Math.abs(getTopFlywheelVelocity()), shot.bottomVelocity, FLYWHEEL_TOLERANCE);
+    }
+
+    private boolean isRotatryReady() {
+        return TorqueMath.toleranced(getRotaryEncoder(), shot.angle, ROTARY_TOLERANCE);
     }
 
     @Override
@@ -184,13 +196,9 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         Debug.log("Distance to Tag", perception.getDistanceToSpeaker());
         Debug.log("Angle to Speaker", perception.getAngleToSpeaker().getDegrees());
         Debug.log("Shot", shot.toString());
-        Debug.log("Top Flywheel Ready", TorqueMath.toleranced(Math.abs(getTopFlywheelVelocity()), shot.topVelocity,
-                FLYWHEEL_TOLERANCE));
-        Debug.log("Bottom Flywheel Ready",
-                TorqueMath.toleranced(Math.abs(getBottomFlywheelVelocity()), shot.bottomVelocity,
-                        FLYWHEEL_TOLERANCE));
-        Debug.log("Rotary Ready", TorqueMath.toleranced(getRotaryEncoder(), shot.angle,
-                ROTARY_TOLERANCE));
+        Debug.log("Top Flywheel Ready", isTopFlywheelReady());
+        Debug.log("Bottom Flywheel Ready", isBottomFlywheelReady());
+        Debug.log("Rotary Ready", isRotatryReady());
 
         Debug.log("drivebase aligned", drivebase.isAligned());
 
@@ -203,10 +211,12 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
             hasNote = true;
         }
 
-        if (wantsState(State.SMART))
+        if (wantsState(State.SMART)) {
             shot = shotTable.get(perception.getDistanceToSpeaker());
-        else {
-            drivebase.setAlignTarget(perception.getAngleToSpeaker());
+            drivebase.setAlignTarget(perception.getAngleToSpeaker()); 
+        } else {
+            // drivebase.setAlignTarget(perception.getAngleToSpeaker());  
+            // ^ this is smart if you want it to run once but I dint think we want that
             shot = desiredState.shot;
         }
 
@@ -217,8 +227,9 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
             shot = new Shot(velo, angle);
         }
 
-        if (isReadyToShoot() && desiredState.isAShot)
+        if (isReadyToShoot() && desiredState.isAShot) {
             gateState = GateState.OUT;
+        }
 
         flywheelTop.setVolts(flywheelTopPID.calculate(getTopFlywheelVelocity(), shot.topVelocity)
                 + flywheelFF.calculate(shot.topVelocity));
@@ -235,9 +246,6 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
 
         gate.setVolts(gateState.voltage);
 
-        if (gateState == GateState.OUT)
-            hasNote = false;
-
         if (mode.isTeleop()) {
             desiredState = State.OFF;
             gateState = GateState.OFF;
@@ -252,13 +260,6 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         this.gateState = state;
     }
 
-    private double getTopFlywheelVelocity() {
-        return flywheelTopEncoder.getVelocity().getValue() * 60;
-    }
-
-    private double getBottomFlywheelVelocity() {
-        return flywheelBottomEncoder.getVelocity().getValue() * 60;
-    }
 
     public static synchronized final Shooter getInstance() {
         return instance == null ? instance = new Shooter() : instance;
