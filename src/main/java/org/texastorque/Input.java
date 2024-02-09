@@ -101,7 +101,7 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
 
         drivebase.rotating = rotationVelocity != 0;
 
-        drivebase.setInputSpeedsTeleop(new TorqueSwerveSpeeds(xVelocity, yVelocity, rotationVelocity));
+        drivebase.setInputSpeedsTeleop(new TorqueSwerveSpeeds(-xVelocity, -yVelocity, rotationVelocity));
     }
 
     public void updateRumble() {

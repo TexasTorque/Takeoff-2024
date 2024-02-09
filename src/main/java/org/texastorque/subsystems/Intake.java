@@ -85,11 +85,14 @@ public class Intake extends TorqueStatorSubsystem<Intake.State> implements Subsy
 
     @Override
     public void update(final TorqueMode mode) {
+
+        State activeState = desiredState;
+
         Debug.log("Intake State", desiredState.toString());
         Debug.log("Intake Rotary Left", rotaryLeft.getPosition());
         Debug.log("Intake Rotary Right", rotaryRight.getPosition());
 
-        if (wantsState(State.SMART_INTAKE) && !spiked) {
+        if (wantsState(State.SMART_INTAKE)) {
             if (!spikeTimeout.get() && shooter.hasGateSpiked()) {
                 Input.getInstance().setRumbleFor(.2);
                 spiked = true;
@@ -100,17 +103,18 @@ public class Intake extends TorqueStatorSubsystem<Intake.State> implements Subsy
         }
 
         if (spiked && shooter.isRotaryAtState())
-            desiredState = State.OFF;
+            activeState = State.OFF;
 
         Debug.log("Desired State After", desiredState.toString());
         Debug.log("spiked", spiked);
+        Debug.log("intake wants to come up", spiked && shooter.isRotaryAtState());
 
-        rollers.setVolts(desiredState.rollerSpeed);
+        rollers.setVolts(activeState.rollerSpeed);
 
         rotaryLeft.setVolts(rotaryLeftPID.calculate(rotaryLeft.getPosition(),
-                desiredState.rotaryPosition));
+                activeState.rotaryPosition));
         rotaryRight.setVolts(rotaryRightPID.calculate(rotaryRight.getPosition(),
-                desiredState.rotaryPosition));
+                activeState.rotaryPosition));
     }
 
     @Override

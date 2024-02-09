@@ -89,7 +89,7 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
     public static final double WIDTH = Units.inchesToMeters(21.25);
 
     public final static double MAX_VELOCITY_TELEOP = 4.6, MAX_ACCELERATION = 2,
-            MAX_ANGULAR_VELOCITY = 3;
+            MAX_ANGULAR_VELOCITY = 2 * Math.PI;
 
     public double ANGULAR_VELOCITY_COEFFICIENT = 1;
 
@@ -121,12 +121,7 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
     private Drivebase() {
         super(State.FIELD_RELATIVE);
 
-         TorqueSwerveModule2022.SwerveConfig swerveConfig = TorqueSwerveModule2022.SwerveConfig.defaultConfig;
-
-         swerveConfig.turnGearRatio = 13.71;
-
-        
-
+        TorqueSwerveModule2022.SwerveConfig swerveConfig = TorqueSwerveModule2022.SwerveConfig.defaultConfig;
 
         fl = new TorqueSwerveModule2022("Front Left", Ports.FL_MOD, 0., swerveConfig, .2);
         fr = new TorqueSwerveModule2022("Front Right", Ports.FR_MOD, 0, swerveConfig, .2);
@@ -195,18 +190,18 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
     @Override
     public final void update(final TorqueMode mode) {
         Debug.log("isAligned", isAligned());
-        Debug.log("Speed Multiplier", speedSetting == SpeedSetting.SEQ ? speedSequence.get() : speedSetting.speed);
-        Debug.log("Angular Velocity", perception.getAngularVelocity().getDegrees());
+        Debug.log("align target", getAlignTarget());
 
         ANGULAR_VELOCITY_COEFFICIENT = SmartDashboard.getNumber("ang coeff", 0);
+
         // if (shooter.wantsState(Shooter.State.SMART)) {
-        // desiredState = State.ALIGN_TO_ANGLE;
+        //     desiredState = State.ALIGN_TO_ANGLE;
         // } else
-        // desiredState = State.FIELD_RELATIVE;
+        //     desiredState = State.FIELD_RELATIVE;
 
         // inputSpeeds = new TorqueSwerveSpeeds(.5, 0, 2);
 
-        if (true) {
+        if (wantsState(State.FIELD_RELATIVE)) {
             // inputSpeeds = inputSpeeds.times(speedSetting == SpeedSetting.SEQ ?
             // speedSequence.get() : speedSetting.speed)
             // .toFieldRelativeSpeeds(perception.getHeading());
@@ -224,21 +219,21 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
 
         }
 
-        // if (wantsState(State.ALIGN_TO_ANGLE)) {
-        // inputSpeeds.omegaRadiansPerSecond = -TorqueMath.constrain(
-        // alignPID.calculate(perception.getHeading().getDegrees(), getAlignTarget()),
-        // .75);
-        // }
+        if (wantsState(State.ALIGN_TO_ANGLE)) {
+            inputSpeeds.omegaRadiansPerSecond = TorqueMath.constrain(
+                    alignPID.calculate(perception.getHeading().getDegrees(), getAlignTarget()),
+                    .75);
+        }
 
         swerveStates = kinematics.toSwerveModuleStates(inputSpeeds);
 
         SwerveDriveKinematics.desaturateWheelSpeeds(swerveStates,
                 MAX_VELOCITY_TELEOP);
 
-        if (false) {
-            // manuallySetModuleStates(swerveStates[0].angle.getRadians(),
-            // swerveStates[1].angle.getRadians(), swerveStates[2].angle.getRadians(),
-            // swerveStates[3].angle.getRadians());
+        if (inputSpeeds.hasZeroVelocity()) {
+            manuallySetModuleStates(swerveStates[0].angle.getRadians(),
+                    swerveStates[1].angle.getRadians(), swerveStates[2].angle.getRadians(),
+                    swerveStates[3].angle.getRadians());
 
         } else {
             fl.setDesiredState(swerveStates[0]);

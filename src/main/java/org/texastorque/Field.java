@@ -91,9 +91,9 @@ public final class Field {
      * Get the angle from pose to the speaker.
      */
     public static Rotation2d getAngleToSpeaker(final Pose2d pose) {
-        return Rotation2d.fromDegrees(180).minus(Rotation2d.fromRadians(Math.atan2(
+        return (Rotation2d.fromRadians(Math.atan2(
                 Field.SPEAKER_POSE.getY() - pose.getY(),
-                Field.SPEAKER_POSE.getX() + pose.getX())));
+                Field.SPEAKER_POSE.getX() + pose.getX()))).plus(Rotation2d.fromRadians(Math.PI));
     }
 
 }
