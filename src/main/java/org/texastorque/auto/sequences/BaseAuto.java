@@ -48,6 +48,10 @@ public class BaseAuto extends TorqueSequence implements Subsystems {
     /**
      * A NoteSequence is a list of notes *indexes* (not actual Note objects) that is encapsulated 
      * so that we can calculate paths.
+     * 
+     * Note indexes work as so. The first three notes that are placed inside the alliance wing
+     * are indexed from top down 1, 2, and 3. The notes on the center line are indexed from top
+     * down 10, 20, 30, 40, 50. Close notes are indexed < 10, center line notes are indexed >= 10.
      */
     private class NoteSequence {
         private final List<Integer> notes = new ArrayList<Integer>();
