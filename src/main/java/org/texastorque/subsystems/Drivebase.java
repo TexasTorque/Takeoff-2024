@@ -7,8 +7,6 @@
 package org.texastorque.subsystems;
 
 import java.util.function.Supplier;
-
-import org.littletonrobotics.junction.Logger;
 import org.texastorque.Debug;
 import org.texastorque.Ports;
 import org.texastorque.Subsystems;
@@ -17,9 +15,7 @@ import org.texastorque.torquelib.base.TorqueMode;
 import org.texastorque.torquelib.base.TorqueState;
 import org.texastorque.torquelib.base.TorqueStatorSubsystem;
 import org.texastorque.torquelib.swerve.TorqueSwerveSpeeds;
-import org.texastorque.torquelib.swerve.TorqueSwerveModuleX.SwerveConfig;
 import org.texastorque.torquelib.swerve.TorqueSwerveModule2022;
-import org.texastorque.torquelib.swerve.TorqueSwerveModuleX;
 import org.texastorque.torquelib.util.TorqueMath;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.geometry.Pose2d;
@@ -88,7 +84,7 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
 
     public static final double WIDTH = Units.inchesToMeters(21.25);
 
-    public final static double MAX_VELOCITY_TELEOP = 4.6, MAX_ACCELERATION = 2,
+    public final static double MAX_VELOCITY = 4.6, MAX_ACCELERATION = 2,
             MAX_ANGULAR_VELOCITY = 2 * Math.PI;
 
     public double ANGULAR_VELOCITY_COEFFICIENT = 1;
@@ -192,34 +188,15 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
         Debug.log("isAligned", isAligned());
         Debug.log("align target", getAlignTarget());
 
-        ANGULAR_VELOCITY_COEFFICIENT = SmartDashboard.getNumber("ang coeff", 0);
-
         // if (shooter.wantsState(Shooter.State.SMART)) {
-        //     desiredState = State.ALIGN_TO_ANGLE;
+        // desiredState = State.ALIGN_TO_ANGLE;
         // } else
-        //     desiredState = State.FIELD_RELATIVE;
-
-        // inputSpeeds = new TorqueSwerveSpeeds(.5, 0, 2);
+        // desiredState = State.FIELD_RELATIVE;
 
         if (wantsState(State.FIELD_RELATIVE)) {
-            // inputSpeeds = inputSpeeds.times(speedSetting == SpeedSetting.SEQ ?
-            // speedSequence.get() : speedSetting.speed)
-            // .toFieldRelativeSpeeds(perception.getHeading());
-
             inputSpeeds = inputSpeeds.times(speedSetting == SpeedSetting.SEQ ? speedSequence.get()
-                    : speedSetting.speed);
-
-            inputSpeeds = inputSpeeds.toFieldRelativeSpeeds(perception.getHeading());
-
-            // .minus(perception.getAngularVelocity().times(ANGULAR_VELOCITY_COEFFICIENT)));
-            // .times(speedSetting == SpeedSetting.SEQ ? speedSequence.get()
-            // : speedSetting.speed));
-
-            // correctHeading();
-
-        }
-
-        if (wantsState(State.ALIGN_TO_ANGLE)) {
+                    : speedSetting.speed).toFieldRelativeSpeeds(perception.getHeading());
+        } else if (wantsState(State.ALIGN_TO_ANGLE)) {
             inputSpeeds.omegaRadiansPerSecond = TorqueMath.constrain(
                     alignPID.calculate(perception.getHeading().getDegrees(), getAlignTarget()),
                     .75);
@@ -227,14 +204,12 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
 
         swerveStates = kinematics.toSwerveModuleStates(inputSpeeds);
 
-        SwerveDriveKinematics.desaturateWheelSpeeds(swerveStates,
-                MAX_VELOCITY_TELEOP);
+        SwerveDriveKinematics.desaturateWheelSpeeds(swerveStates, MAX_VELOCITY);
 
         if (inputSpeeds.hasZeroVelocity()) {
-            manuallySetModuleStates(swerveStates[0].angle.getRadians(),
-                    swerveStates[1].angle.getRadians(), swerveStates[2].angle.getRadians(),
-                    swerveStates[3].angle.getRadians());
-
+            manuallySetModuleStates(swerveStates[0].angle,
+                    swerveStates[1].angle, swerveStates[2].angle,
+                    swerveStates[3].angle);
         } else {
             fl.setDesiredState(swerveStates[0]);
             fr.setDesiredState(swerveStates[1]);
@@ -244,41 +219,14 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
 
         if (mode.isTeleop())
             desiredState = desiredState.parent;
-
-        Logger.recordOutput("module states", swerveStates);
-
     }
 
-    private void manuallySetModuleStates(final double flAngle, final double frAngle,
-            final double blAngle, final double brAngle) {
-        fl.setDesiredState(new SwerveModuleState(0, Rotation2d.fromRadians(flAngle)));
-        fr.setDesiredState(new SwerveModuleState(0, Rotation2d.fromRadians(frAngle)));
-        bl.setDesiredState(new SwerveModuleState(0, Rotation2d.fromRadians(blAngle)));
-        br.setDesiredState(new SwerveModuleState(0, Rotation2d.fromRadians(brAngle)));
-    }
-
-    double lastRotationRadians = 0;
-
-    public boolean rotating = false;
-
-    public void correctHeading() {
-        final double realRotationRadians = perception.getHeading().getRadians();
-
-        if (rotating || !inputSpeeds.hasTranslationalVelocity()) { // if the driver wants to turn or the robot has
-                                                                   // stopped
-            lastRotationRadians = realRotationRadians;
-        }
-
-        if (!rotating) { // The driver doesn't want it to turn, lock heading
-            final double omega = teleopOmegaController.calculate(realRotationRadians, lastRotationRadians);
-            inputSpeeds.omegaRadiansPerSecond = -omega;
-        }
-
-        Debug.log("rotational velocity", inputSpeeds.omegaRadiansPerSecond);
-        Debug.log("rotating", rotating);
-        Debug.log("last Rotation", Rotation2d.fromRadians(lastRotationRadians).getDegrees());
-        Debug.log("rotation lock", !rotating);
-
+    private void manuallySetModuleStates(final Rotation2d flAngle, final Rotation2d frAngle, final Rotation2d blAngle,
+            final Rotation2d brAngle) {
+        fl.setDesiredState(new SwerveModuleState(0, flAngle));
+        fr.setDesiredState(new SwerveModuleState(0, frAngle));
+        bl.setDesiredState(new SwerveModuleState(0, blAngle));
+        br.setDesiredState(new SwerveModuleState(0, brAngle));
     }
 
     @Override

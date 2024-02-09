@@ -92,16 +92,14 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
         if (!slowlySlowDownHold.get())
             drivebase.speedSetting = Drivebase.SpeedSetting.FAST;
 
-        final double xVelocity = TorqueMath.scaledLinearDeadband(driver.getLeftYAxis(), CONTROLLER_DEADBAND)
-                * Drivebase.MAX_VELOCITY_TELEOP;
-        final double yVelocity = TorqueMath.scaledLinearDeadband(driver.getLeftXAxis(), CONTROLLER_DEADBAND)
-                * Drivebase.MAX_VELOCITY_TELEOP;
+        final double xVelocity = TorqueMath.scaledLinearDeadband(-driver.getLeftYAxis(), CONTROLLER_DEADBAND)
+                * Drivebase.MAX_VELOCITY;
+        final double yVelocity = TorqueMath.scaledLinearDeadband(-driver.getLeftXAxis(), CONTROLLER_DEADBAND)
+                * Drivebase.MAX_VELOCITY;
         final double rotationVelocity = TorqueMath.scaledLinearDeadband(-driver.getRightXAxis(), CONTROLLER_DEADBAND)
                 * Drivebase.MAX_ANGULAR_VELOCITY;
 
-        drivebase.rotating = rotationVelocity != 0;
-
-        drivebase.setInputSpeedsTeleop(new TorqueSwerveSpeeds(-xVelocity, -yVelocity, rotationVelocity));
+        drivebase.setInputSpeedsTeleop(new TorqueSwerveSpeeds(xVelocity, yVelocity, rotationVelocity));
     }
 
     public void updateRumble() {
