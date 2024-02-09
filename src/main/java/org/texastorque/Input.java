@@ -1,6 +1,8 @@
 package org.texastorque;
 
 import org.texastorque.subsystems.*;
+import org.texastorque.subsystems.Drivebase.SpeedSequence;
+import org.texastorque.subsystems.Drivebase.SpeedSetting;
 import org.texastorque.torquelib.base.TorqueInput;
 import org.texastorque.torquelib.control.TorqueBoolSupplier;
 import org.texastorque.torquelib.control.TorqueClickSupplier;
@@ -17,9 +19,9 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
 
     private final TorqueRequestableTimeout rumbleTimeout;
 
-    private final TorqueBoolSupplier resetGyro, speedUp, speedDown, climbUp, climbDown, hookOut, runSmartIntake,
+    private final TorqueBoolSupplier resetGyro, speedUp, speedDown, runSmartIntake,
             runDumbIntake, runOuttake, speakerSmartShot, speakerLayup, speakerSafeZone, amp, trap, speakerWarmup,
-            ampWarmup;
+            ampWarmup, slowlySlowDownClick, slowlySlowDownHold, manualGateOut, manualGateIn;
 
     private Input() {
         driver = new TorqueController(0, 0.1);
@@ -29,10 +31,12 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
         resetGyro = new TorqueBoolSupplier(driver::isRightCenterButtonDown);
         speedUp = new TorqueClickSupplier(driver::isRightBumperDown);
         speedDown = new TorqueClickSupplier(driver::isLeftBumperDown);
+        slowlySlowDownClick = new TorqueClickSupplier(driver::isLeftTriggerDown);
+        slowlySlowDownHold = new TorqueBoolSupplier(driver::isLeftTriggerDown);
 
         runSmartIntake = new TorqueBoolSupplier(driver::isRightTriggerDown);
         runDumbIntake = new TorqueBoolSupplier(driver::isRightBumperDown);
-        runOuttake = new TorqueBoolSupplier(driver::isLeftTriggerDown);
+        runOuttake = new TorqueBoolSupplier(driver::isAButtonDown);
 
         speakerSmartShot = new TorqueBoolSupplier(operator::isRightTriggerDown);
         speakerWarmup = new TorqueToggleSupplier(operator::isRightBumperDown);
@@ -41,30 +45,21 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
         amp = new TorqueBoolSupplier(operator::isLeftTriggerDown);
         ampWarmup = new TorqueToggleSupplier(operator::isLeftBumperDown);
         trap = new TorqueBoolSupplier(operator::isXButtonDown);
-
-        climbUp = new TorqueBoolSupplier(driver::isDPADUpDown);
-        climbDown = new TorqueBoolSupplier(driver::isDPADDownDown);
-        hookOut = new TorqueBoolSupplier(driver::isRightStickClickPressed);
+        manualGateOut = new TorqueBoolSupplier(operator::isDPADUpDown);
+        manualGateIn = new TorqueBoolSupplier(operator::isDPADDownDown);
     }
 
     @Override
     public final void update() {
         updateDrivebase();
-        updateClimber();
         updateIntake();
         updateShooter();
         updateRumble();
     }
 
-    public void updateClimber() {
-        climbUp.onTrue(() -> climber.setState(Climber.State.UP));
-        climbDown.onTrue(() -> climber.setState(Climber.State.DOWN));
-        hookOut.onTrue(() -> climber.setState(Climber.State.TRAP));
-    }
-
     public void updateIntake() {
         runSmartIntake.onTrue(() -> intake.setState(Intake.State.SMART_INTAKE));
-        runDumbIntake.onTrue(() -> intake.setState(Intake.State.SMART_INTAKE));
+        runDumbIntake.onTrue(() -> intake.setState(Intake.State.INTAKE));
         runOuttake.onTrue(() -> intake.setState(Intake.State.OUTTAKE));
     }
 
@@ -80,6 +75,9 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
         speakerWarmup.onTrue(() -> shooter.setState(Shooter.State.WARMUP));
 
         ampWarmup.onTrue(() -> shooter.setState(Shooter.State.WARMUP));
+
+        manualGateOut.onTrue(() -> shooter.setGateState(Shooter.GateState.OUT));
+        manualGateIn.onTrue(() -> shooter.setGateState(Shooter.GateState.IN));
     }
 
     public void updateDrivebase() {
@@ -87,14 +85,21 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
         speedDown.onTrue(() -> drivebase.speedSetting.shiftDown());
         speedUp.onTrue(() -> drivebase.speedSetting.shiftUp());
 
-        final double xVelocity = TorqueMath.scaledLinearDeadband(driver.getLeftYAxis(), CONTROLLER_DEADBAND)
-                * Drivebase.MAX_VELOCITY_TELEOP;
-        final double yVelocity = TorqueMath.scaledLinearDeadband(driver.getLeftXAxis(), CONTROLLER_DEADBAND)
-                * Drivebase.MAX_VELOCITY_TELEOP;
-        final double rotationVelocity = TorqueMath.scaledLinearDeadband(driver.getRightXAxis(), CONTROLLER_DEADBAND)
+        slowlySlowDownClick.onTrue(() -> drivebase.speedSequence = new SpeedSequence(Drivebase.SpeedSetting.FAST,
+                Drivebase.SpeedSetting.SLOW, 1));
+        slowlySlowDownHold.onTrue(() -> drivebase.speedSetting = SpeedSetting.SEQ);
+
+        if (!slowlySlowDownHold.get())
+            drivebase.speedSetting = Drivebase.SpeedSetting.FAST;
+
+        final double xVelocity = TorqueMath.scaledLinearDeadband(-driver.getLeftYAxis(), CONTROLLER_DEADBAND)
+                * Drivebase.MAX_VELOCITY;
+        final double yVelocity = TorqueMath.scaledLinearDeadband(-driver.getLeftXAxis(), CONTROLLER_DEADBAND)
+                * Drivebase.MAX_VELOCITY;
+        final double rotationVelocity = TorqueMath.scaledLinearDeadband(-driver.getRightXAxis(), CONTROLLER_DEADBAND)
                 * Drivebase.MAX_ANGULAR_VELOCITY;
 
-        drivebase.setInputSpeeds(new TorqueSwerveSpeeds(xVelocity, yVelocity, rotationVelocity));
+        drivebase.setInputSpeedsTeleop(new TorqueSwerveSpeeds(xVelocity, yVelocity, rotationVelocity));
     }
 
     public void updateRumble() {

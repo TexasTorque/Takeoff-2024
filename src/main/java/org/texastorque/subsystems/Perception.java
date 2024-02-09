@@ -3,10 +3,12 @@ package org.texastorque.subsystems;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import org.littletonrobotics.junction.Logger;
+import java.util.Optional;
+import java.util.function.Supplier;
 import org.texastorque.Debug;
 import org.texastorque.Field;
 import org.texastorque.Subsystems;
+import org.texastorque.Field.CenterLineAttempt;
 import org.texastorque.toast.lib.Camera;
 import org.texastorque.toast.lib.Toast;
 import org.texastorque.toast.lib.Util;
@@ -19,6 +21,11 @@ import org.texastorque.torquelib.base.TorqueState;
 import org.texastorque.torquelib.base.TorqueStatorSubsystem;
 import org.texastorque.torquelib.sensors.TorqueNavXGyro;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.pathplanner.lib.path.GoalEndState;
+import com.pathplanner.lib.path.PathConstraints;
+import com.pathplanner.lib.path.PathPlannerPath;
+import com.pathplanner.lib.path.PathPoint;
+import com.pathplanner.lib.path.RotationTarget;
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.Vector;
@@ -27,26 +34,32 @@ import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Transform3d;
+import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 
 /**
  * Robot perception subsystem, handles sensors that the robot uses
- * to contextualize it's surroundings. 
+ * to contextualize it's surroundings.
  * 
  * 
  * Other perception subsystems are below for reference:
- * - https://github.com/TexasTorque/Bravo-2024/blob/21ab2550dfbc8c3d1c73813b9feec5aa52dac205/src/main/java/org/texastorque/subsystems/Perception.java
- * - https://github.com/TexasTorque/Banana-2024/blob/0d04f9470ef629f2e7fc1128fed3fcafd0b1d2bf/src/main/java/org/texastorque/subsystems/Perception.java
+ * -
+ * https://github.com/TexasTorque/Bravo-2024/blob/21ab2550dfbc8c3d1c73813b9feec5aa52dac205/src/main/java/org/texastorque/subsystems/Perception.java
+ * -
+ * https://github.com/TexasTorque/Banana-2024/blob/0d04f9470ef629f2e7fc1128fed3fcafd0b1d2bf/src/main/java/org/texastorque/subsystems/Perception.java
  * 
- * @author Justus 
+ * @author Justus
  */
 public final class Perception extends TorqueStatorSubsystem<Perception.State> implements Subsystems {
 
-    public enum State implements TorqueState { VISION; }
-    
-     /**
+    public enum State implements TorqueState {
+        VISION;
+    }
+
+    /**
      * Standard deviations of model states. Increase these numbers to trust your
      * model's state estimates less. This matrix is in the form [x, y, theta]ᵀ,
      * with units in meters and radians, then meters.
@@ -62,11 +75,12 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
     private static final Vector<N3> VISION_STDS = VecBuilder.fill(.1, .1, Units.degreesToRadians(5));
 
     /**
-     * The maximum angular velocity of the robot (in radians per second) and maximum distance from
-     * the camera to the april tag (in meters) where we trust the vision measurements. 
+     * The maximum angular velocity of the robot (in radians per second) and maximum
+     * distance from
+     * the camera to the april tag (in meters) where we trust the vision
+     * measurements.
      */
     private static final double MAX_ANGULAR_VELOCITY_RADS = Math.PI * 2, MAX_DISTANCE = 6;
-
 
     private final Toast toast;
     private final SwerveDrivePoseEstimator poseEstimator;
@@ -85,24 +99,27 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
                 drivebase.getModulePositions(),
                 new Pose2d(), ODOMETRY_STDS, VISION_STDS);
 
-        // Add toast cameras 
-        toast.addCamera(new Camera("shooter_right", new Transform3d()));
-        toast.addCamera(new Camera("shooter_left", new Transform3d()));
-        toast.addCamera(new Camera("intake_right", new Transform3d()));
-        toast.addCamera(new Camera("intake_left", new Transform3d()));
+        // Add toast cameras
+        toast.addCamera(new Camera("SHTR_R", Camera.transformInchDeg(-6.9, -11.75, 9.3, 0, 30, 180)));
+        toast.addCamera(new Camera("SHTR_L", Camera.transformInchDeg(-6.9, 11.75, 9.3, 0, 30, 180)));
+        toast.addCamera(new Camera("INTK_R", new Transform3d()));
+        toast.addCamera(new Camera("INTK_L", new Transform3d()));
 
         // Register the apriltags pipeline on all cameras
         toast.iterCams(cam -> cam.addPipeline(new AprilTags(cam.id)));
 
-        // Register the object detection pipelines on intake cameras and configure them to detect notes
-        toast.iterCams("intake", cam -> cam.addPipeline(new ObjDetector<Note>(Note::fromJSON)));
+        // Register the object detection pipelines on intake cameras and configure them
+        // to detect notes
+        toast.getCamera("INTK_R").get().addPipeline(new ObjDetector<Note>(Note::fromJSONRight));
+        toast.getCamera("INTK_L").get().addPipeline(new ObjDetector<Note>(Note::fromJSONLeft));
 
-        // Log the field map to the dashboard 
+        // Log the field map to the dashboard
         Debug.field("Field", field);
     }
 
     @Override
-    public void initialize(final TorqueMode mode) { }
+    public void initialize(final TorqueMode mode) {
+    }
 
     @Override
     public void update(final TorqueMode mode) {
@@ -120,7 +137,7 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
         poseEstimator.update(getHeading(), drivebase.getModulePositions());
     }
 
-    private final Map<Integer, Pose3d> tagsInView = new HashMap<>(); 
+    private final Map<Integer, Pose3d> tagsInView = new HashMap<>();
 
     public void updateVisionLocalization() {
         toast.update(); // Updates all the vision pipelines.
@@ -150,28 +167,37 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
                 // get tag pose in world space
                 final Pose3d tagPose = fieldMap.getTagPose(detection.id).get(); // should never fail
 
-                // we see this tag so we add it to the tagsInView map. this is so we can log the detections on advantagescope
-                if (!tagsInView.containsKey(detection.id)) tagsInView.put(detection.id, tagPose);
+                // we see this tag so we add it to the tagsInView map. this is so we can log the
+                // detections on advantagescope
+                if (!tagsInView.containsKey(detection.id))
+                    tagsInView.put(detection.id, tagPose);
 
-                // converting from cam space to robot space by adding the camera->tag transform with the center->camera transform
-                final Transform3d robotSpaceTransform = detection.transform.plus(cam.transform);    
-                
+                // converting from cam space to robot space by adding the camera->tag transform
+                // with the center->camera transform
+                Transform3d robotSpaceTransform = detection.transform.plus(cam.transform);
+
+                robotSpaceTransform = new Transform3d(new Translation3d(
+                        robotSpaceTransform.getX(),
+                        -robotSpaceTransform.getY(),
+                        -robotSpaceTransform.getZ()), robotSpaceTransform.getRotation());
+
                 // converting robot space to world space using the position of the tag
                 final Pose3d estPose3d = tagPose.transformBy(robotSpaceTransform);
 
                 final Pose2d estPose = estPose3d.toPose2d();
 
-                // if the estimated position is off the field then something is wrong and we must move on
-                if (!Field.isPoseOnField(estPose))
-                    continue;
+                // if the estimated position is off the field then something is wrong and we
+                // must move on
+                // if (!Field.isPoseOnField(estPose))
+                // continue;
 
                 // add the processed vision messurement to the pose estimator
                 poseEstimator.addVisionMeasurement(estPose, detection.timestamp);
             }
         });
 
-        // Serializes and pushes the seen tags to networktables so we can view detections on advantagescop
-        Logger.recordOutput("Perception/TagPoses", tagsInView.values().toArray(new Pose3d[tagsInView.values().size()]));
+        // Serializes and pushes the seen tags to networktables so we can view
+        // detections on advantagescop
     }
 
     /**
@@ -196,11 +222,15 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
         gyro.setOffsetCW(Rotation2d.fromRadians(0));
     }
 
-     /**
+    /**
      * Returns the current perceived position of the robot.
      */
     public Pose2d getPose() {
         return poseEstimator.getEstimatedPosition();
+    }
+
+    public Supplier<Pose2d> supplyPose() {
+        return () -> getPose();
     }
 
     /**
@@ -221,10 +251,7 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
      * Get the angle from the robot to the speaker.
      */
     public Rotation2d getAngleToSpeaker() {
-        return Rotation2d.fromRadians(Math.atan2(
-            Field.SPEAKER_POSE.getY() - getPose().getY(),
-            Field.SPEAKER_POSE.getX() - getPose().getX()))
-            .plus(Rotation2d.fromRadians(Math.PI));
+        return Field.getAngleToSpeaker(getPose());
     }
 
     /**
@@ -232,8 +259,12 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
      */
     public double getDistanceToSpeaker() {
         return Math.sqrt(
-            Math.pow(Field.SPEAKER_POSE.getY() - getPose().getY(), 2)
-            + Math.pow(Field.SPEAKER_POSE.getX() - getPose().getX(), 2));
+                Math.pow(Field.SPEAKER_POSE.getY() - getPose().getY(), 2)
+                        + Math.pow(Field.SPEAKER_POSE.getX() - getPose().getX(), 2));
+    }
+
+    public boolean isAboveSpeakerOnY() {
+        return getPose().getY() > Field.SPEAKER_POSE.getY();
     }
 
     private static volatile Perception instance;
@@ -242,23 +273,55 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
         return instance == null ? instance = new Perception() : instance;
     }
 
+    public List<Note> getNoteDetections() {
+        final List<Note> detRight = toast.getCamera("INKT_R").get().getPipeline(ObjDetector.class).get()
+                .getDetections();
+        final List<Note> detLeft = toast.getCamera("INKT_L").get().getPipeline(ObjDetector.class).get().getDetections();
+        detRight.addAll(detLeft);
+        return detRight;
+    }
+
+    public Optional<Note> getBestDetection() {
+        return ObjDetector.getBestDetection(getNoteDetections());
+    }
+
     /**
      * Class representing a Note detected by an ObjDetector pipeline.
      */
     public static class Note extends Detectable {
+
+        public static final Note EMPTY = new Note("empty", 0, 0, 0);
+
+        public static final double F = 70, W = 640, D = 100;
+
         public final String name;
         public final double x;
         public final double angle;
 
-        public static Note fromJSON(final JsonNode det) {
-            final String name = det.get("name").asText("unknown");
-            final double x = det.get("ctr_x").asDouble(0);
-            final double angle = det.get("angle").asDouble(0);
-            final double confidence = det.get("conf").asDouble(0);
-            return new Note(name, x, angle, confidence);
+        private static double calculateAngle(final double x) {
+            return (x / (2 * W * D) - 0.5) * (2 * F - (D * F) / W);
         }
 
-        public Note(final String name, final double x,final double angle, final double confidence) {
+        private static Note parseJSON(final JsonNode det) {
+            final String name = det.get("name").asText("unknown");
+            final double x = det.get("ctr_x").asDouble(0);
+            final double confidence = det.get("conf").asDouble(0);
+            return new Note(name, x, 180, confidence);
+        }
+
+        public static Note fromJSONRight(final JsonNode det) {
+            final Note parsed = parseJSON(det);
+            final double angle = calculateAngle(parsed.x + W - D);
+            return new Note(parsed.name, parsed.x, angle, parsed.confidence);
+        }
+
+        public static Note fromJSONLeft(final JsonNode det) {
+            final Note parsed = parseJSON(det);
+            final double angle = calculateAngle(parsed.x);
+            return new Note(parsed.name, parsed.x, angle, parsed.confidence);
+        }
+
+        public Note(final String name, final double x, final double angle, final double confidence) {
             this.name = name;
             this.x = x;
             this.angle = angle;
@@ -268,6 +331,91 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
         public String toString() {
             return String.format("%s @ %.2f° (%.2f conf)", name, angle, confidence);
         }
+    }
+
+    @Override
+    public void clean(TorqueMode mode) {
+    }
+
+    public static final PathConstraints PATH_CONST = new PathConstraints(1, 1, Math.PI, Math.PI);
+
+    public PathPoint createPoint(final Pose2d pose) {
+        return createPoint(pose.getTranslation(), pose.getRotation());
+    }
+
+    public PathPoint createPoint(final Translation2d trl, final Rotation2d rot) {
+        final RotationTarget target = new RotationTarget(0, rot);
+        return new PathPoint(trl, target, PATH_CONST);
+    }
+
+    public GoalEndState endState(List<PathPoint> points) {
+        return new GoalEndState(0, points.get(points.size() - 1).rotationTarget.getTarget());
+    }
+
+    public PathPlannerPath generateInitial(final int note) {
+        final Pose2d currentPose = getPose();
+
+        final Pose2d notePose = Field.getNotePose(note);
+
+        List<Translation2d> bezierPoints = PathPlannerPath.bezierFromPoses(
+                currentPose,
+                new Pose2d(notePose.getTranslation(), Field.ROT_BACK));
+
+        final GoalEndState endState = new GoalEndState(0, Rotation2d.fromDegrees(1));
+
+        return new PathPlannerPath(bezierPoints, PATH_CONST, endState);
+    }
+
+    public PathPlannerPath generateNextOmar(final int note) {
+        final Pose2d currentPose = getPose();
+
+        final Pose2d notePose = Field.getNotePose(note);
+
+        final Rotation2d targetRotation = Field.getAngleToSpeaker(notePose);
+
+        final Translation2d midPointLocation = new Translation2d(
+                notePose.getX() - Math.abs(notePose.getY() - currentPose.getY()), // target x - distance from current y
+                                                                                  // to target y
+                (currentPose.getY() + notePose.getY()) / 2f); // y coord between current y and target y
+
+        List<Translation2d> bezierPoints = PathPlannerPath.bezierFromPoses(
+                new Pose2d(currentPose.getTranslation(), Field.ROT_BACK),
+                new Pose2d(midPointLocation, targetRotation),
+                new Pose2d(notePose.getTranslation(), targetRotation.plus(Field.ROT_BACK)));
+
+        Debug.log("Goal Pose", new Pose2d(notePose.getTranslation(), targetRotation).toString());
+
+        final GoalEndState endState = new GoalEndState(0, targetRotation);
+
+        return new PathPlannerPath(bezierPoints, PATH_CONST, endState);
+    }
+
+    public PathPlannerPath generateHomingPosition(final CenterLineAttempt attempt) {
+
+        final Pose2d currentPose = perception.getPose();
+
+        List<Translation2d> bezierPoints = attempt.getBezierToHoming(currentPose);
+
+        final GoalEndState endState = new GoalEndState(0, Field.ROT_FWD);
+
+        return new PathPlannerPath(bezierPoints, PATH_CONST, endState);
+    }
+
+    public PathPlannerPath generateShootingPosition(final CenterLineAttempt attempt) {
+
+        final Pose2d currentPose = perception.getPose();
+
+        List<Translation2d> bezierPoints = attempt.getBezierToShooting(currentPose);
+
+        final Rotation2d targetRot = Field.getAngleToSpeaker(attempt.shooting());
+
+        final GoalEndState endState = new GoalEndState(0, targetRot);
+
+        return new PathPlannerPath(bezierPoints, PATH_CONST, endState);
+    }
+
+    public CenterLineAttempt getCorrectCenterLineAttempt() {
+        return isAboveSpeakerOnY() ? Field.CenterLineAttempt.HIGH : Field.CenterLineAttempt.LOW;
     }
 
 }

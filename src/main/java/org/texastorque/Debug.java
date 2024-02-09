@@ -8,8 +8,9 @@ package org.texastorque;
 
 import java.util.HashMap;
 import java.util.Map;
-import org.texastorque.auto.AutoManager;
 import org.texastorque.torquelib.util.TorqueUtil;
+
+import edu.wpi.first.networktables.GenericEntry;
 import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
 import edu.wpi.first.wpilibj.shuffleboard.ShuffleboardTab;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
@@ -21,14 +22,17 @@ public final class Debug implements Subsystems {
     private static final Map<String, String> strings = new HashMap<>();
     private static final Map<String, Boolean> bools = new HashMap<>();
 
+    private static GenericEntry autoCommandEntry;
+    public static GenericEntry getAutoCommandEntry() { return autoCommandEntry; }
+
     public static void initDashboard() {
         Shuffleboard.update();
 
         final ShuffleboardTab dashboard = Shuffleboard.getTab("COMPETITION");
 
-        dashboard.add("AUTO SELECTOR", AutoManager.getInstance().getAutoSelector())
-                .withPosition(7, 0).withSize(4, 2);
+        autoCommandEntry = dashboard.add("Auto Command", "").getEntry();
     }
+        
 
     public static void log(final String key, final double number) {
         if (DO_LOGGING) {

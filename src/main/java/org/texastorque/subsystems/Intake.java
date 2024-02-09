@@ -1,5 +1,6 @@
 package org.texastorque.subsystems;
 
+import org.texastorque.Debug;
 import org.texastorque.Input;
 import org.texastorque.Ports;
 import org.texastorque.Subsystems;
@@ -9,11 +10,12 @@ import org.texastorque.torquelib.base.TorqueStatorSubsystem;
 import org.texastorque.torquelib.control.TorqueRequestableTimeout;
 import org.texastorque.torquelib.motors.TorqueNEO;
 import org.texastorque.torquelib.util.TorqueMath;
+import edu.wpi.first.math.controller.PIDController;
 
 public class Intake extends TorqueStatorSubsystem<Intake.State> implements Subsystems {
     private static volatile Intake instance;
 
-    private static final double ROTARY_DOWN = 1;
+    private final static double ROTARY_DOWN = 12;
 
     public static enum State implements TorqueState {
         OFF(0, 0), INTAKE(ROTARY_DOWN, 12),
@@ -27,9 +29,11 @@ public class Intake extends TorqueStatorSubsystem<Intake.State> implements Subsy
         }
     }
 
-    private static final double ROTARY_TOLERANCE = 5;
+    private static final double ROTARY_TOLERANCE = 7;
 
-    private final TorqueNEO rotary, rollers;
+    private final TorqueNEO rotaryLeft, rotaryRight, rollers;
+
+    private final PIDController rotaryLeftPID, rotaryRightPID;
 
     private final TorqueRequestableTimeout spikeTimeout;
 
@@ -38,17 +42,29 @@ public class Intake extends TorqueStatorSubsystem<Intake.State> implements Subsy
     public Intake() {
         super(State.OFF);
 
-        rotary = new TorqueNEO(Ports.INTAKE_ROTARY_LEFT);
-        rotary.addFollower(Ports.INTAKE_ROTARY_RIGHT, true);
-        rotary.setVoltageCompensation(12.6);
-        rotary.setBreakMode(false);
-        rotary.setPIDFeedbackDevice(rotary.encoder);
-        rotary.configurePIDF(1, 0, 0, 0);
-        rotary.burnFlash();
+        rotaryLeft = new TorqueNEO(Ports.INTAKE_ROTARY_LEFT);
+        rotaryLeft.setVoltageCompensation(12.6);
+        rotaryLeft.setBreakMode(true);
+        rotaryLeft.invertMotor(false);
+        rotaryLeft.setPIDFeedbackDevice(rotaryLeft.encoder);
+        rotaryLeft.burnFlash();
+
+        rotaryLeftPID = new PIDController(.5, 0, 0);
+
+        rotaryRight = new TorqueNEO(Ports.INTAKE_ROTARY_RIGHT);
+        rotaryRight.setVoltageCompensation(12.6);
+        rotaryRight.setBreakMode(true);
+        rotaryRight.invertMotor(true);
+        rotaryRight.setPIDFeedbackDevice(rotaryRight.encoder);
+        rotaryRight.burnFlash();
+
+        rotaryRightPID = new PIDController(.5, 0, 0);
 
         rollers = new TorqueNEO(Ports.INTAKE_ROLLERS);
         rollers.setVoltageCompensation(12.6);
         rollers.setBreakMode(false);
+        rollers.invertMotor(true);
+        rollers.burnFlash();
 
         spikeTimeout = new TorqueRequestableTimeout();
     }
@@ -57,8 +73,10 @@ public class Intake extends TorqueStatorSubsystem<Intake.State> implements Subsy
     public void initialize(final TorqueMode mode) {
     }
 
-    public boolean isRotaryAtState() {
-        return TorqueMath.toleranced(rotary.getPosition(), desiredState.rotaryPosition, ROTARY_TOLERANCE);
+    public boolean isRotaryDownEnough() {
+        return TorqueMath.toleranced(Math.abs(rotaryLeft.getPosition()), desiredState.rotaryPosition,
+                ROTARY_TOLERANCE)
+                && TorqueMath.toleranced(Math.abs(rotaryRight.getPosition()), desiredState.rotaryPosition);
     }
 
     public boolean isCurrentSpike() {
@@ -67,22 +85,35 @@ public class Intake extends TorqueStatorSubsystem<Intake.State> implements Subsy
 
     @Override
     public void update(final TorqueMode mode) {
+        Debug.log("Intake State", desiredState.toString());
+        Debug.log("Intake Rotary Left", rotaryLeft.getPosition());
+        Debug.log("Intake Rotary Right", rotaryRight.getPosition());
+        
+        State activeState = desiredState;
+
         if (wantsState(State.SMART_INTAKE)) {
             if (!spikeTimeout.get() && shooter.hasGateSpiked()) {
                 Input.getInstance().setRumbleFor(.2);
                 spiked = true;
             }
         } else {
-            spikeTimeout.set(1);
+            spikeTimeout.set(.5);
             spiked = false;
         }
 
         if (spiked && shooter.isRotaryAtState())
-            desiredState = State.OFF;
+            activeState = State.OFF;
 
-        rollers.setVolts(desiredState.rollerSpeed);
-        rotary.setPosition(desiredState.rotaryPosition);
+        rollers.setVolts(activeState.rollerSpeed);
 
+        rotaryLeft.setVolts(rotaryLeftPID.calculate(rotaryLeft.getPosition(),
+                activeState.rotaryPosition));
+        rotaryRight.setVolts(rotaryRightPID.calculate(rotaryRight.getPosition(),
+                activeState.rotaryPosition));
+    }
+
+    @Override
+    public void clean(TorqueMode mode) {
         if (mode.isTeleop()) {
             desiredState = State.OFF;
         }

@@ -7,5 +7,5 @@ public interface Subsystems {
     public final Perception perception = Perception.getInstance();
     public final Intake intake = Intake.getInstance();
     public final Shooter shooter = Shooter.getInstance();
-    public final Climber climber = Climber.getInstance();
+    // public final Climber climber = Climber.getInstance();
 }

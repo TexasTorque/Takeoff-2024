@@ -1,6 +1,6 @@
 package org.texastorque.subsystems;
 
-import org.texastorque.Input;
+import org.texastorque.Debug;
 import org.texastorque.Ports;
 import org.texastorque.Subsystems;
 import org.texastorque.torquelib.base.TorqueMode;
@@ -12,40 +12,45 @@ import org.texastorque.torquelib.util.TorqueMath;
 import com.ctre.phoenix6.hardware.CANcoder;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.controller.SimpleMotorFeedforward;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Subsystems {
 
     private static volatile Shooter instance;
 
-    public static record Shot(double velo, double angle) {
-        private static final Shot empty = new Shot(0, 0);
+    public static record Shot(double topVelocity, double bottomVelocity, double angle) {
+        public Shot(double velocity, double angle) {
+            this(velocity, velocity, angle);
+        }
+
+        private static final Shot empty = new Shot(0, 0, 0);
     }
 
     public static enum State implements TorqueState {
-        OFF(false),
-        INTAKE(new Shot(1477, 1477), false),
-        AMP(new Shot(1477, 1477), true),
-        TRAP(new Shot(1477, 1477), false),
-        SMART(true),
-        WARMUP(new Shot(1477, 1477), false),
-        LAYUP(new Shot(1477, 1477), true),
-        SAFEZONE(new Shot(1477, 1477), true);
+        OFF(new Shot(0, .32), false),
+        INTAKE(new Shot(-800, .54), false),
+        AMP(new Shot(1230, .1728), true),
+        TRAP(new Shot(0, .3), false),
+        WARMUP(new Shot(1500, .32), false),
+        LAYUP(new Shot(5000, .145), true),
+        SAFEZONE(new Shot(5000, .25), true),
+        SMART(true),;
 
         public final Shot shot;
-        public final boolean allowedToShoot;
+        public final boolean isAShot;
 
-        private State(final boolean allowed2shoot) {
-            this(Shot.empty, allowed2shoot);
+        private State(final boolean isAShot) {
+            this(Shot.empty, isAShot);
         }
 
-        private State(final Shot shot, final boolean allowed2shoot) {
+        private State(final Shot shot, final boolean isAShot) {
             this.shot = shot;
-            this.allowedToShoot = allowed2shoot;
+            this.isAShot = isAShot;
         }
     }
 
     public static enum GateState implements TorqueState {
-        OFF(0), IN(-12), OUT(12);
+        OFF(0), IN(12), OUT(-12);
 
         private final double voltage;
 
@@ -54,21 +59,29 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         }
     }
 
-    private static final double FLYWHEEL_TOLERANCE = 100, ROTARY_TOLERANCE = 5, GATE_CURRENT_SPIKE = 10;
+    private static final double FLYWHEEL_TOLERANCE = 120, ROTARY_TOLERANCE = .05, GATE_CURRENT_SPIKE = 15;
 
-    private final TorqueNEO rotary, flywheels, gate;
+    private final TorqueNEO rotary, flywheelTop, flywheelBottom, gate;
 
-    private final CANcoder rotaryEncoder, flywheelEncoder;
+    private final CANcoder rotaryEncoder, flywheelTopEncoder, flywheelBottomEncoder;
 
-    private final PIDController rotaryPID, flywheelPID;
+    private final PIDController rotaryPID, flywheelTopPID, flywheelBottomPID;
     private final SimpleMotorFeedforward flywheelFF;
 
     private final TorqueLookUpTable<Shot> shotTable;
 
     private GateState gateState = GateState.OFF;
 
+    private boolean hasNote = false, debugMode = false;
+
+    private Shot shot = new Shot(0, 0);
+
     public static double lerp(double y1, double y2, double t) {
         return y1 + (t * (y2 - y1));
+    }
+
+    public boolean hasNote() {
+        return hasNote;
     }
 
     public Shooter() {
@@ -77,74 +90,167 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         rotary = new TorqueNEO(Ports.SHOOTER_ROTARY);
         rotary.setVoltageCompensation(12.6);
         rotary.setBreakMode(true);
+        rotary.invertMotor(true);
+        rotary.burnFlash();
 
-        flywheels = new TorqueNEO(Ports.FLYWHEEL_LEFT);
-        flywheels.addFollower(Ports.FLYWHEEL_RIGHT, true);
-        flywheels.setVoltageCompensation(12.6);
-        flywheels.setBreakMode(false);
-        flywheelEncoder = new CANcoder(Ports.SHOOTER_FLYWHEEL_ENCODER);
-        flywheelPID = new PIDController(1, 0, 0);
-        flywheelFF = new SimpleMotorFeedforward(0, 0, 0);
+        rotaryPID = new PIDController(50, 0, 0);
+        rotaryEncoder = new CANcoder(Ports.SHOOTER_ROTARY_ENCODER);
+
+        flywheelTop = new TorqueNEO(Ports.FLYWHEEL_TOP);
+        flywheelTop.setCurrentLimit(80);
+        flywheelTop.setVoltageCompensation(12.6);
+        flywheelTop.setBreakMode(true);
+        flywheelTop.invertMotor(false);
+        flywheelTop.burnFlash();
+
+        flywheelTopEncoder = new CANcoder(Ports.FLYWHEEL_TOP_ENCODER);
+        flywheelTopPID = new PIDController(0.0025, 0, 0);
+
+        // 0001 about 200 loo low
+        // 00025 about 200 too low
+        // 001 about 100 too low
+        flywheelBottom = new TorqueNEO(Ports.FLYWHEEL_BOTTOM);
+        flywheelTop.setCurrentLimit(80);
+        flywheelBottom.setVoltageCompensation(12.6);
+        flywheelBottom.setBreakMode(true);
+        flywheelBottom.invertMotor(true);
+        flywheelBottom.burnFlash();
+
+        flywheelBottomEncoder = new CANcoder(Ports.FLYWHEEL_BOTTOM_ENCODER);
+        flywheelBottomPID = new PIDController(0.0025, 0, 0);
+
+        flywheelFF = new SimpleMotorFeedforward(0.000, 0.001, 0);
 
         gate = new TorqueNEO(Ports.SHOOTER_GATE);
         gate.setVoltageCompensation(12.6);
+        gate.setCurrentLimit(25);
         gate.setBreakMode(true);
-
-        rotaryEncoder = new CANcoder(Ports.SHOOTER_ROTARY_ENCODER);
-        rotaryPID = new PIDController(1, 0, 0);
 
         shotTable = new TorqueLookUpTable<Shot>(
                 (final Shot me, final Shot other) -> Math.abs(other.angle - me.angle) < 0.1
-                        && Math.abs(other.velo - me.velo) < 0.1,
-                (final Shot me, final Shot end, final Double t) -> new Shot(lerp(me.velo, end.velo, t),
+                        && Math.abs(other.topVelocity - me.topVelocity) < 0.1,
+                (final Shot me, final Shot end, final Double t) -> new Shot(lerp(me.topVelocity, end.topVelocity, t),
                         lerp(me.angle, end.angle, t)));
-    }
 
-    public boolean hasGateSpiked() {
-        return gate.getCurrent() >= GATE_CURRENT_SPIKE;
-    }
+        shotTable.add(1.22, new Shot(3900, .175));
+        shotTable.add(1.75, new Shot(4100, .14));
+        shotTable.add(2.28, new Shot(4300, .12));
+        shotTable.add(2.77, new Shot(4500, .1));
+        shotTable.add(3.39, new Shot(4700, .085));
+        shotTable.add(4.1, new Shot(4800, .08));
+        shotTable.add(4.7, new Shot(5350, .069));
+        shotTable.add(5.4, new Shot(6050, .055));
 
-    public boolean readyToShoot() {
-        return TorqueMath.toleranced(flywheels.getVelocity(), desiredState.shot.velo, FLYWHEEL_TOLERANCE) &&
-                TorqueMath.toleranced(rotary.getPosition(), desiredState.shot.angle, ROTARY_TOLERANCE);
-    }
-
-    public boolean isRotaryAtState() {
-        return TorqueMath.toleranced(rotary.getPosition(), desiredState.shot.angle, ROTARY_TOLERANCE);
+        SmartDashboard.putNumber("Shot Velocity", 0);
+        SmartDashboard.putNumber("Shot Angle", 0);
     }
 
     @Override
     public void initialize(TorqueMode mode) {
     }
 
+    public boolean hasGateSpiked() {
+        return gate.getCurrent() >= GATE_CURRENT_SPIKE;
+    }
+
+    public boolean isReadyToShoot() {
+        return TorqueMath.toleranced(Math.abs(getTopFlywheelVelocity()), shot.topVelocity,
+                FLYWHEEL_TOLERANCE) &&
+                TorqueMath.toleranced(Math.abs(getBottomFlywheelVelocity()), shot.bottomVelocity,
+                        FLYWHEEL_TOLERANCE)
+                && isRotaryAtState();
+        // && wantsState(State.SMART) ? drivebase.isAligned() : true;
+    }
+
+    public boolean isRotaryAtState() {
+        return TorqueMath.toleranced(getRotaryEncoder(), desiredState.shot.angle, ROTARY_TOLERANCE);
+    }
+
+    public double getRotaryEncoder() {
+        return rotaryEncoder.getAbsolutePosition().getValue();
+    }
+
     @Override
     public void update(TorqueMode mode) {
-        if (intake.isIntaking()) {
+        Debug.log("Shooter State", desiredState.toString());
+        Debug.log("Shooter Rotary Positon", getRotaryEncoder());
+        Debug.log("Shooter Top Velocity", getTopFlywheelVelocity());
+        Debug.log("Shooter Bottom Velocity", getBottomFlywheelVelocity());
+        Debug.log("Shooter Gate Current", gate.getCurrent());
+        Debug.log("Shooter is Ready", isReadyToShoot());
+        Debug.log("Distance to Tag", perception.getDistanceToSpeaker());
+        Debug.log("Angle to Speaker", perception.getAngleToSpeaker().getDegrees());
+        Debug.log("Shot", shot.toString());
+        Debug.log("Top Flywheel Ready", TorqueMath.toleranced(Math.abs(getTopFlywheelVelocity()), shot.topVelocity,
+                FLYWHEEL_TOLERANCE));
+        Debug.log("Bottom Flywheel Ready",
+                TorqueMath.toleranced(Math.abs(getBottomFlywheelVelocity()), shot.bottomVelocity,
+                        FLYWHEEL_TOLERANCE));
+        Debug.log("Rotary Ready", TorqueMath.toleranced(getRotaryEncoder(), shot.angle,
+                ROTARY_TOLERANCE));
+
+        Debug.log("drivebase aligned", drivebase.isAligned());
+
+        if (intake.isIntaking() && intake.isRotaryDownEnough()) {
             desiredState = State.INTAKE;
             gateState = GateState.IN;
         } else if (intake.isCurrentSpike()) {
             desiredState = State.OFF;
             gateState = GateState.OFF;
+            hasNote = true;
         }
 
-        final Shot shot = desiredState == State.SMART ? shotTable.get(perception.getDistanceToSpeaker())
-                : desiredState.shot;
+        if (wantsState(State.SMART))
+            shot = shotTable.get(perception.getDistanceToSpeaker());
+        else {
+            drivebase.setAlignTarget(perception.getAngleToSpeaker());
+            shot = desiredState.shot;
+        }
 
-        if (readyToShoot() && desiredState.allowedToShoot) {
+        // Testing to get new data points
+        if (wantsState(State.SMART) && debugMode) {
+            double velo = SmartDashboard.getNumber("Shot Velocity", -1);
+            double angle = TorqueMath.constrain(SmartDashboard.getNumber("Shot Angle", -1), .05, .54);
+            shot = new Shot(velo, angle);
+        }
+
+        if (isReadyToShoot() && desiredState.isAShot)
             gateState = GateState.OUT;
-            Input.getInstance().setRumbleFor(.2);
-        }
 
-        flywheels.setVolts(flywheelPID.calculate(flywheelEncoder.getVelocity().getValue(), shot.velo)
-                + flywheelFF.calculate(shot.velo));
-        rotary.setVolts(rotaryPID.calculate(rotaryEncoder.getAbsolutePosition().getValue(), shot.angle));
+        flywheelTop.setVolts(flywheelTopPID.calculate(getTopFlywheelVelocity(), shot.topVelocity)
+                + flywheelFF.calculate(shot.topVelocity));
+
+        flywheelBottom.setVolts(flywheelBottomPID.calculate(-getBottomFlywheelVelocity(), shot.bottomVelocity)
+                + flywheelFF.calculate(shot.bottomVelocity));
+
+        rotary.setVolts(TorqueMath.constrain(rotaryPID.calculate(getRotaryEncoder(),
+                shot.angle), wantsState(State.AMP) ? 2 : 8));
 
         gate.setVolts(gateState.voltage);
+
+        if (gateState == GateState.OUT)
+            hasNote = false;
 
         if (mode.isTeleop()) {
             desiredState = State.OFF;
             gateState = GateState.OFF;
         }
+    }
+
+    @Override
+    public void clean(TorqueMode mode) {
+    }
+
+    public void setGateState(GateState state) {
+        this.gateState = state;
+    }
+
+    private double getTopFlywheelVelocity() {
+        return flywheelTopEncoder.getVelocity().getValue() * 60;
+    }
+
+    private double getBottomFlywheelVelocity() {
+        return flywheelBottomEncoder.getVelocity().getValue() * 60;
     }
 
     public static synchronized final Shooter getInstance() {

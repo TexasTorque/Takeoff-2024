@@ -6,7 +6,8 @@
  */
 package org.texastorque.subsystems;
 
-import java.util.function.DoubleSupplier;
+import java.util.function.Supplier;
+import org.texastorque.Debug;
 import org.texastorque.Ports;
 import org.texastorque.Subsystems;
 import org.texastorque.torquelib.auto.commands.TorqueFollowPath.TorquePathingDrivebase;
@@ -14,8 +15,7 @@ import org.texastorque.torquelib.base.TorqueMode;
 import org.texastorque.torquelib.base.TorqueState;
 import org.texastorque.torquelib.base.TorqueStatorSubsystem;
 import org.texastorque.torquelib.swerve.TorqueSwerveSpeeds;
-import org.texastorque.torquelib.swerve.TorqueSwerveModuleX.SwerveConfig;
-import org.texastorque.torquelib.swerve.TorqueSwerveModuleX;
+import org.texastorque.torquelib.swerve.TorqueSwerveModule2022;
 import org.texastorque.torquelib.util.TorqueMath;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.geometry.Pose2d;
@@ -26,6 +26,8 @@ import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.math.util.Units;
+import edu.wpi.first.wpilibj.Timer;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
         implements Subsystems, TorquePathingDrivebase {
@@ -40,7 +42,7 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
     }
 
     public enum SpeedSetting {
-        SLOW(.25), MID(.5), FAST(1.0);
+        SLOW(.25), MID(.5), FAST(1.0), SEQ(1);
 
         private static final SpeedSetting[] vals = values();
 
@@ -59,12 +61,33 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
         }
     }
 
+    public static class SpeedSequence {
+        final double initSpeed, finalSpeed, duration, startTime, speedDeceleration;
+
+        // Linearly decreases the speed every second for a duration of time
+        public SpeedSequence(final SpeedSetting initSpeed, final SpeedSetting finalSpeed,
+                final double duration) {
+            this.initSpeed = initSpeed.speed;
+            this.finalSpeed = finalSpeed.speed;
+            this.duration = duration;
+            speedDeceleration = (this.initSpeed - this.finalSpeed) / duration;
+            startTime = Timer.getFPGATimestamp();
+        }
+
+        public double get() {
+            return Math.max(initSpeed - speedDeceleration * (Timer.getFPGATimestamp() - startTime),
+                    finalSpeed);
+        }
+    }
+
     private static volatile Drivebase instance;
 
-    public static final double WIDTH = Units.inchesToMeters(58 / 3);
+    public static final double WIDTH = Units.inchesToMeters(21.25);
 
-    public final static double MAX_VELOCITY_TELEOP = 4.6, MAX_ACCELERATION = 2,
-            MAX_ANGULAR_VELOCITY = 6, ANGULAR_VELOCITY_COEFFICIENT = .05;
+    public final static double MAX_VELOCITY = 4.6, MAX_ACCELERATION = 2,
+            MAX_ANGULAR_VELOCITY = 2 * Math.PI;
+
+    public double ANGULAR_VELOCITY_COEFFICIENT = 1;
 
     public static synchronized final Drivebase getInstance() {
         return instance == null ? instance = new Drivebase() : instance;
@@ -77,7 +100,7 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
 
     public final SwerveDriveKinematics kinematics;
 
-    private final TorqueSwerveModuleX fl, fr, bl, br;
+    private final TorqueSwerveModule2022 fl, fr, bl, br;
 
     private final PIDController teleopOmegaController;
 
@@ -87,19 +110,19 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
 
     public SpeedSetting speedSetting = SpeedSetting.FAST;
 
+    public SpeedSequence speedSequence = new SpeedSequence(speedSetting, speedSetting, -1);
+
     private final PIDController alignPID;
 
     private Drivebase() {
         super(State.FIELD_RELATIVE);
 
-        final SwerveConfig swerveConfig = SwerveConfig.defaultConfig;
+        TorqueSwerveModule2022.SwerveConfig swerveConfig = TorqueSwerveModule2022.SwerveConfig.defaultConfig;
 
-        swerveConfig.driveGearRatio = 2;
-
-        fl = new TorqueSwerveModuleX("Front Left", Ports.FL_MOD, swerveConfig);
-        fr = new TorqueSwerveModuleX("Front Right", Ports.FR_MOD, swerveConfig);
-        bl = new TorqueSwerveModuleX("Back Left", Ports.BL_MOD, swerveConfig);
-        br = new TorqueSwerveModuleX("Back Right", Ports.BR_MOD, swerveConfig);
+        fl = new TorqueSwerveModule2022("Front Left", Ports.FL_MOD, 0., swerveConfig, .2);
+        fr = new TorqueSwerveModule2022("Front Right", Ports.FR_MOD, 0, swerveConfig, .2);
+        bl = new TorqueSwerveModule2022("Back Left", Ports.BL_MOD, 0, swerveConfig, .2);
+        br = new TorqueSwerveModule2022("Back Right", Ports.BR_MOD, 0, swerveConfig, .2);
 
         inputSpeeds = new TorqueSwerveSpeeds(0, 0, 0);
 
@@ -109,16 +132,19 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
         for (int i = 0; i < swerveStates.length; i++)
             swerveStates[i] = new SwerveModuleState();
 
-        alignPID = new PIDController(.15, 0, 0);
+        alignPID = new PIDController(.2, 0, 0);
         alignPID.enableContinuousInput(0, 360);
 
         teleopOmegaController = new PIDController(.5 * Math.PI, 0, 0);
+        teleopOmegaController.enableContinuousInput(0, Math.PI * 2);
+
+        SmartDashboard.putNumber("ang coeff", ANGULAR_VELOCITY_COEFFICIENT);
     }
 
     @Override
     public final void initialize(final TorqueMode mode) {
         mode.onAuto(() -> {
-            desiredState = State.ROBOT_RELATIVE;
+            desiredState = State.FIELD_RELATIVE;
         });
 
         mode.onTeleop(() -> {
@@ -127,56 +153,63 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
     }
 
     public SwerveModulePosition[] getModulePositions() {
+
         return new SwerveModulePosition[] {
                 fl.getPosition(), fr.getPosition(),
                 bl.getPosition(), br.getPosition()
         };
     }
 
-    private DoubleSupplier alignTarget = () -> 0;
+    private Supplier<Rotation2d> alignTarget = () -> Rotation2d.fromDegrees(0);
 
-    public void setAlignTarget(final double target) {
+    public void setAlignTarget(final Rotation2d target) {
         alignTarget = () -> target;
     }
 
-    public void setAlignTarget(final DoubleSupplier target) {
+    public void setAlignTargetRelative(final Rotation2d target) {
+        alignTarget = () -> target.plus(perception.getHeading());
+    }
+
+    public void setAlignTarget(final Supplier<Rotation2d> target) {
         alignTarget = target;
     }
 
     private double getAlignTarget() {
-        return TorqueMath.constrain0to360(alignTarget.getAsDouble());
+        return TorqueMath.constrain0to360(alignTarget.get().getDegrees());
     }
 
     public boolean isAligned() {
         return TorqueMath.toleranced(perception.getHeading().getDegrees(),
-                getAlignTarget(), 5);
+                getAlignTarget(), 4);
     }
-
-    public boolean isRotationLocked = true;
 
     @Override
     public final void update(final TorqueMode mode) {
-        if (mode.isTeleop()) {
-            // correctHeading();
-            inputSpeeds = inputSpeeds
-                    .toFieldRelativeSpeeds(perception.getHeading());
-            // .plus(perception.getAngularVelocity().times(ANGULAR_VELOCITY_COEFFICIENT)))
-        }
+        Debug.log("isAligned", isAligned());
+        Debug.log("align target", getAlignTarget());
 
-        if (wantsState(State.ALIGN_TO_ANGLE)) {
+        // if (shooter.wantsState(Shooter.State.SMART)) {
+        // desiredState = State.ALIGN_TO_ANGLE;
+        // } else
+        // desiredState = State.FIELD_RELATIVE;
+
+        if (wantsState(State.FIELD_RELATIVE)) {
+            inputSpeeds = inputSpeeds.times(speedSetting == SpeedSetting.SEQ ? speedSequence.get()
+                    : speedSetting.speed).toFieldRelativeSpeeds(perception.getHeading());
+        } else if (wantsState(State.ALIGN_TO_ANGLE)) {
             inputSpeeds.omegaRadiansPerSecond = TorqueMath.constrain(
-                    alignPID.calculate(perception.getHeading().getDegrees(), alignTarget.getAsDouble()), .75);
+                    alignPID.calculate(perception.getHeading().getDegrees(), getAlignTarget()),
+                    .75);
         }
 
         swerveStates = kinematics.toSwerveModuleStates(inputSpeeds);
 
-        SwerveDriveKinematics.desaturateWheelSpeeds(swerveStates, MAX_VELOCITY_TELEOP);
+        SwerveDriveKinematics.desaturateWheelSpeeds(swerveStates, MAX_VELOCITY);
 
         if (inputSpeeds.hasZeroVelocity()) {
-            manuallySetModuleStates(swerveStates[0].angle.getRadians(),
-                    swerveStates[1].angle.getRadians(), swerveStates[2].angle.getRadians(),
-                    swerveStates[3].angle.getRadians());
-
+            manuallySetModuleStates(swerveStates[0].angle,
+                    swerveStates[1].angle, swerveStates[2].angle,
+                    swerveStates[3].angle);
         } else {
             fl.setDesiredState(swerveStates[0]);
             fr.setDesiredState(swerveStates[1]);
@@ -186,27 +219,14 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
 
         if (mode.isTeleop())
             desiredState = desiredState.parent;
-
     }
 
-    private void manuallySetModuleStates(final double flAngle, final double frAngle,
-            final double blAngle, final double brAngle) {
-        fl.setDesiredState(new SwerveModuleState(0, Rotation2d.fromRadians(flAngle)));
-        fr.setDesiredState(new SwerveModuleState(0, Rotation2d.fromRadians(frAngle)));
-        bl.setDesiredState(new SwerveModuleState(0, Rotation2d.fromRadians(blAngle)));
-        br.setDesiredState(new SwerveModuleState(0, Rotation2d.fromRadians(brAngle)));
-    }
-
-    double lastRotationRadians = 0;
-
-    public void correctHeading() {
-        final double realRotationRadians = perception.getHeading().getRadians();
-
-        if (isRotationLocked && !inputSpeeds.hasRotationalVelocity() && inputSpeeds.hasTranslationalVelocity()) {
-            final double omega = teleopOmegaController.calculate(realRotationRadians, lastRotationRadians);
-            inputSpeeds.omegaRadiansPerSecond = omega;
-        } else
-            lastRotationRadians = realRotationRadians;
+    private void manuallySetModuleStates(final Rotation2d flAngle, final Rotation2d frAngle, final Rotation2d blAngle,
+            final Rotation2d brAngle) {
+        fl.setDesiredState(new SwerveModuleState(0, flAngle));
+        fr.setDesiredState(new SwerveModuleState(0, frAngle));
+        bl.setDesiredState(new SwerveModuleState(0, blAngle));
+        br.setDesiredState(new SwerveModuleState(0, brAngle));
     }
 
     @Override
@@ -230,6 +250,10 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
 
     public ChassisSpeeds getChassisSpeeds() {
         return inputSpeeds;
+    }
+
+    @Override
+    public void clean(TorqueMode mode) {
     }
 
 }
