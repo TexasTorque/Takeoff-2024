@@ -157,6 +157,10 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         return isTopFlywheelReady() && isBottomFlywheelReady() && isRotatryReady() && isRotatryReady();
     }
 
+    public boolean isRotaryAtState() {
+        return TorqueMath.toleranced(getRotaryEncoder(), desiredState.shot.angle, ROTARY_TOLERANCE);
+    }
+
     public double getRotaryEncoder() {
         return rotaryEncoder.getAbsolutePosition().getValue();
     }
