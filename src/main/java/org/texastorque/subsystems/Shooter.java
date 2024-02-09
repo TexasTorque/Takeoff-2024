@@ -12,6 +12,7 @@ import org.texastorque.torquelib.util.TorqueMath;
 import com.ctre.phoenix6.hardware.CANcoder;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.controller.SimpleMotorFeedforward;
+import edu.wpi.first.wpilibj.DigitalInput;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Subsystems {
@@ -26,12 +27,14 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         private static final Shot empty = new Shot(0, 0, 0);
     }
 
+    private static final double ROTARY_OFF = 115;
+
     public static enum State implements TorqueState {
-        OFF(new Shot(0, 115), false),
+        OFF(new Shot(0, ROTARY_OFF), false),
+        WARMUP(new Shot(1500, ROTARY_OFF), false),
         INTAKE(new Shot(-800, 194), false),
         AMP(new Shot(900, 62), true),
-        TRAP(new Shot(0, 108), false),
-        WARMUP(new Shot(1500, 115), false),
+        TRAP(new Shot(0, 108), true),
         LAYUP(new Shot(3900, 63), true),
         SAFEZONE(new Shot(4300, 33), true),
         SMART(true);
@@ -59,29 +62,28 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         }
     }
 
-    private static final double FLYWHEEL_TOLERANCE = 120, ROTARY_TOLERANCE = 3, GATE_CURRENT_SPIKE = 15;
+    private static final double FLYWHEEL_TOLERANCE = 120, ROTARY_TOLERANCE = 3;
 
     private final TorqueNEO rotary, flywheelTop, flywheelBottom, gate;
 
     private final CANcoder rotaryEncoder, flywheelTopEncoder, flywheelBottomEncoder;
 
     private final PIDController rotaryPID, flywheelTopPID, flywheelBottomPID;
+    
     private final SimpleMotorFeedforward flywheelFF;
 
     private final TorqueLookUpTable<Shot> shotTable;
 
+    private final DigitalInput noteSensor;
+
     private GateState gateState = GateState.OFF;
 
-    private boolean hasNote = false, debugMode = true;
+    private boolean debugMode = false;
 
     private Shot shot = new Shot(0, 0);
 
     public static double lerp(double y1, double y2, double t) {
         return y1 + (t * (y2 - y1));
-    }
-
-    public boolean hasNote() {
-        return hasNote;
     }
 
     public Shooter() {
@@ -123,6 +125,8 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         gate.setCurrentLimit(25);
         gate.setBreakMode(true);
 
+        noteSensor = new DigitalInput(Ports.SHOOTER_NOTE_SENSOR);
+
         shotTable = new TorqueLookUpTable<Shot>(
                 (final Shot me, final Shot other) -> Math.abs(other.angle - me.angle) < 0.01
                         && Math.abs(other.topVelocity - me.topVelocity) < 0.1,
@@ -148,8 +152,8 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
     public void initialize(TorqueMode mode) {
     }
 
-    public boolean hasGateSpiked() {
-        return gate.getCurrent() >= GATE_CURRENT_SPIKE;
+    public boolean hasNote() {
+        return !noteSensor.get();
     }
 
     public boolean isReadyToShoot() {
@@ -184,6 +188,10 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         return TorqueMath.toleranced(getRotaryEncoder(), shot.angle, ROTARY_TOLERANCE);
     }
 
+    public boolean isShooting() {
+        return desiredState.isAShot;
+    }
+
     @Override
     public void update(TorqueMode mode) {
         Debug.log("Shooter State", desiredState.toString());
@@ -204,10 +212,9 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         if (intake.isIntaking() && intake.isRotaryDownEnough()) {
             desiredState = State.INTAKE;
             gateState = GateState.IN;
-        } else if (intake.isCurrentSpike()) {
+        } else if (hasNote()) {
             desiredState = State.OFF;
             gateState = GateState.OFF;
-            hasNote = true;
         }
 
         if (wantsState(State.SMART)) {
@@ -238,10 +245,6 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
 
         rotary.setVolts(TorqueMath.constrain(rotaryPID.calculate(getRotaryEncoder(),
                 shot.angle), wantsState(State.AMP) ? 2 : 8));
-
-        if (gateState == GateState.OUT) {
-            hasNote = false;
-        }
 
         gate.setVolts(gateState.voltage);
 

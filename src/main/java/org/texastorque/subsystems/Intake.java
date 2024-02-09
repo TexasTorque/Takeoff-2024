@@ -7,7 +7,6 @@ import org.texastorque.Subsystems;
 import org.texastorque.torquelib.base.TorqueMode;
 import org.texastorque.torquelib.base.TorqueState;
 import org.texastorque.torquelib.base.TorqueStatorSubsystem;
-import org.texastorque.torquelib.control.TorqueRequestableTimeout;
 import org.texastorque.torquelib.motors.TorqueNEO;
 import org.texastorque.torquelib.util.TorqueMath;
 import edu.wpi.first.math.controller.PIDController;
@@ -35,10 +34,6 @@ public class Intake extends TorqueStatorSubsystem<Intake.State> implements Subsy
 
     private final PIDController rotaryLeftPID, rotaryRightPID;
 
-    private final TorqueRequestableTimeout spikeTimeout;
-
-    private boolean spiked = false;
-
     public Intake() {
         super(State.OFF);
 
@@ -65,8 +60,6 @@ public class Intake extends TorqueStatorSubsystem<Intake.State> implements Subsy
         rollers.setBreakMode(false);
         rollers.invertMotor(true);
         rollers.burnFlash();
-
-        spikeTimeout = new TorqueRequestableTimeout();
     }
 
     @Override
@@ -79,37 +72,24 @@ public class Intake extends TorqueStatorSubsystem<Intake.State> implements Subsy
                 && TorqueMath.toleranced(Math.abs(rotaryRight.getPosition()), desiredState.rotaryPosition);
     }
 
-    public boolean isCurrentSpike() {
-        return spiked;
-    }
-
     @Override
     public void update(final TorqueMode mode) {
         Debug.log("Intake State", desiredState.toString());
         Debug.log("Intake Rotary Left", rotaryLeft.getPosition());
         Debug.log("Intake Rotary Right", rotaryRight.getPosition());
-        
-        State activeState = desiredState;
 
-        if (wantsState(State.SMART_INTAKE)) {
-            if (!spikeTimeout.get() && shooter.hasGateSpiked()) {
-                Input.getInstance().setRumbleFor(.2);
-                spiked = true;
-            }
-        } else {
-            spikeTimeout.set(.5);
-            spiked = false;
-        }
+        if (wantsState(State.SMART_INTAKE) && shooter.hasNote())
+            Input.getInstance().setRumbleFor(.2);
 
-        if (spiked && shooter.isRotaryAtState())
-            activeState = State.OFF;
+        if (shooter.hasNote() && shooter.isRotaryAtState())
+            desiredState = State.OFF;
 
-        rollers.setVolts(activeState.rollerSpeed);
+        rollers.setVolts(desiredState.rollerSpeed);
 
         rotaryLeft.setVolts(rotaryLeftPID.calculate(rotaryLeft.getPosition(),
-                activeState.rotaryPosition));
+                desiredState.rotaryPosition));
         rotaryRight.setVolts(rotaryRightPID.calculate(rotaryRight.getPosition(),
-                activeState.rotaryPosition));
+                desiredState.rotaryPosition));
     }
 
     @Override
