@@ -189,9 +189,9 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
         // If shooter is in smart mode then the driver can still drive around but
         // the rotation should stay locked to the goal.
 
-        if (shooter.wantsState(Shooter.State.SMART)) {
-            desiredState = State.ALIGN_TO_ANGLE;
-        } 
+        // if (shooter.wantsState(Shooter.State.SMART)) {
+        //     desiredState = State.ALIGN_TO_ANGLE;
+        // } 
 
         if (wantsState(State.ALIGN_TO_ANGLE)) {
             inputSpeeds.omegaRadiansPerSecond = TorqueMath.constrain(
