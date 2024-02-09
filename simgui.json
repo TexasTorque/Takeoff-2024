@@ -8,6 +8,11 @@
       "/SmartDashboard/Auto List": "String Chooser"
     }
   },
+  "NetworkTables": {
+    "Transitory Values": {
+      "open": false
+    }
+  },
   "NetworkTables Info": {
     "visible": true
   }
