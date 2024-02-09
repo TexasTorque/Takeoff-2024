@@ -9,6 +9,7 @@ import java.util.function.IntSupplier;
 import java.util.function.Supplier;
 import org.texastorque.Debug;
 import org.texastorque.Field;
+import org.texastorque.Robot;
 import org.texastorque.Subsystems;
 import org.texastorque.subsystems.*;
 import org.texastorque.subsystems.Perception.Note;
@@ -35,6 +36,7 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.networktables.BooleanSubscriber;
+import edu.wpi.first.wpilibj.RobotBase;
 
 public class BaseAuto extends TorqueSequence implements Subsystems {
 
@@ -48,6 +50,10 @@ public class BaseAuto extends TorqueSequence implements Subsystems {
     /**
      * A NoteSequence is a list of notes *indexes* (not actual Note objects) that is encapsulated 
      * so that we can calculate paths.
+     * 
+     * Note indexes work as so. The first three notes that are placed inside the alliance wing
+     * are indexed from top down 1, 2, and 3. The notes on the center line are indexed from top
+     * down 10, 20, 30, 40, 50. Close notes are indexed < 10, center line notes are indexed >= 10.
      */
     private class NoteSequence {
         private final List<Integer> notes = new ArrayList<Integer>();
@@ -101,11 +107,15 @@ public class BaseAuto extends TorqueSequence implements Subsystems {
         private final double waitTime = .5;
 
         public Shoot() {
-            addBlock(shooter.yieldState(Shooter.State.SMART));
-            addBlock(new TorqueWaitUntil(shooter::isReadyToShoot));
-            addBlock(new TorqueWaitTime(waitTime));
-            addBlock(shooter.yieldState(Shooter.State.OFF));
-            addBlock(intake.yieldState(Intake.State.OFF));
+            if (RobotBase.isReal()) {
+                addBlock(shooter.yieldState(Shooter.State.SMART));
+                addBlock(new TorqueWaitUntil(shooter::isReadyToShoot));
+                addBlock(new TorqueWaitTime(waitTime));
+                addBlock(shooter.yieldState(Shooter.State.OFF));
+                addBlock(intake.yieldState(Intake.State.OFF));
+            } else {
+                addBlock(new TorqueWaitTime(1));
+            }
         }
     }
 
@@ -134,7 +144,10 @@ public class BaseAuto extends TorqueSequence implements Subsystems {
             addBlock(followPath(() -> noteSequence.getNextPath()), 
                 new DeployIntakeWhen(deployIntakeWhen).command());
 
-            addBlock(new TorqueWaitUntil(shooter::hasNote));
+            if (RobotBase.isReal()) {
+                addBlock(new TorqueWaitUntil(shooter::hasNote));
+            }
+
             addBlock(new TorqueRunSequence(new Shoot()));
         }
     }
