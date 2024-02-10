@@ -31,15 +31,17 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
 
         resetGyro = new TorqueBoolSupplier(driver::isRightCenterButtonDown);
 
-        speedUp = new TorqueClickSupplier(driver::isRightBumperDown);
-        speedDown = new TorqueClickSupplier(driver::isLeftBumperDown);
+        speedUp = new TorqueClickSupplier(() -> false);
+        speedDown = new TorqueClickSupplier(() -> false);
 
         slowlySlowDownClick = new TorqueClickSupplier(driver::isLeftTriggerDown);
         slowlySlowDownHold = new TorqueBoolSupplier(driver::isLeftTriggerDown);
 
-        runSmartIntake = new TorqueBoolSupplier(driver::isRightTriggerDown);
-        runDumbIntake = new TorqueBoolSupplier(driver::isBButtonDown);
-        runOuttake = new TorqueBoolSupplier(driver::isAButtonDown);
+        // when smart intake works then we set runSmartIntake to use driver::isRightTriggerDown
+        // and then set dumb intake to driver::isRightBumperDown
+        runSmartIntake = new TorqueBoolSupplier(() -> false); // right now
+        runDumbIntake = new TorqueBoolSupplier(driver::isRightTriggerDown);
+        runOuttake = new TorqueBoolSupplier(driver::isRightBumperDown); 
 
         speakerSmartShot = new TorqueBoolSupplier(operator::isRightTriggerDown);
         speakerWarmup = new TorqueBoolSupplier(operator::isRightBumperDown);

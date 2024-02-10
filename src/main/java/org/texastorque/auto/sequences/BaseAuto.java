@@ -125,11 +125,10 @@ public class BaseAuto extends TorqueSequence implements Subsystems {
         public Shoot() {
             if (RobotBase.isReal()) {
                 addBlock(shooter.yieldState(Shooter.State.SMART));
-                addBlock(new TorqueWaitUntil(() -> shooter.wantsToShoot()));
-                addBlock(new TorqueWaitUntil(shooter::isReadyToShoot));
-                addBlock(new TorqueRun(() -> shooter.setGateState(GateState.OUT)));
                 addBlock(new TorqueWaitTime(waitTime));
-                addBlock(new TorqueRun(() -> shooter.setGateState(GateState.OFF)));
+                addBlock(shooter.yieldGateState(Shooter.GateState.OUT));
+                addBlock(new TorqueWaitTime(waitTime));
+                addBlock(shooter.yieldGateState(Shooter.GateState.OFF));
                 addBlock(shooter.yieldState(Shooter.State.OFF));
             } else {
                 addBlock(new TorqueWaitTime(1));
@@ -148,6 +147,7 @@ public class BaseAuto extends TorqueSequence implements Subsystems {
             addBlock(intake.yieldState(Intake.State.INTAKE));
             addBlock(new TorqueWaitUntil(intake::isRotaryDownEnough));
             addBlock(shooter.yieldState(Shooter.State.INTAKE));
+            addBlock(shooter.yieldGateState(Shooter.GateState.IN));
         }
     }
 
@@ -166,11 +166,12 @@ public class BaseAuto extends TorqueSequence implements Subsystems {
             addBlock(followPath(() -> noteSequence.getNextPath()),
                     new DeployIntakeWhen(deployIntakeWhen).command());
 
-            // addBlock(new TorqueWaitUntil(shooter::hasNote)); // once we have relaible
-            // hasNote
-            addBlock(new TorqueWaitTime(1));
+            // addBlock(new TorqueWaitUntil(shooter::hasNote)); // once we have relaible hasNote
+            addBlock(new TorqueWaitTime(3));
+            // TURN OFF INTAKE
             addBlock(intake.yieldState(Intake.State.OFF));
             addBlock(shooter.yieldState(Shooter.State.OFF));
+            addBlock(shooter.yieldGateState(Shooter.GateState.IN));
 
             addBlock(new TorqueRunSequence(new Shoot()));
         }

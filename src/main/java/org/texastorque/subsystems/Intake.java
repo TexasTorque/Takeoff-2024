@@ -28,7 +28,7 @@ public class Intake extends TorqueStatorSubsystem<Intake.State> implements Subsy
         }
     }
 
-    private static final double ROTARY_TOLERANCE = 7;
+    private static final double ROTARY_TOLERANCE = 3;
 
     private final TorqueNEO rotaryLeft, rotaryRight, rollers;
 
