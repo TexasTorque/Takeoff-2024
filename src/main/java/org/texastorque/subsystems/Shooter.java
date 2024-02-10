@@ -71,7 +71,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
     private final CANcoder rotaryEncoder, flywheelTopEncoder, flywheelBottomEncoder;
 
     private final PIDController rotaryPID, flywheelTopPID, flywheelBottomPID;
-    
+
     private final SimpleMotorFeedforward flywheelFF;
 
     private final TorqueLookUpTable<Shot> shotTable;
@@ -132,7 +132,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
 
         noteEmmiter = new DigitalOutput(Ports.SHOOTER_NOTE_EMITTER);
         noteEmmiter.set(true);
-        noteReciver  = new DigitalOutput(Ports.SHOOTER_NOTE_RECIVER);
+        noteReciver = new DigitalOutput(Ports.SHOOTER_NOTE_RECIVER);
         noteReciver.set(true);
 
         shotTable = new TorqueLookUpTable<Shot>(
@@ -165,6 +165,8 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
     }
 
     public boolean isReadyToShoot() {
+        if (!wantsToShoot())
+            return false;
         return isTopFlywheelReady() && isBottomFlywheelReady() && isRotaryReady();
     }
 
@@ -200,7 +202,6 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         return desiredState.isAShot;
     }
 
-
     @Override
     public void update(TorqueMode mode) {
         Debug.log("Shooter State", desiredState.toString());
@@ -219,12 +220,14 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
 
         Debug.log("drivebase aligned", drivebase.isAligned());
 
-        if (intake.isIntaking() && intake.isRotaryDownEnough()) {
-            desiredState = State.INTAKE;
-            gateState = GateState.IN;
-        } else if (hasNote()) {
-            desiredState = State.OFF;
-            gateState = GateState.OFF;
+        if (mode.isTeleop()) {
+            if (intake.isIntaking() && intake.isRotaryDownEnough()) {
+                desiredState = State.INTAKE;
+                gateState = GateState.IN;
+            } else if (hasNote()) {
+                desiredState = State.OFF;
+                gateState = GateState.OFF;
+            }
         }
 
         if (wantsState(State.SMART)) {
@@ -243,7 +246,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
             shot = new Shot(velo, angle);
         }
 
-        if (isReadyToShoot() && desiredState.isAShot) {
+        if (isReadyToShoot() && desiredState.isAShot && mode.isTeleop()) {
             gateState = GateState.OUT;
         }
 
