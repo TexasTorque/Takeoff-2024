@@ -261,6 +261,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         if (mode.isTeleop()) {
             desiredState = State.OFF;
         }
+
         gateState = GateState.OFF;
     }
 
