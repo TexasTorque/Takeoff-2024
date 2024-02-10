@@ -37,11 +37,9 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
         slowlySlowDownClick = new TorqueClickSupplier(driver::isLeftTriggerDown);
         slowlySlowDownHold = new TorqueBoolSupplier(driver::isLeftTriggerDown);
 
-        // when smart intake works then we set runSmartIntake to use driver::isRightTriggerDown
-        // and then set dumb intake to driver::isRightBumperDown
-        runSmartIntake = new TorqueBoolSupplier(() -> false); // right now
-        runDumbIntake = new TorqueBoolSupplier(driver::isRightTriggerDown);
-        runOuttake = new TorqueBoolSupplier(driver::isRightBumperDown); 
+        runSmartIntake = new TorqueBoolSupplier(driver::isRightTriggerDown);
+        runDumbIntake = new TorqueBoolSupplier(driver::isRightBumperDown);
+        runOuttake = new TorqueBoolSupplier(driver::isLeftBumperDown);
 
         speakerSmartShot = new TorqueBoolSupplier(operator::isRightTriggerDown);
         speakerWarmup = new TorqueBoolSupplier(operator::isRightBumperDown);
@@ -99,7 +97,8 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
 
         slowlySlowDownHold.onTrue(() -> drivebase.speedSetting = SpeedSetting.SEQ);
 
-        if (!slowlySlowDownHold.get()) drivebase.speedSetting = Drivebase.SpeedSetting.FAST;
+        if (!slowlySlowDownHold.get())
+            drivebase.speedSetting = Drivebase.SpeedSetting.FAST;
 
         final double xVelocity = TorqueMath.scaledLinearDeadband(-driver.getLeftYAxis(), CONTROLLER_DEADBAND)
                 * Drivebase.MAX_VELOCITY;

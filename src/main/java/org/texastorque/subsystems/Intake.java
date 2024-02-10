@@ -18,7 +18,7 @@ public class Intake extends TorqueStatorSubsystem<Intake.State> implements Subsy
 
     public static enum State implements TorqueState {
         OFF(0, 0), INTAKE(ROTARY_DOWN, 12),
-        SMART_INTAKE(ROTARY_DOWN, 12), OUTTAKE(ROTARY_DOWN, -12);
+        SMART_INTAKE(ROTARY_DOWN, 12), OUTTAKE(ROTARY_DOWN, -12), PRIME(7, 0);
 
         public final double rotaryPosition, rollerSpeed;
 
@@ -42,6 +42,7 @@ public class Intake extends TorqueStatorSubsystem<Intake.State> implements Subsy
         rotaryLeft.setBreakMode(true);
         rotaryLeft.invertMotor(false);
         rotaryLeft.setPIDFeedbackDevice(rotaryLeft.encoder);
+        rotaryLeft.setCurrent(35);
         rotaryLeft.burnFlash();
 
         rotaryLeftPID = new PIDController(.5, 0, 0);
@@ -51,6 +52,7 @@ public class Intake extends TorqueStatorSubsystem<Intake.State> implements Subsy
         rotaryRight.setBreakMode(true);
         rotaryRight.invertMotor(true);
         rotaryRight.setPIDFeedbackDevice(rotaryRight.encoder);
+        rotaryRight.setCurrent(35);
         rotaryRight.burnFlash();
 
         rotaryRightPID = new PIDController(.5, 0, 0);
@@ -67,9 +69,9 @@ public class Intake extends TorqueStatorSubsystem<Intake.State> implements Subsy
     }
 
     public boolean isRotaryDownEnough() {
-        return TorqueMath.toleranced(Math.abs(rotaryLeft.getPosition()), desiredState.rotaryPosition,
-                ROTARY_TOLERANCE)
-                && TorqueMath.toleranced(Math.abs(rotaryRight.getPosition()), desiredState.rotaryPosition);
+        return isIntaking()
+                && Math.abs(rotaryLeft.getPosition()) - Math.abs(desiredState.rotaryPosition) < ROTARY_TOLERANCE
+                && Math.abs(rotaryRight.getPosition()) - Math.abs(desiredState.rotaryPosition) < ROTARY_TOLERANCE;
     }
 
     @Override
@@ -77,13 +79,15 @@ public class Intake extends TorqueStatorSubsystem<Intake.State> implements Subsy
         Debug.log("Intake State", desiredState.toString());
         Debug.log("Intake Rotary Left", rotaryLeft.getPosition());
         Debug.log("Intake Rotary Right", rotaryRight.getPosition());
+        Debug.log("Rotary Down Enough", isRotaryDownEnough());
 
-        // if (wantsState(State.SMART_INTAKE) && shooter.hasNote())
-        //     Input.getInstance().setRumbleFor(.2);
+        if (wantsState(State.SMART_INTAKE) && shooter.hasNote()) {
+            Input.getInstance().setRumbleFor(.2);
 
-        // if (shooter.hasNote() && shooter.isRotaryAtState())
-        // if (isIntaking() && shooter.isRotaryAtState())
-        //     desiredState = State.OFF;
+            if (shooter.isRotaryAtState()) {
+                desiredState = mode.isAuto() ? State.PRIME : State.OFF;
+            }
+        }
 
         rollers.setVolts(desiredState.rollerSpeed);
 

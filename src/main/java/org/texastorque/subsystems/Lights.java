@@ -116,8 +116,12 @@ public final class Lights extends TorqueStatelessSubsystem implements Subsystems
             return blinkGreen;
         else if (mode.isAuto())
             return rainbow;
-        else
-            return DriverStation.getAlliance().get() == DriverStation.Alliance.Blue ? blue : red;
+        else {
+            if (DriverStation.getAlliance().isPresent()) {
+                return DriverStation.getAlliance().get() == DriverStation.Alliance.Blue ? blue : red;
+            }
+            return blue;
+        }
 
     }
 
