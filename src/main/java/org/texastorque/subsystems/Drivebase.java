@@ -183,8 +183,8 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
 
     @Override
     public final void update(final TorqueMode mode) {
-        Debug.log("isAligned", isAligned());
-        Debug.log("align target", getAlignTarget());
+        Debug.log("Is Aligned", isAligned());
+        Debug.log("Align Target", getAlignTarget());
 
         // If shooter is in smart mode then the driver can still drive around but
         // the rotation should stay locked to the goal.
@@ -193,14 +193,14 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
         //     desiredState = State.ALIGN_TO_ANGLE;
         // } 
 
-        if (wantsState(State.ALIGN_TO_ANGLE)) {
-            inputSpeeds.omegaRadiansPerSecond = TorqueMath.constrain(
-                    alignPID.calculate(perception.getHeading().getDegrees(), getAlignTarget()),.75);
-        }
-
         if (wantsState(State.FIELD_RELATIVE) || wantsState(State.ALIGN_TO_ANGLE)) {
             inputSpeeds = inputSpeeds.times(speedSetting == SpeedSetting.SEQ ? speedSequence.get()
                     : speedSetting.speed).toFieldRelativeSpeeds(perception.getHeading());
+        }
+
+        if (wantsState(State.ALIGN_TO_ANGLE)) {
+            inputSpeeds.omegaRadiansPerSecond = TorqueMath.constrain(
+                    alignPID.calculate(perception.getHeading().getDegrees(), getAlignTarget()),.75);
         }
 
         swerveStates = kinematics.toSwerveModuleStates(inputSpeeds);

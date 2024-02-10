@@ -78,11 +78,12 @@ public class Intake extends TorqueStatorSubsystem<Intake.State> implements Subsy
         Debug.log("Intake Rotary Left", rotaryLeft.getPosition());
         Debug.log("Intake Rotary Right", rotaryRight.getPosition());
 
-        if (wantsState(State.SMART_INTAKE) && shooter.hasNote())
-            Input.getInstance().setRumbleFor(.2);
+        // if (wantsState(State.SMART_INTAKE) && shooter.hasNote())
+        //     Input.getInstance().setRumbleFor(.2);
 
-        if (shooter.hasNote() && shooter.isRotaryAtState())
-            desiredState = State.OFF;
+        // if (shooter.hasNote() && shooter.isRotaryAtState())
+        // if (isIntaking() && shooter.isRotaryAtState())
+        //     desiredState = State.OFF;
 
         rollers.setVolts(desiredState.rollerSpeed);
 

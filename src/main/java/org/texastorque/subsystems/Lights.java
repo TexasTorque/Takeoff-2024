@@ -81,36 +81,39 @@ public final class Lights extends TorqueStatelessSubsystem implements Subsystems
         return instance == null ? instance = new Lights() : instance;
     }
 
-    private final AddressableLED superstructureLEDs;
+    private final AddressableLED shooterLEDs;
 
     private final AddressableLEDBuffer buff;
 
     private LightAction blinkOrange = new Blink(() -> Color.kOrange, 6),
+            blinkGreen = new Blink(() -> Color.kGreen, 6),
             blinkRed = new Blink(() -> Color.kRed, 6), blinkBlue = new Blink(() -> Color.kBlue, 6),
             rainbow = new Rainbow(), blue = new Solid(() -> Color.kBlue), red = new Solid(() -> Color.kRed);
 
     private Lights() {
-        superstructureLEDs = new AddressableLED(Ports.LIGHTS_SUPERSTRUCTURE);
-        superstructureLEDs.setLength(LENGTH);
+        shooterLEDs = new AddressableLED(Ports.LIGHTS_SUPERSTRUCTURE);
+        shooterLEDs.setLength(LENGTH);
 
         buff = new AddressableLEDBuffer(LENGTH);
 
         for (int i = 0; i < buff.getLength(); i++)
             buff.setLED(i, Color.kGreen);
 
-        superstructureLEDs.setData(buff);
+        shooterLEDs.setData(buff);
     }
 
     @Override
     public final void initialize(final TorqueMode mode) {
-        superstructureLEDs.start();
+        shooterLEDs.start();
     }
 
     public final LightAction getColor(final TorqueMode mode) {
         if (intake.isIntaking())
             return blinkOrange;
-        else if (shooter.isShooting())
+        else if (shooter.wantsToShoot())
             return DriverStation.getAlliance().get() == DriverStation.Alliance.Blue ? blinkBlue : blinkRed;
+        else if (shooter.wantsToShoot() && shooter.isReadyToShoot())
+            return blinkGreen;
         else if (mode.isAuto())
             return rainbow;
         else
@@ -121,7 +124,7 @@ public final class Lights extends TorqueStatelessSubsystem implements Subsystems
     @Override
     public final void update(final TorqueMode mode) {
         getColor(mode).run(buff);
-        superstructureLEDs.setData(buff);
+        shooterLEDs.setData(buff);
     }
 
     @Override

@@ -138,9 +138,9 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
         // This gets comented/uncomented out based on if or if not we want to use
         // vision to update our odometry while we are pathing (like physically following the path)
         //
-        // if (drivebase.wantsState(Drivebase.State.PATHING)) {
-        //     return;
-        // }
+        if (drivebase.wantsState(Drivebase.State.PATHING)) {
+            return;
+        }
 
         toast.iterCams((cam) -> {
             final var pipeOpt = cam.getPipeline(AprilTags.class);
@@ -220,6 +220,7 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
      */
     public void resetGyro() {
         gyro.setOffsetCW(Rotation2d.fromRadians(0));
+        setPose(new Pose2d(5, 5, getHeading()));
     }
 
     /**

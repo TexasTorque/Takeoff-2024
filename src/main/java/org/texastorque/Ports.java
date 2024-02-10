@@ -27,5 +27,7 @@ public final class Ports {
 
     public static final int LIGHTS_SUPERSTRUCTURE = 0;
 
-    public static final int SHOOTER_NOTE_SENSOR = 0;
+    public static final int SHOOTER_NOTE_SENSOR = 1;
+    public static final int SHOOTER_NOTE_EMITTER = 3;
+    public static final int SHOOTER_NOTE_RECIVER = 4;
 }

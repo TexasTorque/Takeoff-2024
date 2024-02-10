@@ -104,7 +104,7 @@ public class BaseAuto extends TorqueSequence implements Subsystems {
      * and will wait until the shooter is ready + a small delay for the peice to leave.
      */
     public class Shoot extends TorqueSequence {
-        private final double waitTime = .5;
+        private final double waitTime = 1;
 
         public Shoot() {
             if (RobotBase.isReal()) {
@@ -112,7 +112,6 @@ public class BaseAuto extends TorqueSequence implements Subsystems {
                 addBlock(new TorqueWaitUntil(shooter::isReadyToShoot));
                 addBlock(new TorqueWaitTime(waitTime));
                 addBlock(shooter.yieldState(Shooter.State.OFF));
-                addBlock(intake.yieldState(Intake.State.OFF));
             } else {
                 addBlock(new TorqueWaitTime(1));
             }
@@ -126,7 +125,8 @@ public class BaseAuto extends TorqueSequence implements Subsystems {
     public class DeployIntakeWhen extends TorqueSequence {
         public DeployIntakeWhen(final BooleanSupplier when) {
             addBlock(new TorqueWaitUntil(when));
-            addBlock(intake.yieldState(Intake.State.SMART_INTAKE));
+            // addBlock(intake.yieldState(Intake.State.SMART_INTAKE));
+            addBlock(intake.yieldState(Intake.State.INTAKE));
         }
     }
 
@@ -143,10 +143,13 @@ public class BaseAuto extends TorqueSequence implements Subsystems {
 
             addBlock(followPath(() -> noteSequence.getNextPath()), 
                 new DeployIntakeWhen(deployIntakeWhen).command());
+            
+            // if (RobotBase.isReal()) {
+            //     addBlock(new TorqueWaitUntil(shooter::hasNote));
+            // }
 
-            if (RobotBase.isReal()) {
-                addBlock(new TorqueWaitUntil(shooter::hasNote));
-            }
+            addBlock(new TorqueWaitTime(1));
+            addBlock(intake.yieldState(Intake.State.OFF));
 
             addBlock(new TorqueRunSequence(new Shoot()));
         }

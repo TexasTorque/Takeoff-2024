@@ -13,6 +13,7 @@ import com.ctre.phoenix6.hardware.CANcoder;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.controller.SimpleMotorFeedforward;
 import edu.wpi.first.wpilibj.DigitalInput;
+import edu.wpi.first.wpilibj.DigitalOutput;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Subsystems {
@@ -33,6 +34,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         OFF(new Shot(0, ROTARY_OFF), false),
         WARMUP(new Shot(1500, ROTARY_OFF), false),
         INTAKE(new Shot(-800, 194), false),
+        BABYBIRD(new Shot(-800, 90), false),
         AMP(new Shot(900, 62), true),
         TRAP(new Shot(0, 108), true),
         LAYUP(new Shot(3900, 63), true),
@@ -75,6 +77,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
     private final TorqueLookUpTable<Shot> shotTable;
 
     private final DigitalInput noteSensor;
+    private final DigitalOutput noteEmmiter, noteReciver;
 
     private GateState gateState = GateState.OFF;
 
@@ -127,9 +130,14 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
 
         noteSensor = new DigitalInput(Ports.SHOOTER_NOTE_SENSOR);
 
+        noteEmmiter = new DigitalOutput(Ports.SHOOTER_NOTE_EMITTER);
+        noteEmmiter.set(true);
+        noteReciver  = new DigitalOutput(Ports.SHOOTER_NOTE_RECIVER);
+        noteReciver.set(true);
+
         shotTable = new TorqueLookUpTable<Shot>(
-                (final Shot me, final Shot other) -> Math.abs(other.angle - me.angle) < 0.01
-                        && Math.abs(other.topVelocity - me.topVelocity) < 0.1,
+                (final Shot me, final Shot other) -> Math.abs(other.angle - me.angle) < 1
+                        && Math.abs(other.topVelocity - me.topVelocity) < 10,
                 (final Shot me, final Shot end, final Double t) -> new Shot(lerp(me.topVelocity, end.topVelocity, t),
                         lerp(me.angle, end.angle, t)));
 
@@ -145,7 +153,6 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
 
         SmartDashboard.putNumber("Shot Velocity", 0);
         SmartDashboard.putNumber("Shot Angle", 0);
-        SmartDashboard.putNumber("Flywheel P", 0);
     }
 
     @Override
@@ -153,7 +160,8 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
     }
 
     public boolean hasNote() {
-        return !noteSensor.get();
+        // return !noteSensor.get();
+        return false;
     }
 
     public boolean isReadyToShoot() {
@@ -188,9 +196,10 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         return TorqueMath.toleranced(getRotaryEncoder(), shot.angle, ROTARY_TOLERANCE);
     }
 
-    public boolean isShooting() {
+    public boolean wantsToShoot() {
         return desiredState.isAShot;
     }
+
 
     @Override
     public void update(TorqueMode mode) {
@@ -206,6 +215,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         Debug.log("Top Flywheel Ready", isTopFlywheelReady());
         Debug.log("Bottom Flywheel Ready", isBottomFlywheelReady());
         Debug.log("Rotary Ready", isRotaryReady());
+        Debug.log("Has Note", hasNote());
 
         Debug.log("drivebase aligned", drivebase.isAligned());
 
@@ -250,8 +260,8 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
 
         if (mode.isTeleop()) {
             desiredState = State.OFF;
-            gateState = GateState.OFF;
         }
+        gateState = GateState.OFF;
     }
 
     @Override
