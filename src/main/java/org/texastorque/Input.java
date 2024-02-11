@@ -12,6 +12,9 @@ import org.texastorque.torquelib.sensors.TorqueController;
 import org.texastorque.torquelib.swerve.TorqueSwerveSpeeds;
 import org.texastorque.torquelib.util.TorqueMath;
 
+import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.Timer;
+
 public final class Input extends TorqueInput<TorqueController> implements Subsystems {
     private static volatile Input instance;
 
@@ -21,32 +24,39 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
 
     private final TorqueBoolSupplier resetGyro, speedUp, speedDown, runSmartIntake,
             runDumbIntake, runOuttake, speakerSmartShot, speakerLayup, speakerSafeZone, amp, trap, speakerWarmup,
-            ampWarmup, slowlySlowDownClick, slowlySlowDownHold, manualGateOut, manualGateIn;
+            slowlySlowDownClick, slowlySlowDownHold, manualGateOut, manualGateIn, babyBird;
 
     private Input() {
         driver = new TorqueController(0, 0.1);
         operator = new TorqueController(1, 0.1);
+
         rumbleTimeout = new TorqueRequestableTimeout();
 
         resetGyro = new TorqueBoolSupplier(driver::isRightCenterButtonDown);
-        speedUp = new TorqueClickSupplier(driver::isRightBumperDown);
-        speedDown = new TorqueClickSupplier(driver::isLeftBumperDown);
+
+        speedUp = new TorqueClickSupplier(() -> false);
+        speedDown = new TorqueClickSupplier(() -> false);
+
         slowlySlowDownClick = new TorqueClickSupplier(driver::isLeftTriggerDown);
         slowlySlowDownHold = new TorqueBoolSupplier(driver::isLeftTriggerDown);
 
         runSmartIntake = new TorqueBoolSupplier(driver::isRightTriggerDown);
         runDumbIntake = new TorqueBoolSupplier(driver::isRightBumperDown);
-        runOuttake = new TorqueBoolSupplier(driver::isAButtonDown);
+        runOuttake = new TorqueBoolSupplier(driver::isLeftBumperDown);
 
         speakerSmartShot = new TorqueBoolSupplier(operator::isRightTriggerDown);
-        speakerWarmup = new TorqueToggleSupplier(operator::isRightBumperDown);
+        speakerWarmup = new TorqueBoolSupplier(operator::isRightBumperDown);
+
         speakerLayup = new TorqueBoolSupplier(operator::isYButtonDown);
         speakerSafeZone = new TorqueBoolSupplier(operator::isAButtonDown);
+
         amp = new TorqueBoolSupplier(operator::isLeftTriggerDown);
-        ampWarmup = new TorqueToggleSupplier(operator::isLeftBumperDown);
         trap = new TorqueBoolSupplier(operator::isXButtonDown);
+
         manualGateOut = new TorqueBoolSupplier(operator::isDPADUpDown);
         manualGateIn = new TorqueBoolSupplier(operator::isDPADDownDown);
+
+        babyBird = new TorqueBoolSupplier(operator::isLeftBumperDown);
     }
 
     @Override
@@ -74,10 +84,10 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
 
         speakerWarmup.onTrue(() -> shooter.setState(Shooter.State.WARMUP));
 
-        ampWarmup.onTrue(() -> shooter.setState(Shooter.State.WARMUP));
-
         manualGateOut.onTrue(() -> shooter.setGateState(Shooter.GateState.OUT));
         manualGateIn.onTrue(() -> shooter.setGateState(Shooter.GateState.IN));
+
+        babyBird.onTrue(() -> shooter.setState(Shooter.State.BABYBIRD));
     }
 
     public void updateDrivebase() {
@@ -87,6 +97,7 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
 
         slowlySlowDownClick.onTrue(() -> drivebase.speedSequence = new SpeedSequence(Drivebase.SpeedSetting.FAST,
                 Drivebase.SpeedSetting.SLOW, 1));
+
         slowlySlowDownHold.onTrue(() -> drivebase.speedSetting = SpeedSetting.SEQ);
 
         if (!slowlySlowDownHold.get())
@@ -103,8 +114,22 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
     }
 
     public void updateRumble() {
-        driver.setRumble(rumbleTimeout.get());
-        operator.setRumble(rumbleTimeout.get());
+        boolean rumbleLeft = rumbleTimeout.get();
+        boolean rumbleRight = rumbleTimeout.get();
+
+        if (TorqueMath.toleranced(DriverStation.getMatchTime(), 20, 1)) {
+            if (Timer.getFPGATimestamp() * 100 % 2 == 0) {
+                rumbleLeft = true;
+                rumbleRight = false;
+            } else {
+                rumbleLeft = false;
+                rumbleRight = true;
+            }
+        }
+        driver.setRumbleLeft(rumbleLeft);
+        driver.setRumbleRight(rumbleRight);
+        operator.setRumbleLeft(rumbleLeft);
+        operator.setRumbleRight(rumbleRight);
     }
 
     public void setRumbleFor(final double duration) {
