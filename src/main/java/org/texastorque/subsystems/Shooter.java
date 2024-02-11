@@ -15,7 +15,6 @@ import com.ctre.phoenix6.hardware.CANcoder;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.controller.SimpleMotorFeedforward;
 import edu.wpi.first.wpilibj.DigitalInput;
-import edu.wpi.first.wpilibj.DigitalOutput;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Subsystems {
@@ -30,11 +29,11 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         private static final Shot empty = new Shot(0, 0, 0);
     }
 
-    private static final double ROTARY_OFF = 115;
+    private static final double ROTARY_OFF_POSITION = 115;
 
     public static enum State implements TorqueState {
-        OFF(new Shot(0, ROTARY_OFF), false),
-        WARMUP(new Shot(1500, ROTARY_OFF), false),
+        OFF(new Shot(0, ROTARY_OFF_POSITION), false),
+        WARMUP(new Shot(1500, ROTARY_OFF_POSITION), false),
         INTAKE(new Shot(-1500, 194), false),
         BABYBIRD(new Shot(-800, 90), false),
         AMP(new Shot(915, 62), true),
@@ -162,18 +161,10 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
 
     private int loopsThatShooterHasBeenReadyToShoot = 0;
 
-    public boolean hasBeenReadyToShoot() {
-        return loopsThatShooterHasBeenReadyToShoot > 20;
-    }
-
     public boolean isReadyToShoot() {
         if (!wantsToShoot())
             return false;
-        return isTopFlywheelReady() && isBottomFlywheelReady() && isRotaryReady();
-    }
-
-    public boolean isRotaryAtState() {
-        return TorqueMath.toleranced(getRotaryEncoder(), desiredState.shot.angle, ROTARY_TOLERANCE);
+        return isTopFlywheelReady() && isBottomFlywheelReady() && isRotaryAtState();
     }
 
     public double getRotaryEncoder() {
@@ -189,15 +180,15 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
     }
 
     private boolean isTopFlywheelReady() {
-        return Math.abs(getTopFlywheelVelocity()) - Math.abs(shot.topVelocity) <= FLYWHEEL_TOLERANCE;
+        return Math.abs(getTopFlywheelVelocity() - shot.topVelocity) <= FLYWHEEL_TOLERANCE;
     }
 
     private boolean isBottomFlywheelReady() {
-        return Math.abs(getBottomFlywheelVelocity()) - Math.abs(shot.bottomVelocity) <= FLYWHEEL_TOLERANCE;
+        return Math.abs(getBottomFlywheelVelocity() - shot.bottomVelocity) <= FLYWHEEL_TOLERANCE;
     }
 
-    private boolean isRotaryReady() {
-        return TorqueMath.toleranced(getRotaryEncoder(), shot.angle, ROTARY_TOLERANCE);
+    public boolean isRotaryAtState() {
+        return Math.abs(getRotaryEncoder() - shot.angle) <= ROTARY_TOLERANCE;
     }
 
     public boolean wantsToShoot() {
@@ -216,20 +207,19 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         Debug.log("Angle to Speaker", perception.getAngleToSpeaker().getDegrees());
         Debug.log("Top Flywheel Ready", isTopFlywheelReady());
         Debug.log("Bottom Flywheel Ready", isBottomFlywheelReady());
-        Debug.log("Rotary Ready", isRotaryReady());
+        Debug.log("Rotary Ready", isRotaryAtState());
         Debug.log("Has Note", hasNote());
 
         Debug.log("drivebase aligned", drivebase.isAligned());
 
         if (mode.isTeleop() && intake.isIntaking()) {
-            if (hasNote()) {
-                desiredState = State.OFF;
-                gateState = GateState.OFF;
-            } else if (intake.isRotaryDownEnough()) {
+            if (intake.isRotaryDownEnough()) {
                 desiredState = State.INTAKE;
                 gateState = GateState.IN;
+            } else if (hasNote()) {
+                desiredState = State.OFF;
+                gateState = GateState.OFF;
             }
-
         }
 
         if (wantsState(State.SMART)) {
@@ -250,17 +240,15 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
             }
         }
 
-        if (!wantsToShoot())
-            loopsThatShooterHasBeenReadyToShoot = 0;
-
         if (isReadyToShoot())
             loopsThatShooterHasBeenReadyToShoot++;
+        else if (!wantsToShoot())
+            loopsThatShooterHasBeenReadyToShoot = 0;
 
         Debug.log("Loops", loopsThatShooterHasBeenReadyToShoot);
 
-        if (hasBeenReadyToShoot()) {
+        if (loopsThatShooterHasBeenReadyToShoot > 20)
             gateState = GateState.OUT;
-        }
 
         Debug.log("Shot", shot.toString());
 

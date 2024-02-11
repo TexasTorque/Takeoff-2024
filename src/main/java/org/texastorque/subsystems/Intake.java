@@ -8,7 +8,6 @@ import org.texastorque.torquelib.base.TorqueMode;
 import org.texastorque.torquelib.base.TorqueState;
 import org.texastorque.torquelib.base.TorqueStatorSubsystem;
 import org.texastorque.torquelib.motors.TorqueNEO;
-import org.texastorque.torquelib.util.TorqueMath;
 import edu.wpi.first.math.controller.PIDController;
 
 public class Intake extends TorqueStatorSubsystem<Intake.State> implements Subsystems {
@@ -70,8 +69,8 @@ public class Intake extends TorqueStatorSubsystem<Intake.State> implements Subsy
 
     public boolean isRotaryDownEnough() {
         return isIntaking()
-                && Math.abs(rotaryLeft.getPosition()) - Math.abs(desiredState.rotaryPosition) < ROTARY_TOLERANCE
-                && Math.abs(rotaryRight.getPosition()) - Math.abs(desiredState.rotaryPosition) < ROTARY_TOLERANCE;
+                && Math.abs(rotaryLeft.getPosition() - desiredState.rotaryPosition) < ROTARY_TOLERANCE
+                && Math.abs(rotaryRight.getPosition() - desiredState.rotaryPosition) < ROTARY_TOLERANCE;
     }
 
     @Override
@@ -84,9 +83,9 @@ public class Intake extends TorqueStatorSubsystem<Intake.State> implements Subsy
         if (wantsState(State.SMART_INTAKE) && shooter.hasNote()) {
             Input.getInstance().setRumbleFor(.2);
 
-            if (shooter.isRotaryAtState()) {
+            if (shooter.isRotaryAtState())
                 desiredState = mode.isAuto() ? State.PRIME : State.OFF;
-            }
+
         }
 
         rollers.setVolts(desiredState.rollerSpeed);
