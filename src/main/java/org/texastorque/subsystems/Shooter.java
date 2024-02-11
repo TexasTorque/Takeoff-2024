@@ -180,11 +180,11 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
     }
 
     private boolean isTopFlywheelReady() {
-        return Math.abs(getTopFlywheelVelocity() - shot.topVelocity) <= FLYWHEEL_TOLERANCE;
+        return Math.abs(Math.abs(getTopFlywheelVelocity()) - Math.abs(shot.topVelocity)) <= FLYWHEEL_TOLERANCE;
     }
 
     private boolean isBottomFlywheelReady() {
-        return Math.abs(getBottomFlywheelVelocity() - shot.bottomVelocity) <= FLYWHEEL_TOLERANCE;
+        return Math.abs(Math.abs(getBottomFlywheelVelocity()) - Math.abs(shot.bottomVelocity)) <= FLYWHEEL_TOLERANCE;
     }
 
     public boolean isRotaryAtState() {

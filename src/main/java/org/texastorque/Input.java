@@ -12,6 +12,9 @@ import org.texastorque.torquelib.sensors.TorqueController;
 import org.texastorque.torquelib.swerve.TorqueSwerveSpeeds;
 import org.texastorque.torquelib.util.TorqueMath;
 
+import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.Timer;
+
 public final class Input extends TorqueInput<TorqueController> implements Subsystems {
     private static volatile Input instance;
 
@@ -111,8 +114,22 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
     }
 
     public void updateRumble() {
-        driver.setRumble(rumbleTimeout.get());
-        operator.setRumble(rumbleTimeout.get());
+        boolean rumbleLeft = rumbleTimeout.get();
+        boolean rumbleRight = rumbleTimeout.get();
+
+        if (TorqueMath.toleranced(DriverStation.getMatchTime(), 20, 1)) {
+            if (Timer.getFPGATimestamp() * 100 % 2 == 0) {
+                rumbleLeft = true;
+                rumbleRight = false;
+            } else {
+                rumbleLeft = false;
+                rumbleRight = true;
+            }
+        }
+        driver.setRumbleLeft(rumbleLeft);
+        driver.setRumbleRight(rumbleRight);
+        operator.setRumbleLeft(rumbleLeft);
+        operator.setRumbleRight(rumbleRight);
     }
 
     public void setRumbleFor(final double duration) {

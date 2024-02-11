@@ -69,8 +69,8 @@ public class Intake extends TorqueStatorSubsystem<Intake.State> implements Subsy
 
     public boolean isRotaryDownEnough() {
         return isIntaking()
-                && Math.abs(rotaryLeft.getPosition() - desiredState.rotaryPosition) < ROTARY_TOLERANCE
-                && Math.abs(rotaryRight.getPosition() - desiredState.rotaryPosition) < ROTARY_TOLERANCE;
+                && Math.abs(Math.abs(rotaryLeft.getPosition()) - Math.abs(desiredState.rotaryPosition)) < ROTARY_TOLERANCE
+                && Math.abs(Math.abs(rotaryRight.getPosition()) - Math.abs(desiredState.rotaryPosition)) < ROTARY_TOLERANCE;
     }
 
     @Override
