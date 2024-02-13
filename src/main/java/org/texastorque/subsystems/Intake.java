@@ -68,21 +68,20 @@ public class Intake extends TorqueStatorSubsystem<Intake.State> implements Subsy
     public void initialize(final TorqueMode mode) {
     }
 
-    public boolean isRotaryDownEnough() {
+    public boolean isAtState() {
         return isIntaking()
+                // && Math.abs(
+                // Math.abs(g()) - Math.abs(desiredState.rotaryPosition)) <= ROTARY_TOLERANCE
                 && Math.abs(
-                        Math.abs(rotaryLeft.getPosition()) - Math.abs(desiredState.rotaryPosition)) <= ROTARY_TOLERANCE
-                && Math.abs(
-                        Math.abs(rotaryRight.getPosition())
-                                - Math.abs(desiredState.rotaryPosition)) <= ROTARY_TOLERANCE;
+                        Math.abs(rotaryRight.getPosition()) - Math.abs(desiredState.rotaryPosition)) <= ROTARY_TOLERANCE;
     }
 
     @Override
     public void update(final TorqueMode mode) {
         Debug.log("Intake State", desiredState.toString());
-        Debug.log("Intake Rotary Left", rotaryLeft.getPosition());
         Debug.log("Intake Rotary Right", rotaryRight.getPosition());
-        Debug.log("Rotary Down Enough", isRotaryDownEnough());
+        Debug.log("Intake Rotary Left", rotaryLeft.getPosition());
+        Debug.log("Rotary Down Enough", isAtState());
 
         if (wantsState(State.SMART_INTAKE) && shooter.hasNote()) {
             Input.getInstance().setRumbleFor(.2);
@@ -96,7 +95,7 @@ public class Intake extends TorqueStatorSubsystem<Intake.State> implements Subsy
 
         rotaryLeft.setVolts(rotaryLeftPID.calculate(rotaryLeft.getPosition(),
                 desiredState.rotaryPosition));
-        rotaryRight.setVolts(rotaryRightPID.calculate(rotaryRight.getPosition(),
+        rotaryRight.setVolts(rotaryRightPID.calculate(rotaryLeft.getPosition(),
                 desiredState.rotaryPosition));
     }
 

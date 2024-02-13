@@ -219,15 +219,15 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
     }
 
     /**
-     * Tear the gyro, make the current heading "north" (0° yaw).
+     * Tare the gyro, make the current heading "north" (0° yaw) and reset the pose.
      */
-    public void resetGyro() {
+    public void resetPoseAndGyro() {
         gyro.setOffsetCW(Rotation2d.fromRadians(0));
         setPose(new Pose2d(5, 5, getHeading()));
     }
 
-    public void resetGyroOnly() {
-        gyro.setOffsetCW(Rotation2d.fromRadians(0));;
+    public void resetGyro() {
+        gyro.setOffsetCW(Rotation2d.fromRadians(0));
     }
 
     /**
