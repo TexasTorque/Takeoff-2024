@@ -24,7 +24,7 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
 
     private final TorqueBoolSupplier resetGyro, speedUp, speedDown, runSmartIntake,
             runDumbIntake, runOuttake, speakerSmartShot, speakerLayup, speakerSafeZone, amp, trap, speakerWarmup,
-            slowlySlowDownClick, slowlySlowDownHold, manualGateOut, manualGateIn, babyBird;
+            slowlySlowDownClick, slowlySlowDownHold, manualGateOut, manualGateIn, babyBird, debugMode;
 
     private Input() {
         driver = new TorqueController(0, 0.1);
@@ -57,6 +57,9 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
         manualGateIn = new TorqueBoolSupplier(operator::isDPADDownDown);
 
         babyBird = new TorqueBoolSupplier(operator::isLeftBumperDown);
+
+        debugMode = new TorqueToggleSupplier(
+                () -> operator.isLeftCenterButtonDown() && operator.isRightCenterButtonDown());
     }
 
     @Override
@@ -87,7 +90,12 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
         manualGateOut.onTrue(() -> shooter.setGateState(Shooter.GateState.OUT));
         manualGateIn.onTrue(() -> shooter.setGateState(Shooter.GateState.IN));
 
-        babyBird.onTrue(() -> shooter.setState(Shooter.State.BABYBIRD));
+        babyBird.onTrue(() -> {
+            shooter.setState(Shooter.State.BABYBIRD);
+            shooter.setGateState(Shooter.GateState.IN);
+        });
+
+        shooter.setDebugMode(debugMode.get());
     }
 
     public void updateDrivebase() {
@@ -118,7 +126,7 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
         boolean rumbleRight = rumbleTimeout.get();
 
         if (TorqueMath.toleranced(DriverStation.getMatchTime(), 20, 1)) {
-            if (Timer.getFPGATimestamp() * 100 % 2 == 0) {
+            if (DriverStation.isTeleop() && Timer.getFPGATimestamp() * 100 % 2 == 0) {
                 rumbleLeft = true;
                 rumbleRight = false;
             } else {

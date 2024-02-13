@@ -32,11 +32,12 @@ import edu.wpi.first.wpilibj.Timer;
 public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
         implements Subsystems, TorquePathingDrivebase {
     public static enum State implements TorqueState {
-        FIELD_RELATIVE(null), 
+        FIELD_RELATIVE(null),
         ROBOT_RELATIVE(null),
-        ALIGN_TO_ANGLE(ROBOT_RELATIVE), 
-        PATHING(null); 
-        // ^ PATHING is an extra state to be like ROBOT_RELATIVE but its explicity pathing
+        ALIGN_TO_ANGLE(ROBOT_RELATIVE),
+        PATHING(null);
+        // ^ PATHING is an extra state to be like ROBOT_RELATIVE but its explicity
+        // pathing
 
         public final State parent;
 
@@ -185,22 +186,23 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
     public final void update(final TorqueMode mode) {
         Debug.log("Is Aligned", isAligned());
         Debug.log("Align Target", getAlignTarget());
+        Debug.log("State", desiredState.toString());
 
         // If shooter is in smart mode then the driver can still drive around but
         // the rotation should stay locked to the goal.
 
-        // if (shooter.wantsState(Shooter.State.SMART)) {
+        // if (shooter.wantsState(Shooter.State.SMART) && !shooter.inDebugMode() && mode.isTeleop()) {
         //     desiredState = State.ALIGN_TO_ANGLE;
-        // } 
+        // }
 
-        if (wantsState(State.FIELD_RELATIVE) || wantsState(State.ALIGN_TO_ANGLE)) {
+        if (wantsState(State.FIELD_RELATIVE)) {
             inputSpeeds = inputSpeeds.times(speedSetting == SpeedSetting.SEQ ? speedSequence.get()
                     : speedSetting.speed).toFieldRelativeSpeeds(perception.getHeading());
         }
 
         if (wantsState(State.ALIGN_TO_ANGLE)) {
             inputSpeeds.omegaRadiansPerSecond = TorqueMath.constrain(
-                    alignPID.calculate(perception.getHeading().getDegrees(), getAlignTarget()),.75);
+                    alignPID.calculate(perception.getHeading().getDegrees(), getAlignTarget()), .75);
         }
 
         swerveStates = kinematics.toSwerveModuleStates(inputSpeeds);
@@ -257,7 +259,6 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
     public void onEndPathing() {
         setState(State.FIELD_RELATIVE);
     }
- 
 
     @Override
     public void clean(TorqueMode mode) {

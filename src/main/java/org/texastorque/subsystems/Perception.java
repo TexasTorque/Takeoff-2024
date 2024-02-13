@@ -136,8 +136,11 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
         toast.update(); // Updates all the vision pipelines.
 
         // This gets comented/uncomented out based on if or if not we want to use
-        // vision to update our odometry while we are pathing (like physically following the path)
+        // vision to update our odometry while we are pathing (like physically following
+        // the path)
         //
+
+        Debug.log("Not Running Vision", drivebase.wantsState(Drivebase.State.PATHING));
         if (drivebase.wantsState(Drivebase.State.PATHING)) {
             return;
         }
@@ -223,6 +226,10 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
         setPose(new Pose2d(5, 5, getHeading()));
     }
 
+    public void resetGyroOnly() {
+        gyro.setOffsetCW(Rotation2d.fromRadians(0));;
+    }
+
     /**
      * Returns the current perceived position of the robot.
      */
@@ -253,6 +260,13 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
      */
     public Rotation2d getAngleToSpeaker() {
         return Field.getAngleToSpeaker(getPose());
+    }
+
+    /**
+     * Get the angle from the robot to the speaker.
+     */
+    public Rotation2d getAngleToSpeakerRembrandt() {
+        return Field.getAngleToSpeakerRembrandt(getPose());
     }
 
     /**
@@ -340,85 +354,93 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
 
     // The below code is used for an auto system that is not in active development.
 
-    // public static final PathConstraints PATH_CONST = new PathConstraints(1, 1, Math.PI, Math.PI);
+    // public static final PathConstraints PATH_CONST = new PathConstraints(1, 1,
+    // Math.PI, Math.PI);
 
     // public PathPoint createPoint(final Pose2d pose) {
-    //     return createPoint(pose.getTranslation(), pose.getRotation());
+    // return createPoint(pose.getTranslation(), pose.getRotation());
     // }
 
     // public PathPoint createPoint(final Translation2d trl, final Rotation2d rot) {
-    //     final RotationTarget target = new RotationTarget(0, rot);
-    //     return new PathPoint(trl, target, PATH_CONST);
+    // final RotationTarget target = new RotationTarget(0, rot);
+    // return new PathPoint(trl, target, PATH_CONST);
     // }
 
     // public GoalEndState endState(List<PathPoint> points) {
-    //     return new GoalEndState(0, points.get(points.size() - 1).rotationTarget.getTarget());
+    // return new GoalEndState(0, points.get(points.size() -
+    // 1).rotationTarget.getTarget());
     // }
 
     // public PathPlannerPath generateInitial(final int note) {
-    //     final Pose2d currentPose = getPose();
+    // final Pose2d currentPose = getPose();
 
-    //     final Pose2d notePose = Field.getNotePose(note);
+    // final Pose2d notePose = Field.getNotePose(note);
 
-    //     List<Translation2d> bezierPoints = PathPlannerPath.bezierFromPoses(
-    //             currentPose,
-    //             new Pose2d(notePose.getTranslation(), Field.ROT_BACK));
+    // List<Translation2d> bezierPoints = PathPlannerPath.bezierFromPoses(
+    // currentPose,
+    // new Pose2d(notePose.getTranslation(), Field.ROT_BACK));
 
-    //     final GoalEndState endState = new GoalEndState(0, Rotation2d.fromDegrees(1));
+    // final GoalEndState endState = new GoalEndState(0, Rotation2d.fromDegrees(1));
 
-    //     return new PathPlannerPath(bezierPoints, PATH_CONST, endState);
+    // return new PathPlannerPath(bezierPoints, PATH_CONST, endState);
     // }
 
     // public PathPlannerPath generateNextOmar(final int note) {
-    //     final Pose2d currentPose = getPose();
+    // final Pose2d currentPose = getPose();
 
-    //     final Pose2d notePose = Field.getNotePose(note);
+    // final Pose2d notePose = Field.getNotePose(note);
 
-    //     final Rotation2d targetRotation = Field.getAngleToSpeaker(notePose);
+    // final Rotation2d targetRotation = Field.getAngleToSpeaker(notePose);
 
-    //     final Translation2d midPointLocation = new Translation2d(
-    //             notePose.getX() - Math.abs(notePose.getY() - currentPose.getY()), // target x - distance from current y
-    //                                                                               // to target y
-    //             (currentPose.getY() + notePose.getY()) / 2f); // y coord between current y and target y
+    // final Translation2d midPointLocation = new Translation2d(
+    // notePose.getX() - Math.abs(notePose.getY() - currentPose.getY()), // target x
+    // - distance from current y
+    // // to target y
+    // (currentPose.getY() + notePose.getY()) / 2f); // y coord between current y
+    // and target y
 
-    //     List<Translation2d> bezierPoints = PathPlannerPath.bezierFromPoses(
-    //             new Pose2d(currentPose.getTranslation(), Field.ROT_BACK),
-    //             new Pose2d(midPointLocation, targetRotation),
-    //             new Pose2d(notePose.getTranslation(), targetRotation.plus(Field.ROT_BACK)));
+    // List<Translation2d> bezierPoints = PathPlannerPath.bezierFromPoses(
+    // new Pose2d(currentPose.getTranslation(), Field.ROT_BACK),
+    // new Pose2d(midPointLocation, targetRotation),
+    // new Pose2d(notePose.getTranslation(), targetRotation.plus(Field.ROT_BACK)));
 
-    //     Debug.log("Goal Pose", new Pose2d(notePose.getTranslation(), targetRotation).toString());
+    // Debug.log("Goal Pose", new Pose2d(notePose.getTranslation(),
+    // targetRotation).toString());
 
-    //     final GoalEndState endState = new GoalEndState(0, targetRotation);
+    // final GoalEndState endState = new GoalEndState(0, targetRotation);
 
-    //     return new PathPlannerPath(bezierPoints, PATH_CONST, endState);
+    // return new PathPlannerPath(bezierPoints, PATH_CONST, endState);
     // }
 
-    // public PathPlannerPath generateHomingPosition(final CenterLineAttempt attempt) {
+    // public PathPlannerPath generateHomingPosition(final CenterLineAttempt
+    // attempt) {
 
-    //     final Pose2d currentPose = perception.getPose();
+    // final Pose2d currentPose = perception.getPose();
 
-    //     List<Translation2d> bezierPoints = attempt.getBezierToHoming(currentPose);
+    // List<Translation2d> bezierPoints = attempt.getBezierToHoming(currentPose);
 
-    //     final GoalEndState endState = new GoalEndState(0, Field.ROT_FWD);
+    // final GoalEndState endState = new GoalEndState(0, Field.ROT_FWD);
 
-    //     return new PathPlannerPath(bezierPoints, PATH_CONST, endState);
+    // return new PathPlannerPath(bezierPoints, PATH_CONST, endState);
     // }
 
-    // public PathPlannerPath generateShootingPosition(final CenterLineAttempt attempt) {
+    // public PathPlannerPath generateShootingPosition(final CenterLineAttempt
+    // attempt) {
 
-    //     final Pose2d currentPose = perception.getPose();
+    // final Pose2d currentPose = perception.getPose();
 
-    //     List<Translation2d> bezierPoints = attempt.getBezierToShooting(currentPose);
+    // List<Translation2d> bezierPoints = attempt.getBezierToShooting(currentPose);
 
-    //     final Rotation2d targetRot = Field.getAngleToSpeaker(attempt.shooting());
+    // final Rotation2d targetRot = Field.getAngleToSpeaker(attempt.shooting());
 
-    //     final GoalEndState endState = new GoalEndState(0, targetRot);
+    // final GoalEndState endState = new GoalEndState(0, targetRot);
 
-    //     return new PathPlannerPath(bezierPoints, PATH_CONST, endState);
+    // return new PathPlannerPath(bezierPoints, PATH_CONST, endState);
     // }
 
     // public CenterLineAttempt getCorrectCenterLineAttempt() {
-    //     return isAboveSpeakerOnY() ? Field.CenterLineAttempt.HIGH : Field.CenterLineAttempt.LOW;
+    // return isAboveSpeakerOnY() ? Field.CenterLineAttempt.HIGH :
+    // Field.CenterLineAttempt.LOW;
     // }
 
 }
