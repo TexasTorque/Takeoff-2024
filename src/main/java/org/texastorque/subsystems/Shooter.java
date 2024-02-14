@@ -300,6 +300,9 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
             final double desiredVolts = -TorqueMath.constrain(Math.pow(intakeWarmupTimer.get(), 2) * .25, 0, 1.5);
             flywheelTop.setVolts(desiredVolts);
             flywheelBottom.setVolts(desiredVolts);
+        } else if (wantsState(State.AMP)) {
+            flywheelTop.setPercent(.15);
+            flywheelBottom.setPercent(.15);
         } else {
             flywheelTop.setVolts(flywheelTopPID.calculate(getTopFlywheelVelocity(), shot.topVelocity)
                     + flywheelFF.calculate(shot.topVelocity));
@@ -311,7 +314,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         }
 
         rotary.setVolts(TorqueMath.constrain(rotaryPID.calculate(getRotaryEncoder(),
-                shot.angle), wantsState(State.AMP) ? 2 : 8));
+                shot.angle), wantsState(State.AMP) ? 3 : 8));
 
         Debug.log("Shooter Gate State", gateState.toString());
 
