@@ -24,7 +24,7 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
 
     private final TorqueBoolSupplier resetGyro, speedUp, speedDown, runSmartIntake,
             runDumbIntake, runOuttake, speakerSmartShot, speakerLayup, speakerSafeZone, amp, trap, speakerWarmup,
-            slowlySlowDownClick, slowlySlowDownHold, manualGateOut, manualGateIn, babyBird;
+            slowlySlowDownClick, slowlySlowDownHold, manualGateOut, manualGateIn, babyBird, debugMode, speakerMid;
 
     private Input() {
         driver = new TorqueController(0, 0.1);
@@ -45,10 +45,11 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
         runOuttake = new TorqueBoolSupplier(driver::isLeftBumperDown);
 
         speakerSmartShot = new TorqueBoolSupplier(operator::isRightTriggerDown);
-        speakerWarmup = new TorqueBoolSupplier(operator::isRightBumperDown);
+        speakerWarmup = new TorqueToggleSupplier(operator::isRightBumperDown);
 
         speakerLayup = new TorqueBoolSupplier(operator::isYButtonDown);
         speakerSafeZone = new TorqueBoolSupplier(operator::isAButtonDown);
+        speakerMid = new TorqueBoolSupplier(operator::isBButtonDown);
 
         amp = new TorqueBoolSupplier(operator::isLeftTriggerDown);
         trap = new TorqueBoolSupplier(operator::isXButtonDown);
@@ -57,6 +58,9 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
         manualGateIn = new TorqueBoolSupplier(operator::isDPADDownDown);
 
         babyBird = new TorqueBoolSupplier(operator::isLeftBumperDown);
+
+        debugMode = new TorqueToggleSupplier(
+                () -> operator.isLeftCenterButtonDown() && operator.isRightCenterButtonDown());
     }
 
     @Override
@@ -78,20 +82,26 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
 
         speakerLayup.onTrue(() -> shooter.setState(Shooter.State.LAYUP));
         speakerSafeZone.onTrue(() -> shooter.setState(Shooter.State.SAFEZONE));
+        speakerMid.onTrue(() -> shooter.setState(Shooter.State.MID));
 
         amp.onTrue(() -> shooter.setState(Shooter.State.AMP));
         trap.onTrue(() -> shooter.setState(Shooter.State.TRAP));
 
-        speakerWarmup.onTrue(() -> shooter.setState(Shooter.State.WARMUP));
+        shooter.setIdle(!speakerWarmup.get());
 
         manualGateOut.onTrue(() -> shooter.setGateState(Shooter.GateState.OUT));
         manualGateIn.onTrue(() -> shooter.setGateState(Shooter.GateState.IN));
 
-        babyBird.onTrue(() -> shooter.setState(Shooter.State.BABYBIRD));
+        babyBird.onTrue(() -> {
+            shooter.setState(Shooter.State.BABYBIRD);
+            shooter.setGateState(Shooter.GateState.IN);
+        });
+
+        shooter.setDebugMode(debugMode.get());
     }
 
     public void updateDrivebase() {
-        resetGyro.onTrue(() -> perception.resetGyro());
+        resetGyro.onTrue(() -> perception.resetPoseAndGyro());
         speedDown.onTrue(() -> drivebase.speedSetting.shiftDown());
         speedUp.onTrue(() -> drivebase.speedSetting.shiftUp());
 
@@ -118,7 +128,7 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
         boolean rumbleRight = rumbleTimeout.get();
 
         if (TorqueMath.toleranced(DriverStation.getMatchTime(), 20, 1)) {
-            if (Timer.getFPGATimestamp() * 100 % 2 == 0) {
+            if (DriverStation.isTeleop() && Timer.getFPGATimestamp() * 100 % 2 == 0) {
                 rumbleLeft = true;
                 rumbleRight = false;
             } else {

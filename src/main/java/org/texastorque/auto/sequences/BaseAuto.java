@@ -18,6 +18,7 @@ import org.texastorque.torquelib.auto.commands.TorqueWhile;
 import com.pathplanner.lib.path.PathPlannerPath;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.wpilibj.RobotBase;
+import edu.wpi.first.wpilibj.Timer;
 
 public class BaseAuto extends TorqueSequence implements Subsystems {
 
@@ -105,10 +106,9 @@ public class BaseAuto extends TorqueSequence implements Subsystems {
         public Shoot() {
             if (RobotBase.isReal()) {
                 addBlock(shooter.yieldState(Shooter.State.SMART));
-                addBlock(new TorqueWaitTime(waitTime));
                 addBlock(new TorqueWaitUntil(() -> !shooter.hasNote()));
                 addBlock(new TorqueWaitTime(waitTime));
-                addBlock(shooter.yieldState(Shooter.State.OFF));
+                addBlock(shooter.yieldState(Shooter.State.AUTO_OFF));
                 addBlock(shooter.yieldGateState(Shooter.GateState.OFF));
             } else {
                 addBlock(new TorqueWaitTime(1));
@@ -121,12 +121,24 @@ public class BaseAuto extends TorqueSequence implements Subsystems {
      * provided with a BooleanSupplier yields true.
      */
     public class DeployIntakeWhen extends TorqueSequence {
-        public DeployIntakeWhen(final BooleanSupplier when) {
-            addBlock(new TorqueWaitUntil(when));
+        private Timer timer = new Timer();
+
+        public DeployIntakeWhen(final Supplier<BooleanSupplier> when) {
+            addBlock(new TorqueWaitUntil(when.get()));
+            addBlock(new TorqueRun(() -> timer.restart()));
+
             addBlock(intake.yieldState(Intake.State.SMART_INTAKE), shooter.yieldState(Shooter.State.OFF));
-            addBlock(new TorqueWaitUntil(intake::isRotaryDownEnough));
+            addBlock(new TorqueWaitUntil(intake::isAtState));
             addBlock(shooter.yieldState(Shooter.State.INTAKE));
             addBlock(shooter.yieldGateState(Shooter.GateState.IN));
+
+            addBlock(new TorqueWaitUntil(() -> shooter.hasNote() || timer.get() > 3));
+
+            addBlock(shooter.yieldGateState(GateState.OFF));
+            addBlock(shooter.yieldState(Shooter.State.SMART_WARMUP));
+
+            // addBlock(new TorqueWaitUntil(shooter::isRotaryAtState));
+            addBlock(intake.yieldState(Intake.State.PRIME));
         }
     }
 
@@ -134,22 +146,19 @@ public class BaseAuto extends TorqueSequence implements Subsystems {
      * This sequence runs a path from one note to another.
      */
     public class CollectAndShootNote extends TorqueSequence {
+        private boolean isNextOnCenterLine = false;
+
         public CollectAndShootNote(final NoteSequence noteSequence) {
-            // If we are going to the center line we wait until our X coord is > 5.5
-            // to deploy the intake. Otherwise we just do it right now.
-            final BooleanSupplier deployIntakeWhen = noteSequence.isNextOnCenterLine()
-                    ? () -> perception.getPose().getX() > 5.5
-                    : () -> true;
+            addBlock(new TorqueRun(() -> isNextOnCenterLine = noteSequence.isNextOnCenterLine()));
 
             addBlock(followPath(() -> noteSequence.getNextPath()),
-                    new DeployIntakeWhen(deployIntakeWhen).command());
+                    new DeployIntakeWhen(
+                            () -> isNextOnCenterLine
+                                    ? (() -> perception.getPose().getX() > 6.5)
+                                    : (() -> true))
+                            .command());
 
-            addBlock(new TorqueWaitUntil(shooter::hasNote));
-
-            addBlock(shooter.yieldState(Shooter.State.OFF));
-            addBlock(shooter.yieldGateState(GateState.OFF));
-            addBlock(new TorqueWaitUntil(shooter::isRotaryAtState));
-            addBlock(intake.yieldState(Intake.State.PRIME));
+            addBlock(new TorqueWaitTime(() -> isNextOnCenterLine ? .25 : 0));
 
             addBlock(new TorqueRunSequence(new Shoot()));
         }
@@ -160,12 +169,10 @@ public class BaseAuto extends TorqueSequence implements Subsystems {
     public BaseAuto(final int... notes) {
         noteSequence = new NoteSequence(notes);
 
-        // This is debug only
         addBlock(new TorqueRun(() -> perception.setPose(new Pose2d(1.1, 5.75, Field.ROT_FWD))));
+        addBlock(new TorqueRun(() -> perception.resetGyro()));
 
         addBlock(new TorqueRunSequence(new Shoot()));
-
-        addBlock(intake.yieldState(Intake.State.PRIME));
 
         addBlock(new TorqueWhile(noteSequence::hasNext, new CollectAndShootNote(noteSequence)));
     }

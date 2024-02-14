@@ -40,7 +40,16 @@ public final class Field {
     public static Rotation2d getAngleToSpeaker(final Pose2d pose) {
         return (Rotation2d.fromRadians(Math.atan2(
                 Field.SPEAKER_POSE.getY() - pose.getY(),
-                Field.SPEAKER_POSE.getX() + pose.getX()))).plus(Rotation2d.fromRadians(Math.PI));
+                Field.SPEAKER_POSE.getX() - pose.getX())));
+        // .plus(Rotation2d.fromRadians(Math.PI));
+    }
+
+    /**
+     * Get the angle from pose to the speaker.
+     */
+    public static Rotation2d getAngleToSpeakerRembrandt(final Pose2d pose) {
+        return SPEAKER_POSE.getTranslation().minus(pose.getTranslation()).getAngle().plus(Rotation2d.fromRadians(Math.PI));
+        
     }
 
     public static AprilTagFieldLayout getFieldLayout() {
@@ -55,41 +64,42 @@ public final class Field {
     // The below code is used for an auto system that is not in active development.
 
     // public static Pose2d getNotePose(int note) {
-    //     switch (note) {
-    //         case 1:
+    // switch (note) {
+    // case 1:
 
-    //         case 2:
-    //             return new Pose2d(2.9, 5.55, ROT_FWD);
-    //         case 3:
-    //             return new Pose2d(2.9, 4.1, ROT_FWD);
-    //         default:
-    //             return new Pose2d();
-    //     }
+    // case 2:
+    // return new Pose2d(2.9, 5.55, ROT_FWD);
+    // case 3:
+    // return new Pose2d(2.9, 4.1, ROT_FWD);
+    // default:
+    // return new Pose2d();
+    // }
     // }
 
-    // public static record CenterLineAttempt(Pose2d midpoint, Pose2d homing, Pose2d shooting) {
+    // public static record CenterLineAttempt(Pose2d midpoint, Pose2d homing, Pose2d
+    // shooting) {
 
-    //     public static CenterLineAttempt HIGH = new CenterLineAttempt(
-    //             new Pose2d(4.75, 6, ROT_FWD), // midpoint
-    //             new Pose2d(6.5, 6.25, ROT_FWD), // homing
-    //             new Pose2d(3.8, 5.7, ROT_FWD) // shooting
-    //     );
+    // public static CenterLineAttempt HIGH = new CenterLineAttempt(
+    // new Pose2d(4.75, 6, ROT_FWD), // midpoint
+    // new Pose2d(6.5, 6.25, ROT_FWD), // homing
+    // new Pose2d(3.8, 5.7, ROT_FWD) // shooting
+    // );
 
-    //     public static CenterLineAttempt LOW = new CenterLineAttempt(
-    //             new Pose2d(4.75, 1.75, ROT_FWD), // midpoint
-    //             new Pose2d(6.5, 1.5, ROT_FWD), // homing
-    //             new Pose2d(2.5, 3.5, ROT_FWD) // shooting
-    //     );
+    // public static CenterLineAttempt LOW = new CenterLineAttempt(
+    // new Pose2d(4.75, 1.75, ROT_FWD), // midpoint
+    // new Pose2d(6.5, 1.5, ROT_FWD), // homing
+    // new Pose2d(2.5, 3.5, ROT_FWD) // shooting
+    // );
 
-    //     public static CenterLineAttempt EMPTY = new CenterLineAttempt(
-    //             new Pose2d(), new Pose2d(), new Pose2d());
+    // public static CenterLineAttempt EMPTY = new CenterLineAttempt(
+    // new Pose2d(), new Pose2d(), new Pose2d());
 
-    //     public List<Translation2d> getBezierToHoming(final Pose2d current) {
-    //         return PathPlannerPath.bezierFromPoses(current, midpoint, homing);
-    //     }
+    // public List<Translation2d> getBezierToHoming(final Pose2d current) {
+    // return PathPlannerPath.bezierFromPoses(current, midpoint, homing);
+    // }
 
-    //     public List<Translation2d> getBezierToShooting(final Pose2d current) {
-    //         return PathPlannerPath.bezierFromPoses(current, shooting);
-    //     }
+    // public List<Translation2d> getBezierToShooting(final Pose2d current) {
+    // return PathPlannerPath.bezierFromPoses(current, shooting);
+    // }
     // }
 }

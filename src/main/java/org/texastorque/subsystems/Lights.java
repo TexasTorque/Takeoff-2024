@@ -85,9 +85,9 @@ public final class Lights extends TorqueStatelessSubsystem implements Subsystems
 
     private final AddressableLEDBuffer buff;
 
-    private LightAction blinkOrange = new Blink(() -> Color.kOrange, 6),
-            blinkGreen = new Blink(() -> Color.kGreen, 6),
-            blinkRed = new Blink(() -> Color.kRed, 6), blinkBlue = new Blink(() -> Color.kBlue, 6),
+    private LightAction blinkGreen = new Blink(() -> Color.kGreen, 6),
+            green = new Solid(() -> Color.kGreen),
+            yellow = new Solid(() -> Color.kYellow),
             rainbow = new Rainbow(), blue = new Solid(() -> Color.kBlue), red = new Solid(() -> Color.kRed);
 
     private Lights() {
@@ -108,10 +108,10 @@ public final class Lights extends TorqueStatelessSubsystem implements Subsystems
     }
 
     public final LightAction getColor(final TorqueMode mode) {
-        if (intake.isIntaking())
-            return blinkOrange;
+        if (shooter.hasNote())
+            return green;
         else if (shooter.wantsToShoot())
-            return DriverStation.getAlliance().get() == DriverStation.Alliance.Blue ? blinkBlue : blinkRed;
+            return yellow;
         else if (shooter.wantsToShoot() && shooter.isReadyToShoot())
             return blinkGreen;
         else if (mode.isAuto())
