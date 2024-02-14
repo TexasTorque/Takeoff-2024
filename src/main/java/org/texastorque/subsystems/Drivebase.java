@@ -89,7 +89,7 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
 
     public static final double WIDTH = Units.inchesToMeters(21.25);
 
-    public final static double MAX_VELOCITY = 4.6, MAX_ACCELERATION = 2,
+    public final static double MAX_VELOCITY = SwerveConfig.WHEEL_FREE_SPEED, MAX_ACCELERATION = 5,
             MAX_ANGULAR_VELOCITY = 2 * Math.PI, ANGULAR_VELOCITY_COEFFICIENT = 1;
 
     public static synchronized final Drivebase getInstance() {
@@ -191,8 +191,9 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
         // If shooter is in smart mode then the driver can still drive around but
         // the rotation should stay locked to the goal.
 
-        // if (shooter.wantsState(Shooter.State.SMART) && !shooter.inDebugMode() && mode.isTeleop()) {
-        //     desiredState = State.ALIGN_TO_ANGLE;
+        // if (shooter.wantsState(Shooter.State.SMART) && !shooter.inDebugMode() &&
+        // mode.isTeleop()) {
+        // desiredState = State.ALIGN_TO_ANGLE;
         // }
 
         if (wantsState(State.FIELD_RELATIVE)) {

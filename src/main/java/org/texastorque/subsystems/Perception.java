@@ -65,7 +65,7 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
      * [x, y, theta]ᵀ, with units in meters and radians.
      */
 
-    private static final Vector<N3> VISION_STDS = VecBuilder.fill(.1, .1, Units.degreesToRadians(5));
+    private static final Vector<N3> VISION_STDS = VecBuilder.fill(.02, .02, Units.degreesToRadians(1));
 
     /**
      * The maximum angular velocity of the robot (in radians per second) and maximum

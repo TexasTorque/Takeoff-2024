@@ -27,7 +27,7 @@ public class Intake extends TorqueStatorSubsystem<Intake.State> implements Subsy
         }
     }
 
-    private static final double ROTARY_TOLERANCE = 3;
+    private static final double ROTARY_TOLERANCE = 4;
 
     private final TorqueNEO rotaryLeft, rotaryRight, rollers;
 
@@ -73,7 +73,8 @@ public class Intake extends TorqueStatorSubsystem<Intake.State> implements Subsy
                 // && Math.abs(
                 // Math.abs(g()) - Math.abs(desiredState.rotaryPosition)) <= ROTARY_TOLERANCE
                 && Math.abs(
-                        Math.abs(rotaryRight.getPosition()) - Math.abs(desiredState.rotaryPosition)) <= ROTARY_TOLERANCE;
+                        Math.abs(rotaryRight.getPosition())
+                                - Math.abs(desiredState.rotaryPosition)) <= ROTARY_TOLERANCE;
     }
 
     @Override
