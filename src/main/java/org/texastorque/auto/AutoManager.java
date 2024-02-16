@@ -2,6 +2,7 @@ package org.texastorque.auto;
 
 import org.texastorque.auto.sequences.BaseAuto;
 import org.texastorque.auto.sequences.RunPath;
+import org.texastorque.auto.sequences.TestGoalLock;
 import org.texastorque.torquelib.auto.*;
 
 public final class AutoManager extends TorqueAutoManager {
@@ -20,6 +21,8 @@ public final class AutoManager extends TorqueAutoManager {
         addSequence("2 to 3 to 50 to 40", new BaseAuto(2, 3, 50, 40));
 
         addSequence(new RunPath());
+
+        addSequence(new TestGoalLock());
     }
 
     public static final synchronized AutoManager getInstance() {

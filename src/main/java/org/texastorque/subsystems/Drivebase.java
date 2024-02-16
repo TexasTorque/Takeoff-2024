@@ -7,9 +7,10 @@
 package org.texastorque.subsystems;
 
 import java.util.function.Supplier;
-import org.texastorque.Debug;
+
 import org.texastorque.Ports;
 import org.texastorque.Subsystems;
+import org.texastorque.torquelib.Debug;
 import org.texastorque.torquelib.auto.commands.TorqueFollowPath.TorquePathingDrivebase;
 import org.texastorque.torquelib.base.TorqueMode;
 import org.texastorque.torquelib.base.TorqueState;
@@ -140,10 +141,16 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
 
         teleopOmegaController = new PIDController(.5 * Math.PI, 0, 0);
         teleopOmegaController.enableContinuousInput(0, Math.PI * 2);
+
+    
     }
 
     @Override
     public final void initialize(final TorqueMode mode) {
+        // Set the angle target for ALIGN_TO_ANGLE state, basically makes that state
+        // an "align to goal" state.
+        setAlignTarget(perception::getAngleToSpeaker);
+
         mode.onAuto(() -> {
             desiredState = State.FIELD_RELATIVE;
         });
@@ -182,25 +189,45 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
         return TorqueMath.toleranced(perception.getHeading().getDegrees(), getAlignTarget(), 4);
     }
 
+    private boolean lockingOnToGoal = false;
+
     @Override
     public final void update(final TorqueMode mode) {
         Debug.log("Is Aligned", isAligned());
         Debug.log("Align Target", getAlignTarget());
-        Debug.log("State", desiredState.toString());
+        Debug.log("Drivebase State", desiredState.toString());
 
         // If shooter is in smart mode then the driver can still drive around but
         // the rotation should stay locked to the goal.
+        if (shooter.wantsState(Shooter.State.SMART) && !shooter.inDebugMode() && mode.isTeleop()) {
+            desiredState = State.ALIGN_TO_ANGLE;
+            // If we are not in the slowdown sequence speed setting
+            if (speedSetting != SpeedSetting.SEQ) {
+                // We gotta make sure we set it up
+                speedSetting = SpeedSetting.SEQ;
+                // If this is the first loop that we are locking onto the goal then we need 
+                // to create a new speed sequence. If we are already in the speed sequence 
+                // state during the first loop where we are locking onto the goal then the
+                // driver was already in the speed sequence and we dont want to mess them up.
+                if (!lockingOnToGoal) {
+                    speedSequence = new SpeedSequence(Drivebase.SpeedSetting.FAST, Drivebase.SpeedSetting.SLOW, 1);
+                }
+            }
+            lockingOnToGoal = true; // we are locking on
+        } else {
+            lockingOnToGoal = false; // we are not locking on
+        }
 
-        // if (shooter.wantsState(Shooter.State.SMART) && !shooter.inDebugMode() &&
-        // mode.isTeleop()) {
-        // desiredState = State.ALIGN_TO_ANGLE;
-        // }
-
-        if (wantsState(State.FIELD_RELATIVE)) {
+        // If we are in FIELD_RELATIVE or ALIGN_TO_ANGLE then we want to convert our field
+        // relative chassis speeds into robot relative chassis speeds. We also want to 
+        // multiply by speed setting stuff.
+        if (wantsState(State.FIELD_RELATIVE) || wantsState(State.ALIGN_TO_ANGLE)) {
             inputSpeeds = inputSpeeds.times(speedSetting == SpeedSetting.SEQ ? speedSequence.get()
                     : speedSetting.speed).toFieldRelativeSpeeds(perception.getHeading());
         }
 
+        // If we are in the align state then we want to set our rotational velocity to 
+        // the output of the align to angle PID controller.
         if (wantsState(State.ALIGN_TO_ANGLE)) {
             inputSpeeds.omegaRadiansPerSecond = TorqueMath.constrain(
                     alignPID.calculate(perception.getHeading().getDegrees(), getAlignTarget()), .75);
@@ -259,6 +286,10 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
 
     public void onEndPathing() {
         setState(State.FIELD_RELATIVE);
+    }
+
+    public double getRadius() {
+        return WIDTH * Math.sqrt(2);
     }
 
     @Override

@@ -1,8 +1,8 @@
 package org.texastorque.subsystems;
 
-import org.texastorque.Debug;
 import org.texastorque.Ports;
 import org.texastorque.Subsystems;
+import org.texastorque.torquelib.Debug;
 import org.texastorque.torquelib.auto.TorqueCommand;
 import org.texastorque.torquelib.auto.commands.TorqueRun;
 import org.texastorque.torquelib.base.TorqueMode;
@@ -241,8 +241,6 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         Debug.log("Shooter Gate Current", gate.getCurrent());
         Debug.log("Shooter is Ready", isReadyToShoot());
         Debug.log("Distance to Tag", perception.getDistanceToSpeaker());
-        Debug.log("Angle to Speaker", perception.getAngleToSpeaker().getDegrees());
-        Debug.log("Angle to Speaker Rembrand", perception.getAngleToSpeakerRembrandt().getDegrees());
         Debug.log("Top Flywheel Ready", isTopFlywheelReady());
         Debug.log("Bottom Flywheel Ready", isBottomFlywheelReady());
         Debug.log("Rotary Ready", isRotaryAtState());
@@ -283,7 +281,6 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
 
         if (wantsState(State.SMART)) {
             shot = shotTable.get(perception.getDistanceToSpeaker() + (mode.isAuto() ? 0 : 0));
-            drivebase.setAlignTarget(perception.getAngleToSpeakerRembrandt());
         } else {
             shot = desiredState.shot;
         }

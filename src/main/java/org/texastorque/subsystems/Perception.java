@@ -5,8 +5,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Supplier;
-import org.texastorque.Debug;
+
+import org.littletonrobotics.junction.Logger;
 import org.texastorque.Field;
+import org.texastorque.Robot;
 import org.texastorque.Subsystems;
 import org.texastorque.toast.lib.Camera;
 import org.texastorque.toast.lib.Toast;
@@ -15,6 +17,7 @@ import org.texastorque.toast.lib.pipelines.AprilTags;
 import org.texastorque.toast.lib.pipelines.ObjDetector;
 import org.texastorque.toast.lib.pipelines.AprilTags.AprilTagDetection;
 import org.texastorque.toast.lib.pipelines.ObjDetector.Detectable;
+import org.texastorque.torquelib.Debug;
 import org.texastorque.torquelib.base.TorqueMode;
 import org.texastorque.torquelib.base.TorqueState;
 import org.texastorque.torquelib.base.TorqueStatorSubsystem;
@@ -32,6 +35,7 @@ import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 /**
  * Robot perception subsystem, handles sensors that the robot uses
@@ -119,10 +123,18 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
         updateOdometryLocalization();
         updateVisionLocalization();
 
-        field.setRobotPose(poseEstimator.getEstimatedPosition());
+        field.setRobotPose(getPose());
+        if (!Robot.isReal() && shooter.wantsState(Shooter.State.SMART) && mode.isAuto()) {
+            field.setRobotPose(new Pose2d(getPose().getTranslation(), getAngleToSpeaker()));
+        }
 
         Debug.log("Pose", Util.pose2d2str(poseEstimator.getEstimatedPosition()));
         Debug.log("Heading (°)", getHeading().getDegrees());
+
+        Debug.log("Angle To Speaker (°)", getAngleToSpeaker().getDegrees());
+
+        Logger.recordOutput("Perception/SpeakerPose", new Pose2d[] {
+                Field.SPEAKER_POSE});
     }
 
     public void updateOdometryLocalization() {
@@ -138,8 +150,6 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
         // This gets comented/uncomented out based on if or if not we want to use
         // vision to update our odometry while we are pathing (like physically following
         // the path)
-        //
-
         Debug.log("Not Running Vision", drivebase.wantsState(Drivebase.State.PATHING));
         if (drivebase.wantsState(Drivebase.State.PATHING)) {
             return;
@@ -201,6 +211,7 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
 
         // Serializes and pushes the seen tags to networktables so we can view
         // detections on advantagescop
+        Logger.recordOutput("Perception/TagPoses", tagsInView.values().toArray(new Pose3d[tagsInView.values().size()]));
     }
 
     /**
@@ -260,13 +271,6 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
      */
     public Rotation2d getAngleToSpeaker() {
         return Field.getAngleToSpeaker(getPose());
-    }
-
-    /**
-     * Get the angle from the robot to the speaker.
-     */
-    public Rotation2d getAngleToSpeakerRembrandt() {
-        return Field.getAngleToSpeakerRembrandt(getPose());
     }
 
     /**
