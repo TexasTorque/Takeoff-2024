@@ -11,7 +11,6 @@ import org.texastorque.torquelib.control.TorqueToggleSupplier;
 import org.texastorque.torquelib.sensors.TorqueController;
 import org.texastorque.torquelib.swerve.TorqueSwerveSpeeds;
 import org.texastorque.torquelib.util.TorqueMath;
-
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Timer;
 
@@ -23,8 +22,8 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
     private final TorqueRequestableTimeout rumbleTimeout;
 
     private final TorqueBoolSupplier resetGyro, speedUp, speedDown, runSmartIntake,
-            runDumbIntake, runOuttake, speakerSmartShot, speakerLayup, speakerSafeZone, amp, trap, speakerWarmup,
-            slowlySlowDownClick, slowlySlowDownHold, manualGateOut, manualGateIn, babyBird, debugMode, speakerMid;
+            runDumbIntake, runOuttake, speakerSmartShot, speakerLayup, speakerSafeZone, amp, trap,
+            deaccelerateClick, deaccelerateHold, manualGateOut, manualGateIn, babyBird, debugMode, speakerMid, shooterIdle, shooterConsent;
 
     private Input() {
         driver = new TorqueController(0, 0.1);
@@ -37,27 +36,30 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
         speedUp = new TorqueClickSupplier(() -> false);
         speedDown = new TorqueClickSupplier(() -> false);
 
-        slowlySlowDownClick = new TorqueClickSupplier(driver::isLeftTriggerDown);
-        slowlySlowDownHold = new TorqueBoolSupplier(driver::isLeftTriggerDown);
+        deaccelerateClick = new TorqueClickSupplier(driver::isLeftTriggerDown);
+        deaccelerateHold = new TorqueBoolSupplier(driver::isLeftTriggerDown);
 
         runSmartIntake = new TorqueBoolSupplier(driver::isRightTriggerDown);
         runDumbIntake = new TorqueBoolSupplier(driver::isRightBumperDown);
         runOuttake = new TorqueBoolSupplier(driver::isLeftBumperDown);
 
         speakerSmartShot = new TorqueBoolSupplier(operator::isRightTriggerDown);
-        speakerWarmup = new TorqueToggleSupplier(operator::isRightBumperDown);
 
         speakerLayup = new TorqueBoolSupplier(operator::isYButtonDown);
         speakerSafeZone = new TorqueBoolSupplier(operator::isAButtonDown);
         speakerMid = new TorqueBoolSupplier(operator::isBButtonDown);
 
         amp = new TorqueBoolSupplier(operator::isLeftTriggerDown);
-        trap = new TorqueBoolSupplier(operator::isXButtonDown);
+        trap = new TorqueBoolSupplier(() -> false);
 
         manualGateOut = new TorqueBoolSupplier(operator::isDPADUpDown);
         manualGateIn = new TorqueBoolSupplier(operator::isDPADDownDown);
 
+        shooterIdle = new TorqueToggleSupplier(operator::isRightBumperDown);
+
         babyBird = new TorqueBoolSupplier(operator::isLeftBumperDown);
+
+        shooterConsent = new TorqueBoolSupplier(operator::isXButtonDown);
 
         debugMode = new TorqueToggleSupplier(
                 () -> operator.isLeftCenterButtonDown() && operator.isRightCenterButtonDown());
@@ -87,8 +89,6 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
         amp.onTrue(() -> shooter.setState(Shooter.State.AMP));
         trap.onTrue(() -> shooter.setState(Shooter.State.TRAP));
 
-        shooter.setIdle(!speakerWarmup.get());
-
         manualGateOut.onTrue(() -> shooter.setGateState(Shooter.GateState.OUT));
         manualGateIn.onTrue(() -> shooter.setGateState(Shooter.GateState.IN));
 
@@ -96,6 +96,9 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
             shooter.setState(Shooter.State.BABYBIRD);
             shooter.setGateState(Shooter.GateState.IN);
         });
+
+        shooter.setIdle(!shooterIdle.get());
+        shooter.setConsent(!shooterConsent.get());
 
         shooter.setDebugMode(debugMode.get());
     }
@@ -105,12 +108,12 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
         speedDown.onTrue(() -> drivebase.speedSetting.shiftDown());
         speedUp.onTrue(() -> drivebase.speedSetting.shiftUp());
 
-        slowlySlowDownClick.onTrue(() -> drivebase.speedSequence = new SpeedSequence(Drivebase.SpeedSetting.FAST,
+        deaccelerateClick.onTrue(() -> drivebase.speedSequence = new SpeedSequence(Drivebase.SpeedSetting.FAST,
                 Drivebase.SpeedSetting.SLOW, 1));
 
-        slowlySlowDownHold.onTrue(() -> drivebase.speedSetting = SpeedSetting.SEQ);
+        deaccelerateHold.onTrue(() -> drivebase.speedSetting = SpeedSetting.SEQ);
 
-        if (!slowlySlowDownHold.get())
+        if (!deaccelerateHold.get())
             drivebase.speedSetting = Drivebase.SpeedSetting.FAST;
 
         final double xVelocity = TorqueMath.scaledLinearDeadband(-driver.getLeftYAxis(), CONTROLLER_DEADBAND)

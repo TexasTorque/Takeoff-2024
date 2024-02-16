@@ -73,7 +73,7 @@ public class Intake extends TorqueStatorSubsystem<Intake.State> implements Subsy
                 // && Math.abs(
                 // Math.abs(g()) - Math.abs(desiredState.rotaryPosition)) <= ROTARY_TOLERANCE
                 && Math.abs(
-                        Math.abs(rotaryRight.getPosition())
+                        Math.abs(rotaryLeft.getPosition())
                                 - Math.abs(desiredState.rotaryPosition)) <= ROTARY_TOLERANCE;
     }
 

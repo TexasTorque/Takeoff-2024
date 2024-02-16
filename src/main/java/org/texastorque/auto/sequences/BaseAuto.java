@@ -17,7 +17,6 @@ import org.texastorque.torquelib.auto.commands.TorqueWaitUntil;
 import org.texastorque.torquelib.auto.commands.TorqueWhile;
 import com.pathplanner.lib.path.PathPlannerPath;
 import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj.Timer;
 
 public class BaseAuto extends TorqueSequence implements Subsystems {
@@ -104,15 +103,11 @@ public class BaseAuto extends TorqueSequence implements Subsystems {
         private final double waitTime = .2;
 
         public Shoot() {
-            if (RobotBase.isReal()) {
-                addBlock(shooter.yieldState(Shooter.State.SMART));
-                addBlock(new TorqueWaitUntil(() -> !shooter.hasNote()));
-                addBlock(new TorqueWaitTime(waitTime));
-                addBlock(shooter.yieldState(Shooter.State.AUTO_OFF));
-                addBlock(shooter.yieldGateState(Shooter.GateState.OFF));
-            } else {
-                addBlock(new TorqueWaitTime(1));
-            }
+            addBlock(shooter.yieldState(Shooter.State.SMART));
+            addBlock(new TorqueWaitUntil(() -> !shooter.hasNote()));
+            // addBlock(new TorqueWaitTime(waitTime));
+            addBlock(shooter.yieldState(Shooter.State.AUTO_OFF));
+            addBlock(shooter.yieldGateState(Shooter.GateState.OFF));
         }
     }
 
@@ -137,7 +132,6 @@ public class BaseAuto extends TorqueSequence implements Subsystems {
             addBlock(shooter.yieldGateState(GateState.OFF));
             addBlock(shooter.yieldState(Shooter.State.SMART_WARMUP));
 
-            // addBlock(new TorqueWaitUntil(shooter::isRotaryAtState));
             addBlock(intake.yieldState(Intake.State.PRIME));
         }
     }
@@ -153,12 +147,11 @@ public class BaseAuto extends TorqueSequence implements Subsystems {
 
             addBlock(followPath(() -> noteSequence.getNextPath()),
                     new DeployIntakeWhen(
-                            () -> isNextOnCenterLine
-                                    ? (() -> perception.getPose().getX() > 6.5)
+                            () -> isNextOnCenterLine ? (() -> perception.getPose().getX() > 6.5)
                                     : (() -> true))
                             .command());
 
-            addBlock(new TorqueWaitTime(() -> isNextOnCenterLine ? .25 : 0));
+            // addBlock(new TorqueWaitTime(() -> isNextOnCenterLine ? .25 : 0));
 
             addBlock(new TorqueRunSequence(new Shoot()));
         }

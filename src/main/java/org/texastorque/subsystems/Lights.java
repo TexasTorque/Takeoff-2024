@@ -87,7 +87,6 @@ public final class Lights extends TorqueStatelessSubsystem implements Subsystems
 
     private LightAction blinkGreen = new Blink(() -> Color.kGreen, 6),
             green = new Solid(() -> Color.kGreen),
-            yellow = new Solid(() -> Color.kYellow),
             blinkYellow = new Blink(() -> Color.kYellow, 6),
             rainbow = new Rainbow(), blue = new Solid(() -> Color.kBlue), red = new Solid(() -> Color.kRed);
 
@@ -116,7 +115,7 @@ public final class Lights extends TorqueStatelessSubsystem implements Subsystems
         if (intake.isIntaking())
             return blinkYellow;
         if (mode.isAuto())
-            return yellow;
+            return rainbow;
 
         // Teleop:
         if (DriverStation.getAlliance().isPresent()) {
