@@ -32,15 +32,16 @@ public final class Field {
         return id <= 16;
     }
 
-    public static final Pose2d SPEAKER_POSE = new Pose2d(0.25, 5.55, Rotation2d.fromDegrees(0));
+    public static final Pose2d SPEAKER_POSE_ANGLE = new Pose2d(0, 5.55, Rotation2d.fromDegrees(0));
+    public static final Pose2d SPEAKER_POSE_DISTANCE = new Pose2d(-.04, 5.55, Rotation2d.fromDegrees(0));
 
     /**
      * Get the angle from pose to the speaker.
      */
     public static Rotation2d getAngleToSpeaker(final Pose2d pose) {
         return Rotation2d.fromRadians(Math.atan2(
-                Field.SPEAKER_POSE.getY() - pose.getY(),
-                Field.SPEAKER_POSE.getX() - pose.getX())).plus(Rotation2d.fromRadians(Math.PI));
+                Field.SPEAKER_POSE_ANGLE.getY() - pose.getY(),
+                Field.SPEAKER_POSE_ANGLE.getX() - pose.getX())).plus(Rotation2d.fromRadians(Math.PI));
     }
 
     public static AprilTagFieldLayout getFieldLayout() {

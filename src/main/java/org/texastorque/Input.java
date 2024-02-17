@@ -23,7 +23,8 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
 
     private final TorqueBoolSupplier resetGyro, speedUp, speedDown, runSmartIntake,
             runDumbIntake, runOuttake, speakerSmartShot, speakerLayup, speakerSafeZone, amp, trap,
-            deaccelerateClick, deaccelerateHold, manualGateOut, manualGateIn, babyBird, debugMode, speakerMid, shooterIdle, shooterConsent;
+            deaccelerateClick, deaccelerateHold, manualGateOut, manualGateIn, babyBird, debugMode, speakerMid,
+            shooterIdle;
 
     private Input() {
         driver = new TorqueController(0, 0.1);
@@ -58,8 +59,6 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
         shooterIdle = new TorqueToggleSupplier(operator::isRightBumperDown);
 
         babyBird = new TorqueBoolSupplier(operator::isLeftBumperDown);
-
-        shooterConsent = new TorqueBoolSupplier(operator::isXButtonDown);
 
         debugMode = new TorqueToggleSupplier(
                 () -> operator.isLeftCenterButtonDown() && operator.isRightCenterButtonDown());
@@ -98,7 +97,7 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
         });
 
         shooter.setIdle(!shooterIdle.get());
-        shooter.setConsent(!shooterConsent.get());
+        shooter.setConsent(!operator.isLeftStickClickDown());
 
         shooter.setDebugMode(debugMode.get());
     }
@@ -130,8 +129,8 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
         boolean rumbleLeft = rumbleTimeout.get();
         boolean rumbleRight = rumbleTimeout.get();
 
-        if (TorqueMath.toleranced(DriverStation.getMatchTime(), 20, 1)) {
-            if (DriverStation.isTeleop() && Timer.getFPGATimestamp() * 100 % 2 == 0) {
+        if (TorqueMath.toleranced(DriverStation.getMatchTime(), 20, 1) && DriverStation.isTeleop()) {
+            if (Timer.getFPGATimestamp() * 100 % 2 == 0) {
                 rumbleLeft = true;
                 rumbleRight = false;
             } else {

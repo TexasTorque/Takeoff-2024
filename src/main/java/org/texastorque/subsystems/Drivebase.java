@@ -106,8 +106,6 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
 
     private final TorqueSwerveModule2022 fl, fr, bl, br;
 
-    private final PIDController teleopOmegaController;
-
     private SwerveModuleState[] swerveStates;
 
     public TorqueSwerveSpeeds inputSpeeds;
@@ -117,6 +115,8 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
     public SpeedSequence speedSequence = new SpeedSequence(speedSetting, speedSetting, -1);
 
     private final PIDController alignPID;
+
+    private double loopsThatDBIsAligned = 0;
 
     private Drivebase() {
         super(State.FIELD_RELATIVE);
@@ -138,18 +138,13 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
 
         alignPID = new PIDController(.2, 0, 0);
         alignPID.enableContinuousInput(0, 360);
-
-        teleopOmegaController = new PIDController(.5 * Math.PI, 0, 0);
-        teleopOmegaController.enableContinuousInput(0, Math.PI * 2);
-
-    
     }
 
     @Override
     public final void initialize(final TorqueMode mode) {
         // Set the angle target for ALIGN_TO_ANGLE state, basically makes that state
         // an "align to goal" state.
-        setAlignTarget(perception::getAngleToSpeaker);
+        setAlignTarget(perception::getFilteredAngleToSpeaker);
 
         mode.onAuto(() -> {
             desiredState = State.FIELD_RELATIVE;
@@ -186,7 +181,11 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
     }
 
     public boolean isAligned() {
-        return TorqueMath.toleranced(perception.getHeading().getDegrees(), getAlignTarget(), 4);
+        return TorqueMath.toleranced(perception.getHeading().getDegrees(), getAlignTarget(), .75);
+    }
+
+    public boolean hasBeenAligned() {
+        return loopsThatDBIsAligned > 15;
     }
 
     private boolean lockingOnToGoal = false;
@@ -205,8 +204,8 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
             if (speedSetting != SpeedSetting.SEQ) {
                 // We gotta make sure we set it up
                 speedSetting = SpeedSetting.SEQ;
-                // If this is the first loop that we are locking onto the goal then we need 
-                // to create a new speed sequence. If we are already in the speed sequence 
+                // If this is the first loop that we are locking onto the goal then we need
+                // to create a new speed sequence. If we are already in the speed sequence
                 // state during the first loop where we are locking onto the goal then the
                 // driver was already in the speed sequence and we dont want to mess them up.
                 if (!lockingOnToGoal) {
@@ -216,21 +215,29 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
             lockingOnToGoal = true; // we are locking on
         } else {
             lockingOnToGoal = false; // we are not locking on
+            if (mode.isTeleop())
+                desiredState = State.FIELD_RELATIVE;
         }
 
-        // If we are in FIELD_RELATIVE or ALIGN_TO_ANGLE then we want to convert our field
-        // relative chassis speeds into robot relative chassis speeds. We also want to 
+        if (isAligned())
+            loopsThatDBIsAligned++;
+        else
+            loopsThatDBIsAligned = 0;
+
+        // If we are in FIELD_RELATIVE or ALIGN_TO_ANGLE then we want to convert our
+        // field
+        // relative chassis speeds into robot relative chassis speeds. We also want to
         // multiply by speed setting stuff.
         if (wantsState(State.FIELD_RELATIVE) || wantsState(State.ALIGN_TO_ANGLE)) {
             inputSpeeds = inputSpeeds.times(speedSetting == SpeedSetting.SEQ ? speedSequence.get()
                     : speedSetting.speed).toFieldRelativeSpeeds(perception.getHeading());
         }
 
-        // If we are in the align state then we want to set our rotational velocity to 
+        // If we are in the align state then we want to set our rotational velocity to
         // the output of the align to angle PID controller.
         if (wantsState(State.ALIGN_TO_ANGLE)) {
             inputSpeeds.omegaRadiansPerSecond = TorqueMath.constrain(
-                    alignPID.calculate(perception.getHeading().getDegrees(), getAlignTarget()), .75);
+                    alignPID.calculate(perception.getHeading().getDegrees(), getAlignTarget()), Math.PI);
         }
 
         swerveStates = kinematics.toSwerveModuleStates(inputSpeeds);

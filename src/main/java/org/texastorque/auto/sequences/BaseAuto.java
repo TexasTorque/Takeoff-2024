@@ -4,13 +4,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
-
 import org.texastorque.Field;
-import org.texastorque.Robot;
 import org.texastorque.Subsystems;
 import org.texastorque.subsystems.*;
 import org.texastorque.subsystems.Shooter.GateState;
-import org.texastorque.torquelib.Debug;
 import org.texastorque.torquelib.auto.TorqueSequence;
 import org.texastorque.torquelib.auto.commands.TorqueFollowPath;
 import org.texastorque.torquelib.auto.commands.TorqueRun;
@@ -20,6 +17,8 @@ import org.texastorque.torquelib.auto.commands.TorqueWaitUntil;
 import org.texastorque.torquelib.auto.commands.TorqueWhile;
 import com.pathplanner.lib.path.PathPlannerPath;
 import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj.Timer;
 
@@ -48,6 +47,7 @@ public class BaseAuto extends TorqueSequence implements Subsystems {
     private class NoteSequence {
         private final List<Integer> notes = new ArrayList<Integer>();
         int lastNote = 0, nextNote = 0;
+        String pathName = "";
 
         /**
          * Creates a note sequence from a variatic list of arguments which provide
@@ -69,8 +69,13 @@ public class BaseAuto extends TorqueSequence implements Subsystems {
         private PathPlannerPath getNextPath() {
             lastNote = nextNote;
             nextNote = notes.remove(0);
-            final String pathName = "go_" + lastNote + "_to_" + nextNote;
+            pathName = "go_" + lastNote + "_to_" + nextNote;
             return PathPlannerPath.fromPathFile(pathName);
+        }
+
+        private Pose2d getPathEndPose() {
+            return PathPlannerPath.fromPathFile(pathName).getTrajectory(new ChassisSpeeds(), new Rotation2d())
+                    .getEndState().getTargetHolonomicPose();
         }
 
         /**
@@ -109,7 +114,7 @@ public class BaseAuto extends TorqueSequence implements Subsystems {
         public Shoot() {
             log("Auto State", () -> "SHOOTING");
 
-            addBlock(shooter.yieldState(Shooter.State.SMART));
+            addBlock(shooter.yieldState(Shooter.State.FUTURE_SMART));
             if (RobotBase.isReal()) {
                 addBlock(new TorqueWaitUntil(() -> !shooter.hasNote()));
             } else {
@@ -137,7 +142,6 @@ public class BaseAuto extends TorqueSequence implements Subsystems {
 
             addBlock(intake.yieldState(Intake.State.SMART_INTAKE), shooter.yieldState(Shooter.State.OFF));
 
-
             if (RobotBase.isReal()) {
                 addBlock(new TorqueWaitUntil(intake::isAtState));
             }
@@ -154,7 +158,8 @@ public class BaseAuto extends TorqueSequence implements Subsystems {
             log("Auto State", () -> "WARMING UP");
 
             addBlock(shooter.yieldGateState(GateState.OFF));
-            addBlock(shooter.yieldState(Shooter.State.SMART_WARMUP));
+            addBlock(new TorqueRun(() -> perception.setFutureShootingPose(noteSequence.getPathEndPose())));
+            addBlock(shooter.yieldState(Shooter.State.FUTURE_SMART));
 
             addBlock(intake.yieldState(Intake.State.PRIME));
         }
@@ -174,8 +179,7 @@ public class BaseAuto extends TorqueSequence implements Subsystems {
             log("Auto State", () -> "BEGIN PATH");
 
             addBlock(followPath(() -> noteSequence.getNextPath()),
-                    new DeployIntakeWhen(() -> perception.getPose().getX() > 5.5 || deployIntakeRightAway).command()
-            );
+                    new DeployIntakeWhen(() -> perception.getPose().getX() > 6 || deployIntakeRightAway).command());
 
             // addBlock(new TorqueWaitTime(() -> isNextOnCenterLine ? .25 : 0));
 
@@ -188,9 +192,10 @@ public class BaseAuto extends TorqueSequence implements Subsystems {
     public BaseAuto(final int... notes) {
         noteSequence = new NoteSequence(notes);
 
-        addBlock(new TorqueRun(() -> perception.setPose(new Pose2d(1.33, 5.55, Field.ROT_FWD))));
-        addBlock(new TorqueRun(() -> perception.resetGyro()));
+        // addBlock(new TorqueRun(() -> perception.setPose(new Pose2d(1.33, 5.55, Field.ROT_FWD))));
+        // addBlock(new TorqueRun(() -> perception.resetGyro()));
 
+        addBlock(new TorqueRun(() -> perception.setFutureShootingPose(perception.getPose())));
         addBlock(new TorqueRunSequence(new Shoot()));
 
         addBlock(new TorqueWhile(noteSequence::hasNext, new CollectAndShootNote(noteSequence)));

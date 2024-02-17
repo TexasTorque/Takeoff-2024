@@ -21,6 +21,7 @@ import org.texastorque.torquelib.Debug;
 import org.texastorque.torquelib.base.TorqueMode;
 import org.texastorque.torquelib.base.TorqueState;
 import org.texastorque.torquelib.base.TorqueStatorSubsystem;
+import org.texastorque.torquelib.control.TorqueRollingMedian;
 import org.texastorque.torquelib.sensors.TorqueNavXGyro;
 import com.fasterxml.jackson.databind.JsonNode;
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
@@ -34,6 +35,7 @@ import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.math.util.Units;
+import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
@@ -69,7 +71,7 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
      * [x, y, theta]ᵀ, with units in meters and radians.
      */
 
-    private static final Vector<N3> VISION_STDS = VecBuilder.fill(.02, .02, Units.degreesToRadians(1));
+    private static final Vector<N3> VISION_STDS = VecBuilder.fill(.1, .1, Units.degreesToRadians(1));
 
     /**
      * The maximum angular velocity of the robot (in radians per second) and maximum
@@ -86,6 +88,12 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
     public final Field2d field = new Field2d();
     private AprilTagFieldLayout fieldMap = Field.getFieldLayout();
 
+    private final TorqueRollingMedian filteredX, filteredY;
+    private double filteredPoseX = 0;
+    private double filteredPoseY = 0;
+
+    private Pose2d futureShootingPose = new Pose2d();
+
     public Perception() {
         super(State.VISION);
 
@@ -97,8 +105,8 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
                 new Pose2d(), ODOMETRY_STDS, VISION_STDS);
 
         // Add toast cameras
-        toast.addCamera(new Camera("SHTR_R", Camera.transformInchDeg(-6.9, 11.75, 9.3, 0, 30, 180)));
-        toast.addCamera(new Camera("SHTR_L", Camera.transformInchDeg(-6.9, -11.75, 9.3, 0, 30, 180)));
+        toast.addCamera(new Camera("SHTR_R", Camera.transformInchDeg(-6.9, 11.75, 9.3, 0, 35, 180)));
+        toast.addCamera(new Camera("SHTR_L", Camera.transformInchDeg(-6.9, -11.75, 9.3, 0, 35, 180)));
         toast.addCamera(new Camera("INTK_R", new Transform3d()));
         toast.addCamera(new Camera("INTK_L", new Transform3d()));
 
@@ -112,6 +120,9 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
 
         // Log the field map to the dashboard
         Debug.field("Field", field);
+
+        filteredX = new TorqueRollingMedian(30);
+        filteredY = new TorqueRollingMedian(30);
     }
 
     @Override
@@ -123,22 +134,27 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
         updateOdometryLocalization();
         updateVisionLocalization();
 
-        field.setRobotPose(getPose());
+        field.setRobotPose(getFilteredPose());
         if (!Robot.isReal() && shooter.wantsState(Shooter.State.SMART) && mode.isAuto()) {
             field.setRobotPose(new Pose2d(getPose().getTranslation(), getAngleToSpeaker()));
         }
 
         Debug.log("Pose", Util.pose2d2str(poseEstimator.getEstimatedPosition()));
+        Debug.log("Filtered Pose", Util.pose2d2str(getFilteredPose()));
         Debug.log("Heading (°)", getHeading().getDegrees());
 
         Debug.log("Angle To Speaker (°)", getAngleToSpeaker().getDegrees());
 
         Logger.recordOutput("Perception/SpeakerPose", new Pose2d[] {
-                Field.SPEAKER_POSE});
+                Field.SPEAKER_POSE_ANGLE });
+
+        filteredPoseX = filteredX.calculate(getPose().getX());
+        filteredPoseY = filteredY.calculate(getPose().getY());
     }
 
     public void updateOdometryLocalization() {
         // Updates the pose estimator with swerve encoder feedback
+
         poseEstimator.update(getHeading(), drivebase.getModulePositions());
     }
 
@@ -205,7 +221,7 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
                 // continue;
 
                 // add the processed vision messurement to the pose estimator
-                poseEstimator.addVisionMeasurement(estPose, detection.timestamp);
+                poseEstimator.addVisionMeasurement(estPose, Timer.getFPGATimestamp());
             }
         });
 
@@ -229,6 +245,14 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
         return gyro.getAngularVelocity();
     }
 
+    public Pose2d getFilteredPose() {
+        return new Pose2d(filteredPoseX, filteredPoseY, getHeading());
+    }
+
+    public Rotation2d getFilteredAngleToSpeaker() {
+        return Field.getAngleToSpeaker(getFilteredPose());
+    }
+
     /**
      * Tare the gyro, make the current heading "north" (0° yaw) and reset the pose.
      */
@@ -239,6 +263,10 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
 
     public void resetGyro() {
         gyro.setOffsetCW(Rotation2d.fromRadians(0));
+    }
+
+    public void setFutureShootingPose(final Pose2d pose) {
+        futureShootingPose = pose;
     }
 
     /**
@@ -278,12 +306,21 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
      */
     public double getDistanceToSpeaker() {
         return Math.sqrt(
-                Math.pow(Field.SPEAKER_POSE.getY() - getPose().getY(), 2)
-                        + Math.pow(Field.SPEAKER_POSE.getX() - getPose().getX(), 2));
+                Math.pow(Field.SPEAKER_POSE_DISTANCE.getY() - getPose().getY(), 2)
+                        + Math.pow(Field.SPEAKER_POSE_DISTANCE.getX() - getPose().getX(), 2));
+    }
+
+     /**
+     * Get the distance from the robot to the speaker
+     */
+    public double getFutureDistanceToSpeaker() {
+        return Math.sqrt(
+                Math.pow(Field.SPEAKER_POSE_DISTANCE.getY() - futureShootingPose.getY(), 2)
+                        + Math.pow(Field.SPEAKER_POSE_DISTANCE.getX() - futureShootingPose.getX(), 2));
     }
 
     public boolean isAboveSpeakerOnY() {
-        return getPose().getY() > Field.SPEAKER_POSE.getY();
+        return getPose().getY() > Field.SPEAKER_POSE_ANGLE.getY();
     }
 
     private static volatile Perception instance;

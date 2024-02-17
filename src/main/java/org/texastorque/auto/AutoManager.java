@@ -19,6 +19,9 @@ public final class AutoManager extends TorqueAutoManager {
         addSequence("2 to 3", new BaseAuto(2, 3));
         addSequence("2 to 3 to 50", new BaseAuto(2, 3, 50));
         addSequence("2 to 3 to 50 to 40", new BaseAuto(2, 3, 50, 40));
+        addSequence("10 to 20 to 30", new BaseAuto(10, 20, 30));
+
+        addSequence("50 to 40 to 30", new BaseAuto(50, 40, 30));
 
         addSequence(new RunPath());
 
