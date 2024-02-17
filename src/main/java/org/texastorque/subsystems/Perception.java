@@ -121,8 +121,8 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
         // Log the field map to the dashboard
         Debug.field("Field", field);
 
-        filteredX = new TorqueRollingMedian(30);
-        filteredY = new TorqueRollingMedian(30);
+        filteredX = new TorqueRollingMedian(15);
+        filteredY = new TorqueRollingMedian(15);
     }
 
     @Override
