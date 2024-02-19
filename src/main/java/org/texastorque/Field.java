@@ -32,7 +32,8 @@ public final class Field {
         return id <= 16;
     }
 
-    public static final Pose2d SPEAKER_POSE_ANGLE = new Pose2d(0, 5.55, Rotation2d.fromDegrees(0));
+    public static final Pose2d SPEAKER_POSE_ANGLE_LEFT = new Pose2d(0, 6.5, Rotation2d.fromDegrees(0));
+    public static final Pose2d SPEAKER_POSE_ANGLE_RIGHT = new Pose2d(0, 6, Rotation2d.fromDegrees(0));
     public static final Pose2d SPEAKER_POSE_DISTANCE = new Pose2d(-.04, 5.55, Rotation2d.fromDegrees(0));
 
     /**
@@ -40,8 +41,9 @@ public final class Field {
      */
     public static Rotation2d getAngleToSpeaker(final Pose2d pose) {
         return Rotation2d.fromRadians(Math.atan2(
-                Field.SPEAKER_POSE_ANGLE.getY() - pose.getY(),
-                Field.SPEAKER_POSE_ANGLE.getX() - pose.getX())).plus(Rotation2d.fromRadians(Math.PI));
+                (pose.getY() < 4.5 ? Field.SPEAKER_POSE_ANGLE_LEFT.getY() : Field.SPEAKER_POSE_ANGLE_RIGHT.getY())
+                        - pose.getY(),
+                Field.SPEAKER_POSE_ANGLE_LEFT.getX() - pose.getX())).plus(Rotation2d.fromRadians(Math.PI));
     }
 
     public static AprilTagFieldLayout getFieldLayout() {

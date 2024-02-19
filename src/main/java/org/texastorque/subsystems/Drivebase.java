@@ -136,7 +136,7 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
         for (int i = 0; i < swerveStates.length; i++)
             swerveStates[i] = new SwerveModuleState();
 
-        alignPID = new PIDController(.2, 0, 0);
+        alignPID = new PIDController(.1, 0, 0);
         alignPID.enableContinuousInput(0, 360);
     }
 
@@ -181,7 +181,7 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
     }
 
     public boolean isAligned() {
-        return TorqueMath.toleranced(perception.getHeading().getDegrees(), getAlignTarget(), .75);
+        return TorqueMath.toleranced(perception.getHeading().getDegrees(), getAlignTarget(), 2);
     }
 
     public boolean hasBeenAligned() {
@@ -198,7 +198,7 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
 
         // If shooter is in smart mode then the driver can still drive around but
         // the rotation should stay locked to the goal.
-        if (shooter.wantsState(Shooter.State.SMART) && !shooter.inDebugMode() && mode.isTeleop()) {
+        if (shooter.wantsState(Shooter.State.SMART) && mode.isTeleop()) {
             desiredState = State.ALIGN_TO_ANGLE;
             // If we are not in the slowdown sequence speed setting
             if (speedSetting != SpeedSetting.SEQ) {

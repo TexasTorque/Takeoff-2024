@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
-import org.texastorque.Field;
 import org.texastorque.Subsystems;
 import org.texastorque.subsystems.*;
 import org.texastorque.subsystems.Shooter.GateState;
@@ -109,8 +108,6 @@ public class BaseAuto extends TorqueSequence implements Subsystems {
      * leave.
      */
     public class Shoot extends TorqueSequence {
-        private final double waitTime = .2;
-
         public Shoot() {
             log("Auto State", () -> "SHOOTING");
 
@@ -120,7 +117,6 @@ public class BaseAuto extends TorqueSequence implements Subsystems {
             } else {
                 addBlock(new TorqueWaitTime(1));
             }
-            // addBlock(new TorqueWaitTime(waitTime));
             addBlock(shooter.yieldState(Shooter.State.AUTO_OFF));
             addBlock(shooter.yieldGateState(Shooter.GateState.OFF));
             log("Auto State", () -> "SHOT");
@@ -181,19 +177,14 @@ public class BaseAuto extends TorqueSequence implements Subsystems {
             addBlock(followPath(() -> noteSequence.getNextPath()),
                     new DeployIntakeWhen(() -> perception.getPose().getX() > 5.5 || deployIntakeRightAway).command());
 
-            // addBlock(new TorqueWaitTime(() -> isNextOnCenterLine ? .25 : 0));
-
             addBlock(new TorqueRunSequence(new Shoot()));
         }
     }
 
     private final NoteSequence noteSequence;
 
-    public BaseAuto(final int... notes) {
+    public BaseAuto(final double angleOffset, final int... notes) {
         noteSequence = new NoteSequence(notes);
-
-        // addBlock(new TorqueRun(() -> perception.setPose(new Pose2d(1.33, 5.55, Field.ROT_FWD))));
-        // addBlock(new TorqueRun(() -> perception.resetGyro()));
 
         addBlock(new TorqueRun(() -> perception.setFutureShootingPose(perception.getPose())));
         addBlock(new TorqueRunSequence(new Shoot()));

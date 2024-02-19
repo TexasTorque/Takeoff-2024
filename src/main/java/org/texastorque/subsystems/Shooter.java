@@ -30,7 +30,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         private static final Shot empty = new Shot(0, 0, 0);
     }
 
-    private static final double ROTARY_OFF_POSITION = 124;
+    private static final double ROTARY_OFF_POSITION = 128;
 
     public static enum State implements TorqueState {
         OFF(new Shot(0, ROTARY_OFF_POSITION), false),
@@ -148,26 +148,40 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
                 (final Shot me, final Shot end, final Double t) -> new Shot(lerp(me.topVelocity, end.topVelocity, t),
                         lerp(me.angle, end.angle, t)));
 
-        shotTable.add(1.22, new Shot(4100, 64));
-        // shotTable.add(1.75, new Shot(4200, 50.4));
-        // shotTable.add(2.28, new Shot(4500, 43.2));
-        // shotTable.add(2.5, new Shot(4600, 41));
-        // shotTable.add(2.77, new Shot(4700, 36));
-        // shotTable.add(3.39, new Shot(4900, 30.6));
-        // shotTable.add(4.1, new Shot(5250, 28.8));
-        // shotTable.add(4.7, new Shot(5550, 24.8));
-        // shotTable.add(4.9, new Shot(6250, 21));
-        // shotTable.add(5.4, new Shot(6250, 18.8));
+        // shotTable.add(1.22, new Shot(4100, 64));
+        // shotTable.add(1.85, new Shot(3900, 50));
+        // shotTable.add(2.84, new Shot(4300, 37));
+        // shotTable.add(3.15, new Shot(4400, 35));
+        // shotTable.add(3.3, new Shot(4500, 32));
+        // shotTable.add(3.5, new Shot(4550, 31));
+        // shotTable.add(3.6, new Shot(4500, 30));
+        // shotTable.add(4.1, new Shot(4600, 29));
+        // shotTable.add(4.8, new Shot(4700, 25.5));
+        // shotTable.add(5.6, new Shot(4900, 22));
 
+        // 3.5 bad :(
+        // 3.6 bad
+        // 3.3 bad
+
+        shotTable.add(1.22, new Shot(4100, 64));
         shotTable.add(1.85, new Shot(3900, 50));
-        shotTable.add(2.84, new Shot(4300, 37));
-        shotTable.add(3.15, new Shot(4400, 35));
-        shotTable.add(3.3, new Shot(4500, 32));
-        shotTable.add(3.5, new Shot(4550, 31));
-        shotTable.add(3.6, new Shot(4500, 30));
-        shotTable.add(4.1, new Shot(4600, 29));
-        shotTable.add(4.8, new Shot(4700, 25.5));
-        shotTable.add(5.6, new Shot(4900, 22));
+        shotTable.add(1.9, new Shot(4300, 32));
+        shotTable.add(2.08, new Shot(3800, 46));
+        shotTable.add(2.15, new Shot(4100, 42));
+        shotTable.add(2.37, new Shot(3800, 38));
+        shotTable.add(2.55, new Shot(4300, 35)); 
+        // shotTable.add(2.62, new Shot(4300, 37));
+        shotTable.add(2.65, new Shot(4600, 34));
+        shotTable.add(2.5, new Shot(4600, 34));
+        shotTable.add(2.7, new Shot(4600, 34));
+        shotTable.add(2.9, new Shot(4300, 34));
+        shotTable.add(3.07, new Shot(4600, 31));
+        shotTable.add(3.15, new Shot(4600, 31)); // outlier
+        shotTable.add(3.48, new Shot(4600, 31));
+        shotTable.add(3.85, new Shot(4600, 27));
+        shotTable.add(3.9, new Shot(4600, 27));
+        shotTable.add(3.97, new Shot(4600, 27));
+        shotTable.add(4.19, new Shot(4900, 27));
 
         SmartDashboard.putNumber("Shot Velocity", 0);
         SmartDashboard.putNumber("Shot Angle", 0);

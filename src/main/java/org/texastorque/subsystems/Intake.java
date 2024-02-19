@@ -16,7 +16,7 @@ public class Intake extends TorqueStatorSubsystem<Intake.State> implements Subsy
     private final static double ROTARY_DOWN = 13;
 
     public static enum State implements TorqueState {
-        OFF(0, 0), INTAKE(ROTARY_DOWN, 10),
+        OFF(2, 0), INTAKE(ROTARY_DOWN, 10),
         SMART_INTAKE(ROTARY_DOWN, 10), OUTTAKE(ROTARY_DOWN, -10), PRIME(7, 0);
 
         public final double rotaryPosition, rollerSpeed;
@@ -69,10 +69,7 @@ public class Intake extends TorqueStatorSubsystem<Intake.State> implements Subsy
     }
 
     public boolean isAtState() {
-        return isIntaking()
-                // && Math.abs(
-                // Math.abs(g()) - Math.abs(desiredState.rotaryPosition)) <= ROTARY_TOLERANCE
-                && Math.abs(
+        return isIntaking() && Math.abs(
                         Math.abs(rotaryLeft.getPosition())
                                 - Math.abs(desiredState.rotaryPosition)) <= ROTARY_TOLERANCE;
     }
