@@ -7,6 +7,8 @@
 package org.texastorque;
 
 import java.io.IOException;
+import java.sql.Driver;
+
 import org.texastorque.torquelib.util.TorqueMath;
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.apriltag.AprilTagFields;
@@ -50,8 +52,16 @@ public final class Field {
     }
 
     /**
-     * Get the angle from pose to the speaker.
+     * Get the angle from pose to the speaker alliance respective.
      */
+    public Rotation2d getAngleToSpeakerAlliance(final Pose2d pose) {
+        if (DriverStation.getAlliance().isPresent()
+                && DriverStation.getAlliance().get() == DriverStation.Alliance.Red) {
+            return Rotation2d.fromRadians(Math.PI).minus(getAngleToSpeaker(pose));
+        } else
+            return getAngleToSpeaker(pose);
+    }
+
     public Rotation2d getAngleToSpeaker(final Pose2d pose) {
         return Rotation2d.fromRadians(Math.atan2(
                 (pose.getY() < 4.5 ? SPEAKER_POSE_ANGLE_RIGHT.getY() : SPEAKER_POSE_ANGLE_LEFT.getY())

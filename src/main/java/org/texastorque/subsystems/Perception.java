@@ -260,7 +260,7 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
     }
 
     public Rotation2d getFilteredAngleToSpeaker() {
-        return field.getAngleToSpeaker(getFilteredPose());
+        return field.getAngleToSpeakerAlliance(getFilteredPose());
     }
 
     /**
@@ -312,7 +312,7 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
      * Get the angle from the robot to the speaker.
      */
     public Rotation2d getAngleToSpeaker() {
-        return field.getAngleToSpeaker(getPose());
+        return field.getAngleToSpeakerAlliance(getPose());
     }
 
     /**
