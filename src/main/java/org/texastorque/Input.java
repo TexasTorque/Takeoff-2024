@@ -97,7 +97,7 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
         });
 
         shooter.setIdle(!shooterIdle.get());
-        shooter.setConsent(!operator.isLeftStickClickDown());
+        shooter.setConsent(!TorqueMath.toleranced(operator.getLeftYAxis(), 0, CONTROLLER_DEADBAND) || !TorqueMath.toleranced(operator.getLeftXAxis(), 0, CONTROLLER_DEADBAND));
 
         shooter.setDebugMode(debugMode.get());
     }

@@ -83,8 +83,8 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
     private final SwerveDrivePoseEstimator poseEstimator;
 
     private final TorqueNavXGyro gyro = TorqueNavXGyro.getInstance();
-    public final Field2d field = new Field2d();
-    private AprilTagFieldLayout fieldMap = Field.getFieldLayout();
+    public final Field2d field2d = new Field2d();
+    private AprilTagFieldLayout fieldMap;
 
     private final TorqueRollingMedian filteredX, filteredY;
     private double filteredPoseX = 0;
@@ -118,10 +118,12 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
         toast.getCamera("INTK_L").get().addPipeline(new ObjDetector<Note>(Note::fromJSONLeft));
 
         // Log the field map to the dashboard
-        Debug.field("Field", field);
+        Debug.field("Field", field2d);
 
         filteredX = new TorqueRollingMedian(5);
         filteredY = new TorqueRollingMedian(5);
+
+        fieldMap = field.getFieldLayout();
     }
 
     @Override
@@ -133,9 +135,9 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
         updateOdometryLocalization();
         updateVisionLocalization();
 
-        field.setRobotPose(getFilteredPose());
+        field2d.setRobotPose(getFilteredPose());
         if (!Robot.isReal() && shooter.wantsState(Shooter.State.SMART) && mode.isAuto()) {
-            field.setRobotPose(new Pose2d(getPose().getTranslation(), getAngleToSpeaker()));
+            field2d.setRobotPose(new Pose2d(getPose().getTranslation(), getAngleToSpeaker()));
         }
 
         Debug.log("Pose", Util.pose2d2str(poseEstimator.getEstimatedPosition()));
@@ -145,7 +147,7 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
         Debug.log("Angle To Speaker (°)", getAngleToSpeaker().getDegrees());
 
         Logger.recordOutput("Perception/SpeakerPose", new Pose2d[] {
-                Field.SPEAKER_POSE_ANGLE_LEFT });
+                field.SPEAKER_POSE_ANGLE_RIGHT });
 
         filteredPoseX = filteredX.calculate(getPose().getX());
         filteredPoseY = filteredY.calculate(getPose().getY());
@@ -192,7 +194,7 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
                 // - or the tag is too far away
                 // then we ignore the detection and move on
                 if (!detection.isValidDetection()
-                        || !Field.isIDValid(detection.id)
+                        || !field.isIDValid(detection.id)
                         || Math.abs(gyro.getAngularVelocity().getRadians()) > MAX_ANGULAR_VELOCITY_RADS
                         || detection.getDistance() > MAX_DISTANCE)
                     continue;
@@ -258,7 +260,7 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
     }
 
     public Rotation2d getFilteredAngleToSpeaker() {
-        return Field.getAngleToSpeaker(getFilteredPose());
+        return field.getAngleToSpeaker(getFilteredPose());
     }
 
     /**
@@ -310,7 +312,7 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
      * Get the angle from the robot to the speaker.
      */
     public Rotation2d getAngleToSpeaker() {
-        return Field.getAngleToSpeaker(getPose());
+        return field.getAngleToSpeaker(getPose());
     }
 
     /**
@@ -318,8 +320,8 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
      */
     public double getDistanceToSpeaker() {
         return Math.sqrt(
-                Math.pow(Field.SPEAKER_POSE_DISTANCE.getY() - getPose().getY(), 2)
-                        + Math.pow(Field.SPEAKER_POSE_DISTANCE.getX() - getPose().getX(), 2));
+                Math.pow(field.SPEAKER_POSE_DISTANCE.getY() - getPose().getY(), 2)
+                        + Math.pow(field.SPEAKER_POSE_DISTANCE.getX() - getPose().getX(), 2));
     }
 
     /**
@@ -327,10 +329,9 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
      */
     public double getFutureDistanceToSpeaker() {
         return Math.sqrt(
-                Math.pow(Field.SPEAKER_POSE_DISTANCE.getY() - futureShootingPose.getY(), 2)
-                        + Math.pow(Field.SPEAKER_POSE_DISTANCE.getX() - futureShootingPose.getX(), 2));
+                Math.pow(field.SPEAKER_POSE_DISTANCE.getY() - futureShootingPose.getY(), 2)
+                        + Math.pow(field.SPEAKER_POSE_DISTANCE.getX() - futureShootingPose.getX(), 2));
     }
-
 
     private static volatile Perception instance;
 
