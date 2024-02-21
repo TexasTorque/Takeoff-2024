@@ -2,9 +2,11 @@ package org.texastorque.auto.sequences;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 import org.texastorque.Subsystems;
+import org.texastorque.auto.AutoManager;
 import org.texastorque.subsystems.*;
 import org.texastorque.subsystems.Shooter.GateState;
 import org.texastorque.torquelib.auto.TorqueSequence;
@@ -45,8 +47,7 @@ public class BaseAuto extends TorqueSequence implements Subsystems {
      */
     private class NoteSequence {
         private final List<Integer> notes = new ArrayList<Integer>();
-        int lastNote = 0, nextNote = 0;
-        String pathName = "";
+        private int lastNote = 0, nextNote = 0;
 
         /**
          * Creates a note sequence from a variatic list of arguments which provide
@@ -68,13 +69,8 @@ public class BaseAuto extends TorqueSequence implements Subsystems {
         private PathPlannerPath getNextPath() {
             lastNote = nextNote;
             nextNote = notes.remove(0);
-            pathName = "go_" + lastNote + "_to_" + nextNote;
-            return PathPlannerPath.fromPathFile(pathName);
-        }
-
-        private Pose2d getPathEndPose() {
-            return PathPlannerPath.fromPathFile(pathName).getTrajectory(new ChassisSpeeds(), new Rotation2d())
-                    .getEndState().getTargetHolonomicPose();
+            final String pathName = "go_" + lastNote + "_to_" + nextNote;
+            return AutoManager.getInstance().getPath(pathName);
         }
 
         /**
@@ -154,7 +150,9 @@ public class BaseAuto extends TorqueSequence implements Subsystems {
             log("Auto State", () -> "WARMING UP");
 
             addBlock(shooter.yieldGateState(GateState.OFF));
-            addBlock(new TorqueRun(() -> perception.setFutureShootingPose(noteSequence.getPathEndPose())));
+            addBlock(new TorqueRun(() -> perception.setFutureShootingPose(
+                    TorqueFollowPath.getEndingPositionForCurrentlyLoadedPath())));
+
             addBlock(shooter.yieldState(Shooter.State.FUTURE_SMART));
 
             addBlock(intake.yieldState(Intake.State.PRIME));

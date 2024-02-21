@@ -3,11 +3,22 @@ package org.texastorque.auto;
 import org.texastorque.auto.sequences.BaseAuto;
 import org.texastorque.torquelib.auto.*;
 
+import com.pathplanner.lib.path.PathPlannerPath;
+
 public final class AutoManager extends TorqueAutoManager {
     private static volatile AutoManager instance;
 
     @Override
-    public final void init() {
+    public final void loadPaths() {
+        pathLoader.preloadPath("go_0_to_2");
+    }
+
+    public final PathPlannerPath getPath(final String pathName) {
+        return pathLoader.getPathUnsafe(pathName); // choose your strategy here
+    }
+   
+    @Override
+    public final void loadSequences() {
         addSequence("2", new BaseAuto(0, 2));
 
         addSequence("2 to 1", new BaseAuto(0, 2, 1));
