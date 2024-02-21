@@ -87,7 +87,6 @@ public final class Lights extends TorqueStatelessSubsystem implements Subsystems
 
     private LightAction blinkGreen = new Blink(() -> Color.kGreen, 6),
             green = new Solid(() -> Color.kGreen),
-            blinkYellow = new Blink(() -> Color.kYellow, 6),
             rainbow = new Rainbow(), blue = new Solid(() -> Color.kBlue), red = new Solid(() -> Color.kRed);
 
     private Lights() {

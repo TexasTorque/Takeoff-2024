@@ -16,7 +16,7 @@ public class Intake extends TorqueStatorSubsystem<Intake.State> implements Subsy
     private final static double ROTARY_DOWN = 13;
 
     public static enum State implements TorqueState {
-        OFF(2, 0), INTAKE(ROTARY_DOWN, 10),
+        OFF(0, 0), INTAKE(ROTARY_DOWN, 10),
         SMART_INTAKE(ROTARY_DOWN, 10), OUTTAKE(ROTARY_DOWN, -10), PRIME(7, 0);
 
         public final double rotaryPosition, rollerSpeed;

@@ -97,9 +97,12 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
         });
 
         shooter.setIdle(!shooterIdle.get());
-        shooter.setConsent(!TorqueMath.toleranced(operator.getLeftYAxis(), 0, CONTROLLER_DEADBAND) || !TorqueMath.toleranced(operator.getLeftXAxis(), 0, CONTROLLER_DEADBAND));
+        // shooter.setConsent(!TorqueMath.toleranced(operator.getLeftYAxis(), 0, CONTROLLER_DEADBAND) || !TorqueMath.toleranced(operator.getLeftXAxis(), 0, CONTROLLER_DEADBAND));
+        shooter.setConsent(!operator.isLeftStickClickDown());
 
         shooter.setDebugMode(debugMode.get());
+
+        shooter.setEmergencyCurrentLimit(driver.isLeftCenterButtonDown());
     }
 
     public void updateDrivebase() {

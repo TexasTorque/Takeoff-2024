@@ -21,24 +21,10 @@ public final class Field {
     public static final double LENGTH = Units.inchesToMeters(651.25);
     public static final double WIDTH = Units.inchesToMeters(315.5);
 
-    public static final Rotation2d ROT_FWD = Rotation2d.fromDegrees(0);
-    public static final Rotation2d ROT_BACK = Rotation2d.fromDegrees(180);
-
-    public final Pose2d SPEAKER_POSE_ANGLE_RIGHT;
-    public final Pose2d SPEAKER_POSE_ANGLE_LEFT;
-    public final Pose2d SPEAKER_POSE_DISTANCE;
-
-    public Field() {
-        boolean isRedAlliance = DriverStation.getAlliance().isPresent()
-                && DriverStation.getAlliance().get() == DriverStation.Alliance.Red;
-
-        double speakerPosition = isRedAlliance ? LENGTH : 0;
-
-        SPEAKER_POSE_ANGLE_RIGHT = new Pose2d(speakerPosition, 6.5, Rotation2d.fromDegrees(0));
-        SPEAKER_POSE_ANGLE_LEFT = new Pose2d(speakerPosition, 6, Rotation2d.fromDegrees(0));
-        SPEAKER_POSE_DISTANCE = new Pose2d(-.04 * (isRedAlliance ? -1 : 1) + speakerPosition, 5.55,
-                Rotation2d.fromDegrees(0));
-    }
+    public Pose2d SPEAKER_POSE_DISTANCE = new Pose2d();
+    public Pose2d SPEAKER_POSE_ANGLE_RIGHT = new Pose2d();
+    public Pose2d SPEAKER_POSE_ANGLE_LEFT = new Pose2d();
+    public boolean isRedAlliance;
 
     public boolean isPoseOnField(final Pose2d pose) {
         return TorqueMath.constrained(pose.getX(), 0, LENGTH)
@@ -49,22 +35,28 @@ public final class Field {
         return id <= 16;
     }
 
-    /**
-     * Get the angle from pose to the speaker alliance respective.
-     */
-    public Rotation2d getAngleToSpeakerAlliance(final Pose2d pose) {
-        if (DriverStation.getAlliance().isPresent()
-                && DriverStation.getAlliance().get() == DriverStation.Alliance.Red) {
-            return Rotation2d.fromRadians(Math.PI * 2).minus(getAngleToSpeaker(pose));
-        } else
-            return getAngleToSpeaker(pose);
+    public Rotation2d getAngleToSpeaker(final Pose2d pose) {
+        isRedAlliance = DriverStation.getAlliance().isPresent()
+                && DriverStation.getAlliance().get() == DriverStation.Alliance.Red;
+
+        double speakerPosition = isRedAlliance ? LENGTH : 0;
+
+        SPEAKER_POSE_DISTANCE = new Pose2d(-.04 * (isRedAlliance ? -1 : 1) + speakerPosition, 5.55,
+                Rotation2d.fromDegrees(0));
+
+        SPEAKER_POSE_ANGLE_RIGHT = new Pose2d(speakerPosition, 6.5, Rotation2d.fromDegrees(0));
+        SPEAKER_POSE_ANGLE_LEFT = new Pose2d(speakerPosition, 5.45, Rotation2d.fromDegrees(0));
+        // SPEAKER_POSE_ANGLE_LEFT = new Pose2d(speakerPosition, 6, Rotation2d.fromDegrees(0));
+
+        return Rotation2d.fromRadians(Math.atan2(
+                (pose.getY() < 3 ? SPEAKER_POSE_ANGLE_RIGHT.getY() : SPEAKER_POSE_ANGLE_LEFT.getY())
+                        - pose.getY(),
+                SPEAKER_POSE_ANGLE_RIGHT.getX() - pose.getX()))
+                .plus(Rotation2d.fromRadians(isRedAlliance ? 0 : Math.PI));
     }
 
-    public Rotation2d getAngleToSpeaker(final Pose2d pose) {
-        return Rotation2d.fromRadians(Math.atan2(
-                (pose.getY() < 4.5 ? SPEAKER_POSE_ANGLE_RIGHT.getY() : SPEAKER_POSE_ANGLE_LEFT.getY())
-                        - pose.getY(),
-                SPEAKER_POSE_ANGLE_RIGHT.getX() - pose.getX())).plus(Rotation2d.fromRadians(Math.PI));
+    public boolean isXPast(final Pose2d pose, final double xPosition) {
+        return !isRedAlliance ? pose.getX() > xPosition : pose.getX() < LENGTH - xPosition;
     }
 
     public AprilTagFieldLayout getFieldLayout() {
@@ -75,6 +67,11 @@ public final class Field {
             return null;
         }
     }
+
+    // public static void main(String[] args) {
+    // System.out.println(getAngleToSpeaker(new Pose2d(13.72, 2.74, new
+    // Rotation2d())));
+    // }
 
     public static synchronized final Field getInstance() {
         return instance == null ? instance = new Field() : instance;

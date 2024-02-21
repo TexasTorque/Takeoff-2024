@@ -260,7 +260,7 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
     }
 
     public Rotation2d getFilteredAngleToSpeaker() {
-        return field.getAngleToSpeakerAlliance(getFilteredPose());
+        return field.getAngleToSpeaker(getFilteredPose());
     }
 
     /**
@@ -312,7 +312,7 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
      * Get the angle from the robot to the speaker.
      */
     public Rotation2d getAngleToSpeaker() {
-        return field.getAngleToSpeakerAlliance(getPose());
+        return field.getAngleToSpeaker(getPose());
     }
 
     /**
@@ -402,96 +402,4 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
     @Override
     public void clean(TorqueMode mode) {
     }
-
-    // The below code is used for an auto system that is not in active development.
-
-    // public static final PathConstraints PATH_CONST = new PathConstraints(1, 1,
-    // Math.PI, Math.PI);
-
-    // public PathPoint createPoint(final Pose2d pose) {
-    // return createPoint(pose.getTranslation(), pose.getRotation());
-    // }
-
-    // public PathPoint createPoint(final Translation2d trl, final Rotation2d rot) {
-    // final RotationTarget target = new RotationTarget(0, rot);
-    // return new PathPoint(trl, target, PATH_CONST);
-    // }
-
-    // public GoalEndState endState(List<PathPoint> points) {
-    // return new GoalEndState(0, points.get(points.size() -
-    // 1).rotationTarget.getTarget());
-    // }
-
-    // public PathPlannerPath generateInitial(final int note) {
-    // final Pose2d currentPose = getPose();
-
-    // final Pose2d notePose = Field.getNotePose(note);
-
-    // List<Translation2d> bezierPoints = PathPlannerPath.bezierFromPoses(
-    // currentPose,
-    // new Pose2d(notePose.getTranslation(), Field.ROT_BACK));
-
-    // final GoalEndState endState = new GoalEndState(0, Rotation2d.fromDegrees(1));
-
-    // return new PathPlannerPath(bezierPoints, PATH_CONST, endState);
-    // }
-
-    // public PathPlannerPath generateNextOmar(final int note) {
-    // final Pose2d currentPose = getPose();
-
-    // final Pose2d notePose = Field.getNotePose(note);
-
-    // final Rotation2d targetRotation = Field.getAngleToSpeaker(notePose);
-
-    // final Translation2d midPointLocation = new Translation2d(
-    // notePose.getX() - Math.abs(notePose.getY() - currentPose.getY()), // target x
-    // - distance from current y
-    // // to target y
-    // (currentPose.getY() + notePose.getY()) / 2f); // y coord between current y
-    // and target y
-
-    // List<Translation2d> bezierPoints = PathPlannerPath.bezierFromPoses(
-    // new Pose2d(currentPose.getTranslation(), Field.ROT_BACK),
-    // new Pose2d(midPointLocation, targetRotation),
-    // new Pose2d(notePose.getTranslation(), targetRotation.plus(Field.ROT_BACK)));
-
-    // Debug.log("Goal Pose", new Pose2d(notePose.getTranslation(),
-    // targetRotation).toString());
-
-    // final GoalEndState endState = new GoalEndState(0, targetRotation);
-
-    // return new PathPlannerPath(bezierPoints, PATH_CONST, endState);
-    // }
-
-    // public PathPlannerPath generateHomingPosition(final CenterLineAttempt
-    // attempt) {
-
-    // final Pose2d currentPose = perception.getPose();
-
-    // List<Translation2d> bezierPoints = attempt.getBezierToHoming(currentPose);
-
-    // final GoalEndState endState = new GoalEndState(0, Field.ROT_FWD);
-
-    // return new PathPlannerPath(bezierPoints, PATH_CONST, endState);
-    // }
-
-    // public PathPlannerPath generateShootingPosition(final CenterLineAttempt
-    // attempt) {
-
-    // final Pose2d currentPose = perception.getPose();
-
-    // List<Translation2d> bezierPoints = attempt.getBezierToShooting(currentPose);
-
-    // final Rotation2d targetRot = Field.getAngleToSpeaker(attempt.shooting());
-
-    // final GoalEndState endState = new GoalEndState(0, targetRot);
-
-    // return new PathPlannerPath(bezierPoints, PATH_CONST, endState);
-    // }
-
-    // public CenterLineAttempt getCorrectCenterLineAttempt() {
-    // return isAboveSpeakerOnY() ? Field.CenterLineAttempt.HIGH :
-    // Field.CenterLineAttempt.LOW;
-    // }
-
 }

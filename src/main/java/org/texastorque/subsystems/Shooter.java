@@ -1,5 +1,9 @@
 package org.texastorque.subsystems;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
 import org.texastorque.Ports;
 import org.texastorque.Subsystems;
 import org.texastorque.torquelib.Debug;
@@ -11,10 +15,13 @@ import org.texastorque.torquelib.base.TorqueStatorSubsystem;
 import org.texastorque.torquelib.control.TorqueLookUpTable;
 import org.texastorque.torquelib.motors.TorqueNEO;
 import org.texastorque.torquelib.util.TorqueMath;
+import org.texastorque.torquelib.util.TorquePolyRegression;
+
 import com.ctre.phoenix6.hardware.CANcoder;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.controller.SimpleMotorFeedforward;
 import edu.wpi.first.wpilibj.DigitalInput;
+import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
@@ -30,7 +37,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         private static final Shot empty = new Shot(0, 0, 0);
     }
 
-    private static final double ROTARY_OFF_POSITION = 128;
+    private static final double ROTARY_OFF_POSITION = 122;
 
     public static enum State implements TorqueState {
         OFF(new Shot(0, ROTARY_OFF_POSITION), false),
@@ -87,7 +94,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
 
     private GateState gateState = GateState.OFF;
 
-    private boolean debugMode = false, idle = true, consent = false;
+    private boolean debugMode = false, idle = true, consent = false, emergencyCurrentLimit;
 
     private Shot shot = new Shot(0, 0);
 
@@ -98,6 +105,8 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
     public void setConsent(boolean consent) {
         this.consent = consent;
     }
+
+    private TorquePolyRegression rpmRegression, angleRegression;
 
     public Shooter() {
         super(State.OFF);
@@ -113,7 +122,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         rotaryEncoder = new CANcoder(Ports.SHOOTER_ROTARY_ENCODER);
 
         flywheelTop = new TorqueNEO(Ports.FLYWHEEL_TOP);
-        flywheelTop.setCurrentLimit(60);
+        flywheelTop.setCurrentLimit(40);
         flywheelTop.setVoltageCompensation(12.6);
         flywheelTop.setBreakMode(true);
         flywheelTop.invertMotor(false);
@@ -123,7 +132,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         flywheelTopPID = new PIDController(0.003, 0, 0);
 
         flywheelBottom = new TorqueNEO(Ports.FLYWHEEL_BOTTOM);
-        flywheelBottom.setCurrentLimit(60);
+        flywheelBottom.setCurrentLimit(40);
         flywheelBottom.setVoltageCompensation(12.6);
         flywheelBottom.setBreakMode(true);
         flywheelBottom.invertMotor(true);
@@ -147,24 +156,51 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
                 (final Shot me, final Shot end, final Double t) -> new Shot(lerp(me.topVelocity, end.topVelocity, t),
                         lerp(me.angle, end.angle, t)));
 
+        // shotTable.add(1.22, new Shot(4100, 64));
+        // shotTable.add(1.85, new Shot(3900, 50));
+        // shotTable.add(1.9, new Shot(4300, 32));
+        // shotTable.add(2.08, new Shot(3800, 46));
+        // shotTable.add(2.15, new Shot(4100, 42));
+        // shotTable.add(2.37, new Shot(3800, 38));
+        // shotTable.add(2.55, new Shot(4300, 35));
+        // shotTable.add(2.65, new Shot(4600, 34));
+        // shotTable.add(2.5, new Shot(4600, 34));
+        // shotTable.add(2.7, new Shot(4600, 34));
+        // shotTable.add(2.9, new Shot(4300, 34));
+        // shotTable.add(3.07, new Shot(4600, 31));
+        // shotTable.add(3.15, new Shot(4600, 31));
+        // shotTable.add(3.48, new Shot(4600, 31));
+        // shotTable.add(3.85, new Shot(4600, 27));
+        // shotTable.add(3.9, new Shot(4600, 27));
+        // shotTable.add(3.97, new Shot(4600, 27));
+        // shotTable.add(4.19, new Shot(4900, 27));
+
         shotTable.add(1.22, new Shot(4100, 64));
-        shotTable.add(1.85, new Shot(3900, 50));
-        shotTable.add(1.9, new Shot(4300, 32));
-        shotTable.add(2.08, new Shot(3800, 46));
-        shotTable.add(2.15, new Shot(4100, 42));
-        shotTable.add(2.37, new Shot(3800, 38));
-        shotTable.add(2.55, new Shot(4300, 35));
-        shotTable.add(2.65, new Shot(4600, 34));
-        shotTable.add(2.5, new Shot(4600, 34));
-        shotTable.add(2.7, new Shot(4600, 34));
-        shotTable.add(2.9, new Shot(4300, 34));
-        shotTable.add(3.07, new Shot(4600, 31));
-        shotTable.add(3.15, new Shot(4600, 31));
-        shotTable.add(3.48, new Shot(4600, 31));
-        shotTable.add(3.85, new Shot(4600, 27));
-        shotTable.add(3.9, new Shot(4600, 27));
-        shotTable.add(3.97, new Shot(4600, 27));
-        shotTable.add(4.19, new Shot(4900, 27));
+        shotTable.add(1.75, new Shot(4200, 50.4));
+        shotTable.add(2.28, new Shot(4500, 43.2));
+        shotTable.add(2.5, new Shot(4600, 41));
+        shotTable.add(2.77, new Shot(4700, 36));
+        shotTable.add(3.39, new Shot(4900, 30.6));
+        shotTable.add(4.1, new Shot(5000, 28.8));
+        shotTable.add(4.7, new Shot(5550, 24.8));
+        shotTable.add(4.9, new Shot(6250, 21));
+        shotTable.add(5.4, new Shot(6250, 18.8));
+
+        var entries = shotTable.table.entrySet();
+        double[] distances = new double[entries.size()];
+        double[] rpms = new double[entries.size()];
+        double[] angles = new double[entries.size()];
+
+        int i = 0;
+        for (final Map.Entry<Double, Shot> entry : shotTable.table.entrySet()) {
+            distances[i] = entry.getKey();
+            rpms[i] = entry.getValue().bottomVelocity;
+            angles[i] = entry.getValue().angle;
+            i++;
+        }
+
+        rpmRegression = new TorquePolyRegression(distances, rpms, 1);
+        angleRegression = new TorquePolyRegression(distances, angles, 2);
 
         SmartDashboard.putNumber("Shot Velocity", 0);
         SmartDashboard.putNumber("Shot Angle", 0);
@@ -173,6 +209,10 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
 
     @Override
     public void initialize(TorqueMode mode) {
+    }
+
+    public void setEmergencyCurrentLimit(final boolean limit) {
+        emergencyCurrentLimit = limit;
     }
 
     public boolean hasNote() {
@@ -229,6 +269,13 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         debugMode = mode;
     }
 
+    public Shot getRegressionShot(double distance) {
+        return new Shot(
+                TorqueMath.constrain(rpmRegression.predict(distance), 0, DriverStation.isAutonomous() ? 5000 : 7000),
+                TorqueMath.constrain(angleRegression.predict(distance), 0, 90)
+        );
+    }
+
     @Override
     public void update(TorqueMode mode) {
         Debug.log("Shooter State", desiredState.toString());
@@ -265,12 +312,15 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
             }
         }
 
-        if (intake.isIntaking()) {
+        if (emergencyCurrentLimit || mode.isAuto()) {
             flywheelBottom.setCurrentLimit(80);
             flywheelTop.setCurrentLimit(80);
-        } else {
+        } else if (intake.isIntaking()) {
             flywheelBottom.setCurrentLimit(60);
             flywheelTop.setCurrentLimit(60);
+        } else {
+            flywheelBottom.setCurrentLimit(40);
+            flywheelTop.setCurrentLimit(40);
         }
 
         if (desiredState == State.INTAKE && mode.isAuto()) {
@@ -278,9 +328,9 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         }
 
         if (wantsState(State.SMART))
-            shot = shotTable.get(perception.getDistanceToSpeaker());
+            shot = getRegressionShot(perception.getDistanceToSpeaker());
         else if (wantsState(State.FUTURE_SMART))
-            shot = shotTable.get(perception.getFutureDistanceToSpeaker());
+            shot = getRegressionShot(perception.getDistanceToSpeaker());
         else
             shot = desiredState.shot;
 

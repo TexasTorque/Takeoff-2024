@@ -175,7 +175,7 @@ public class BaseAuto extends TorqueSequence implements Subsystems {
             log("Auto State", () -> "BEGIN PATH");
 
             addBlock(followPath(() -> noteSequence.getNextPath()),
-                    new DeployIntakeWhen(() -> perception.getPose().getX() > 5.5 || deployIntakeRightAway).command());
+                    new DeployIntakeWhen(() -> field.isXPast(perception.getPose(), 5.5) || deployIntakeRightAway).command());
 
             addBlock(new TorqueRunSequence(new Shoot()));
         }
