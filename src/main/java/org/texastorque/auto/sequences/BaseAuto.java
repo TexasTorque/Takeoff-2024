@@ -2,7 +2,6 @@ package org.texastorque.auto.sequences;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 import org.texastorque.Subsystems;
@@ -17,9 +16,6 @@ import org.texastorque.torquelib.auto.commands.TorqueWaitTime;
 import org.texastorque.torquelib.auto.commands.TorqueWaitUntil;
 import org.texastorque.torquelib.auto.commands.TorqueWhile;
 import com.pathplanner.lib.path.PathPlannerPath;
-import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj.Timer;
 
@@ -181,7 +177,7 @@ public class BaseAuto extends TorqueSequence implements Subsystems {
 
     private final NoteSequence noteSequence;
 
-    public BaseAuto(final double angleOffset, final int... notes) {
+    public BaseAuto(final int... notes) {
         noteSequence = new NoteSequence(notes);
 
         addBlock(new TorqueRun(() -> perception.setFutureShootingPose(perception.getPose())));

@@ -244,6 +244,10 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
                 TorqueMath.constrain(angleRegression.predict(distance), 0, 90));
     }
 
+    public boolean hasConsent() {
+        return consent;
+    }
+
     @Override
     public void update(TorqueMode mode) {
         Debug.log("Shooter State", desiredState.toString());
@@ -280,7 +284,10 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
             }
         }
 
-        if (emergencyCurrentLimit || mode.isAuto()) {
+        if (emergencyCurrentLimit) {
+            flywheelBottom.setCurrentLimit(90);
+            flywheelTop.setCurrentLimit(90);
+        } else if (mode.isAuto()) {
             flywheelBottom.setCurrentLimit(80);
             flywheelTop.setCurrentLimit(80);
         } else if (intake.isIntaking()) {
