@@ -44,13 +44,13 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         BABYBIRD(new Shot(-1200, 90), false),
         AMP(new Shot(1000, 62), true),
         TRAP(new Shot(0, 108), true),
-        LAYUP(new Shot(3900, 63), true),
-        MID(new Shot(4300, 37), true),
-        SAFEZONE(new Shot(4300, 33), true),
+        LAYUP(new Shot(3900, 63), new Shot(3900, 122), true),
+        MID(new Shot(4300, 37), new Shot(4300, 133), true),
+        SAFEZONE(new Shot(4300, 33), new Shot(4300, 139), true),
         FUTURE_SMART(true),
         SMART(true);
 
-        public final Shot shot;
+        public final Shot shot, shiftedShot;
         public final boolean isAShot;
 
         private State(final boolean isAShot) {
@@ -59,7 +59,18 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
 
         private State(final Shot shot, final boolean isAShot) {
             this.shot = shot;
+            this.shiftedShot = shot;
             this.isAShot = isAShot;
+        }
+
+        private State(final Shot shot, final Shot shiftedShot, final boolean isAShot) {
+            this.shot = shot;
+            this.shiftedShot = shiftedShot;
+            this.isAShot = isAShot;
+        }
+
+        public Shot getShot(boolean shift) {
+            return shift ? shiftedShot : shot;
         }
     }
 
@@ -95,7 +106,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
 
     private GateState gateState = GateState.OFF;
 
-    private boolean debugMode = false, idle = true, consent = false, emergencyCurrentLimit;
+    private boolean debugMode = false, idle = true, consent = false, emergencyCurrentLimit = false, shift = false;
 
     private Shot shot = new Shot(0, 0);
 
@@ -190,6 +201,14 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         return !noteSensor.get();
     }
 
+    public void setShift(boolean shift) {
+        this.shift = shift;
+    }
+
+    public boolean isShift() {
+        return shift;
+    }
+
     public boolean isReadyToShoot() {
         if (!wantsToShoot() || drivebase.wantsState(Drivebase.State.PATHING))
             return false;
@@ -273,6 +292,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         Debug.log("Idle Mode", idle);
         Debug.log("Shooter Shot Velocity", shot.topVelocity);
         Debug.log("Shooter Consent", consent);
+        Debug.log("Shooter Shift", shift);
 
         if (mode.isTeleop() && intake.isIntaking()) {
             if (intake.isAtState() && !hasNote()) {
@@ -303,7 +323,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         else if (wantsState(State.FUTURE_SMART))
             shot = getRegressionShot(perception.getFutureDistanceToSpeaker());
         else
-            shot = desiredState.shot;
+            shot = desiredState.getShot(shift);
 
         // Testing to get new data points
         if (wantsState(State.SMART) && debugMode && mode.isTeleop()) {
@@ -317,14 +337,15 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         else if (!wantsToShoot())
             loopsThatShooterHasBeenReadyToShoot = 0;
 
-        if (loopsThatShooterHasBeenReadyToShoot > 15 && (mode.isTeleop() ? (consent && drivebase.hasBeenAligned()) : true))
-            gateState = GateState.OUT;
+        if (loopsThatShooterHasBeenReadyToShoot > 15 && (!shift ? drivebase.hasBeenAligned() : true)) {
+            if ((mode.isTeleop() && consent) || mode.isAuto())
+                gateState = GateState.OUT;
+        }
 
         Debug.log("Shot", shot.toString());
 
         if (wantsState(Shooter.State.OFF) && hasNote() && mode.isTeleop() && idle) {
             final double desiredVolts = TorqueMath.constrain(Math.pow(shootingWarmupTimer.get(), 2) * .25, 0, 3.5);
-
             flywheelTop.setVolts(desiredVolts);
             flywheelBottom.setVolts(desiredVolts);
         } else if (wantsState(Shooter.State.OFF) && mode.isTeleop() && idle) {
@@ -341,7 +362,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
             shootingWarmupTimer.restart();
         }
 
-        rotary.setVolts(TorqueMath.constrain(rotaryPID.calculate(getRotaryEncoder(), shot.angle),8));
+        rotary.setVolts(TorqueMath.constrain(rotaryPID.calculate(getRotaryEncoder(), shot.angle), 8));
 
         Debug.log("Shooter Gate State", gateState.toString());
 

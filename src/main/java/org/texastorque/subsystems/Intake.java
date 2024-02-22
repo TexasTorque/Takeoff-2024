@@ -17,7 +17,7 @@ public class Intake extends TorqueStatorSubsystem<Intake.State> implements Subsy
 
     public static enum State implements TorqueState {
         OFF(0, 0), INTAKE(ROTARY_DOWN, 10),
-        SMART_INTAKE(ROTARY_DOWN, 10), OUTTAKE(ROTARY_DOWN, -10), PRIME(7, 0);
+        SMART_INTAKE(ROTARY_DOWN, 10), OUTTAKE(ROTARY_DOWN, -10), AUTO_PRIME(7, 0), PRIME(4, 0);
 
         public final double rotaryPosition, rollerSpeed;
 
@@ -70,8 +70,8 @@ public class Intake extends TorqueStatorSubsystem<Intake.State> implements Subsy
 
     public boolean isAtState() {
         return isIntaking() && Math.abs(
-                        Math.abs(rotaryLeft.getPosition())
-                                - Math.abs(desiredState.rotaryPosition)) <= ROTARY_TOLERANCE;
+                Math.abs(rotaryLeft.getPosition())
+                        - Math.abs(desiredState.rotaryPosition)) <= ROTARY_TOLERANCE;
     }
 
     @Override
@@ -85,8 +85,10 @@ public class Intake extends TorqueStatorSubsystem<Intake.State> implements Subsy
             Input.getInstance().setRumbleFor(.2);
 
             if (shooter.isRotaryAtState())
-                desiredState = mode.isAuto() ? State.PRIME : State.OFF;
+                desiredState = mode.isAuto() ? State.AUTO_PRIME : State.OFF;
 
+        } else if (!isIntaking() && !wantsState(State.OUTTAKE) && shooter.isShift() ) {
+            desiredState = State.PRIME;
         }
 
         rollers.setVolts(desiredState.rollerSpeed);

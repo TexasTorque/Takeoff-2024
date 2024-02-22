@@ -14,7 +14,6 @@ import org.texastorque.torquelib.base.TorqueStatelessSubsystem;
 import org.texastorque.torquelib.util.TorqueUtil;
 import edu.wpi.first.wpilibj.AddressableLED;
 import edu.wpi.first.wpilibj.AddressableLEDBuffer;
-import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.util.Color;
 
 public final class Lights extends TorqueStatelessSubsystem implements Subsystems {
@@ -87,7 +86,7 @@ public final class Lights extends TorqueStatelessSubsystem implements Subsystems
 
     private LightAction blinkGreen = new Blink(() -> Color.kGreen, 6),
             green = new Solid(() -> Color.kGreen),
-            rainbow = new Rainbow(), blue = new Solid(() -> Color.kBlue), red = new Solid(() -> Color.kRed);
+            rainbow = new Rainbow(), red = new Solid(() -> Color.kRed), purple = new Solid(() -> Color.kPurple);
 
     private Lights() {
         shooterLEDs = new AddressableLED(Ports.LIGHTS_SUPERSTRUCTURE);
@@ -107,19 +106,15 @@ public final class Lights extends TorqueStatelessSubsystem implements Subsystems
     }
 
     public final LightAction getColor(final TorqueMode mode) {
-        if (perception.seesTags() && shooter.hasNote()) 
-            return blinkGreen;
-        else if (shooter.hasNote())
-            return green;
-   
+        if (shooter.hasNote())
+            return shooter.isShift() ? purple : green;
+        if (perception.seesTags() && shooter.hasNote())
+            return shooter.isShift() ? purple : blinkGreen;
+
         if (mode.isAuto())
             return rainbow;
 
-        // Teleop:
-        if (DriverStation.getAlliance().isPresent()) {
-            return DriverStation.getAlliance().get() == DriverStation.Alliance.Blue ? blue : red;
-        }
-        return blue;
+        return red;
 
     }
 

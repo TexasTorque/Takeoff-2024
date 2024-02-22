@@ -6,7 +6,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Supplier;
 import org.littletonrobotics.junction.Logger;
-import org.texastorque.Field;
 import org.texastorque.Robot;
 import org.texastorque.Subsystems;
 import org.texastorque.toast.lib.Camera;
@@ -84,9 +83,9 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
 
     private final TorqueNavXGyro gyro = TorqueNavXGyro.getInstance();
     public final Field2d field2d = new Field2d();
-    private AprilTagFieldLayout fieldMap;
-
     private final TorqueRollingMedian filteredX, filteredY;
+    private final AprilTagFieldLayout fieldMap;
+
     private double filteredPoseX = 0;
     private double filteredPoseY = 0;
     private boolean seesTags = false;
@@ -132,6 +131,7 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
 
     @Override
     public void update(final TorqueMode mode) {
+        field.updateForAlliance();
         updateOdometryLocalization();
         updateVisionLocalization();
 
@@ -167,7 +167,6 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
         // This gets comented/uncomented out based on if or if not we want to use
         // vision to update our odometry while we are pathing (like physically following
         // the path)
-        Debug.log("Not Running Vision", drivebase.wantsState(Drivebase.State.PATHING));
         if (drivebase.wantsState(Drivebase.State.PATHING)) {
             return;
         }

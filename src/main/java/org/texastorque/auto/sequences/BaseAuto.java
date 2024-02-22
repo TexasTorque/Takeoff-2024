@@ -154,11 +154,11 @@ public class BaseAuto extends TorqueSequence implements Subsystems {
 
             addBlock(shooter.yieldGateState(GateState.OFF));
             addBlock(new TorqueRun(() -> perception.setFutureShootingPose(
-                    TorqueFollowPath.getEndingPositionForCurrentlyLoadedPath(isCenterLine ? -.5 : 0))));
+                    field.getEndPosition(TorqueFollowPath.getEndingPositionForCurrentlyLoadedPath(), isCenterLine))));
 
             addBlock(shooter.yieldState(Shooter.State.FUTURE_SMART));
 
-            addBlock(intake.yieldState(Intake.State.PRIME));
+            addBlock(intake.yieldState(Intake.State.AUTO_PRIME));
         }
     }
 
