@@ -126,10 +126,7 @@ public class BaseAuto extends TorqueSequence implements Subsystems {
         private boolean isCenterLine = true;
 
         public DeployIntakeWhen(final BooleanSupplier when) {
-            addBlock(new TorqueRun(() -> {
-                if (when.getAsBoolean())
-                    isCenterLine = false;
-            }));
+            addBlock(new TorqueRun(() -> isCenterLine = !when.getAsBoolean()));
             addBlock(new TorqueWaitUntil(when));
             addBlock(new TorqueRun(() -> timer.restart()));
 
@@ -187,7 +184,7 @@ public class BaseAuto extends TorqueSequence implements Subsystems {
 
     public BaseAuto(final int... notes) {
         noteSequence = new NoteSequence(notes);
-
+      
         addBlock(new TorqueRun(() -> perception.setFutureShootingPose(perception.getPose())));
         addBlock(new TorqueRunSequence(new Shoot()));
 

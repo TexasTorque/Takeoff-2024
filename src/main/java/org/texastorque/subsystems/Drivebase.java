@@ -198,7 +198,7 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
 
         // If shooter is in smart mode then the driver can still drive around but
         // the rotation should stay locked to the goal.
-        if (shooter.wantsState(Shooter.State.SMART) && shooter.hasConsent() && !shooter.isShift() && mode.isTeleop()) {
+        if (shooter.wantsState(Shooter.State.SMART) && shooter.hasConsent() && !shooter.isShift() && mode.isTeleop() && !shooter.isDebugMode()) {
             desiredState = State.ALIGN_TO_ANGLE;
             // If we are not in the slowdown sequence speed setting
             if (speedSetting != SpeedSetting.SEQ) {
