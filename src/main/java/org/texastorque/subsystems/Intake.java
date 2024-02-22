@@ -1,9 +1,9 @@
 package org.texastorque.subsystems;
 
-import org.texastorque.Debug;
 import org.texastorque.Input;
 import org.texastorque.Ports;
 import org.texastorque.Subsystems;
+import org.texastorque.torquelib.Debug;
 import org.texastorque.torquelib.base.TorqueMode;
 import org.texastorque.torquelib.base.TorqueState;
 import org.texastorque.torquelib.base.TorqueStatorSubsystem;
@@ -69,11 +69,8 @@ public class Intake extends TorqueStatorSubsystem<Intake.State> implements Subsy
     }
 
     public boolean isAtState() {
-        return isIntaking()
-                // && Math.abs(
-                // Math.abs(g()) - Math.abs(desiredState.rotaryPosition)) <= ROTARY_TOLERANCE
-                && Math.abs(
-                        Math.abs(rotaryRight.getPosition())
+        return isIntaking() && Math.abs(
+                        Math.abs(rotaryLeft.getPosition())
                                 - Math.abs(desiredState.rotaryPosition)) <= ROTARY_TOLERANCE;
     }
 

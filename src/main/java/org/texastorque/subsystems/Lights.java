@@ -87,7 +87,6 @@ public final class Lights extends TorqueStatelessSubsystem implements Subsystems
 
     private LightAction blinkGreen = new Blink(() -> Color.kGreen, 6),
             green = new Solid(() -> Color.kGreen),
-            yellow = new Solid(() -> Color.kYellow),
             rainbow = new Rainbow(), blue = new Solid(() -> Color.kBlue), red = new Solid(() -> Color.kRed);
 
     private Lights() {
@@ -108,20 +107,19 @@ public final class Lights extends TorqueStatelessSubsystem implements Subsystems
     }
 
     public final LightAction getColor(final TorqueMode mode) {
-        if (shooter.hasNote())
-            return green;
-        else if (shooter.wantsToShoot())
-            return yellow;
-        else if (shooter.wantsToShoot() && shooter.isReadyToShoot())
+        if (perception.seesTags() && shooter.hasNote()) 
             return blinkGreen;
-        else if (mode.isAuto())
+        else if (shooter.hasNote())
+            return green;
+   
+        if (mode.isAuto())
             return rainbow;
-        else {
-            if (DriverStation.getAlliance().isPresent()) {
-                return DriverStation.getAlliance().get() == DriverStation.Alliance.Blue ? blue : red;
-            }
-            return blue;
+
+        // Teleop:
+        if (DriverStation.getAlliance().isPresent()) {
+            return DriverStation.getAlliance().get() == DriverStation.Alliance.Blue ? blue : red;
         }
+        return blue;
 
     }
 
