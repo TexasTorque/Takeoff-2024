@@ -109,6 +109,8 @@ public class BaseAuto extends TorqueSequence implements Subsystems {
             } else {
                 addBlock(new TorqueWaitTime(1));
             }
+            log("Auto State", () -> "GOT NOTE");
+
             addBlock(shooter.yieldState(Shooter.State.AUTO_OFF));
             addBlock(shooter.yieldGateState(Shooter.GateState.OFF));
             log("Auto State", () -> "SHOT");
@@ -125,7 +127,8 @@ public class BaseAuto extends TorqueSequence implements Subsystems {
 
         public DeployIntakeWhen(final BooleanSupplier when) {
             addBlock(new TorqueRun(() -> {
-                if (when.getAsBoolean()) isCenterLine = false;
+                if (when.getAsBoolean())
+                    isCenterLine = false;
             }));
             addBlock(new TorqueWaitUntil(when));
             addBlock(new TorqueRun(() -> timer.restart()));
@@ -173,7 +176,8 @@ public class BaseAuto extends TorqueSequence implements Subsystems {
             log("Auto State", () -> "BEGIN PATH");
 
             addBlock(followPath(() -> noteSequence.getNextPath()),
-                    new DeployIntakeWhen(() -> field.isXPast(perception.getPose(), 5.5) || deployIntakeRightAway).command());
+                    new DeployIntakeWhen(() -> field.isXPast(perception.getPose(), 5.5) || deployIntakeRightAway)
+                            .command());
 
             addBlock(new TorqueRunSequence(new Shoot()));
         }
