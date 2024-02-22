@@ -45,7 +45,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         AUTO_OFF(new Shot(0, 90), false),
         INTAKE(new Shot(-1900, 194), false),
         BABYBIRD(new Shot(-1200, 90), false),
-        AMP(new Shot(1450, 55), true),
+        AMP(new Shot(1500, 55), true),
         AUTO_AMP(new Shot(1000, 90), true),
         TRAP(new Shot(0, 108), true),
         LAYUP(new Shot(3900, 63), new Shot(3900, 122), true),
@@ -408,7 +408,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         }
 
         rotary.setVolts(TorqueMath.constrain(rotaryPID.calculate(getRotaryEncoder(), shot.angle),
-                wantsState(State.AMP) ? 3 : 8));
+                wantsState(State.AMP) ? 3 : 3));
 
         Debug.log("Shooter Gate State", gateState.toString());
 
