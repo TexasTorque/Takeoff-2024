@@ -70,8 +70,7 @@ public class Intake extends TorqueStatorSubsystem<Intake.State> implements Subsy
 
     public boolean isAtState() {
         return isIntaking() && Math.abs(
-                Math.abs(rotaryLeft.getPosition())
-                        - Math.abs(desiredState.rotaryPosition)) <= ROTARY_TOLERANCE;
+                Math.abs(rotaryLeft.getPosition()) - Math.abs(desiredState.rotaryPosition)) <= ROTARY_TOLERANCE;
     }
 
     @Override
@@ -87,7 +86,7 @@ public class Intake extends TorqueStatorSubsystem<Intake.State> implements Subsy
             if (shooter.isRotaryAtState())
                 desiredState = mode.isAuto() ? State.AUTO_PRIME : State.OFF;
 
-        } else if (!isIntaking() && !wantsState(State.OUTTAKE) && shooter.isShift() ) {
+        } else if (!isIntaking() && !isOutaking() && shooter.isShift()) {
             desiredState = State.PRIME;
         }
 

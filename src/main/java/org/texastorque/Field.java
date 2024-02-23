@@ -26,13 +26,14 @@ public final class Field {
     public Pose2d SPEAKER_POSE_ANGLE_LEFT = new Pose2d();
     public boolean isRedAlliance;
 
-    public void updateForAlliance() {
+    public void updateAlliance() {
         isRedAlliance = DriverStation.getAlliance().isPresent()
                 && DriverStation.getAlliance().get() == DriverStation.Alliance.Red;
 
         double speakerPosition = isRedAlliance ? LENGTH : 0;
 
-        SPEAKER_POSE_DISTANCE = new Pose2d(-.04 * (isRedAlliance ? -1 : 1) + speakerPosition, 5.55, Rotation2d.fromDegrees(0));
+        SPEAKER_POSE_DISTANCE = new Pose2d(-.04 * (isRedAlliance ? -1 : 1) + speakerPosition, 5.55,
+                Rotation2d.fromDegrees(0));
 
         SPEAKER_POSE_ANGLE_RIGHT = new Pose2d(speakerPosition, 6.5, Rotation2d.fromDegrees(0));
         SPEAKER_POSE_ANGLE_LEFT = new Pose2d(speakerPosition, 5.45, Rotation2d.fromDegrees(0));
@@ -59,8 +60,10 @@ public final class Field {
     }
 
     public Pose2d getEndPosition(final Pose2d pathEndPosition, final boolean isCenterLine) {
-        if (!isCenterLine) return pathEndPosition;
-        return new Pose2d(pathEndPosition.getX() + .5 * (isRedAlliance ? 1 : -1), pathEndPosition.getY(), pathEndPosition.getRotation());
+        if (!isCenterLine)
+            return pathEndPosition;
+        return new Pose2d(pathEndPosition.getX() + .5 * (isRedAlliance ? 1 : -1), pathEndPosition.getY(),
+                pathEndPosition.getRotation());
     }
 
     public AprilTagFieldLayout getFieldLayout() {

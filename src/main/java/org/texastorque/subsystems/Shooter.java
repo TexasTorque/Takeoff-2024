@@ -8,10 +8,7 @@ import org.texastorque.Ports;
 import org.texastorque.Subsystems;
 import org.texastorque.torquelib.Debug;
 import org.texastorque.torquelib.auto.TorqueCommand;
-import org.texastorque.torquelib.auto.TorqueSequence;
 import org.texastorque.torquelib.auto.commands.TorqueRun;
-import org.texastorque.torquelib.auto.commands.TorqueRunWhile;
-import org.texastorque.torquelib.auto.commands.TorqueWaitUntil;
 import org.texastorque.torquelib.base.TorqueMode;
 import org.texastorque.torquelib.base.TorqueState;
 import org.texastorque.torquelib.base.TorqueStatorSubsystem;
@@ -46,7 +43,6 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         INTAKE(new Shot(-1900, 194), false),
         BABYBIRD(new Shot(-1200, 90), false),
         AMP(new Shot(1500, 55), true),
-        AUTO_AMP(new Shot(1000, 90), true),
         TRAP(new Shot(0, 108), true),
         LAYUP(new Shot(3900, 63), new Shot(3900, 122), true),
         MID(new Shot(4300, 37), new Shot(4300, 133), true),
@@ -88,21 +84,6 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         }
     }
 
-    public final class AutoAmp extends TorqueSequence {
-        public AutoAmp() {
-            // addBlock(shooter.yieldState(Shooter.State.REV_AMP));
-
-            addBlock(new TorqueWaitUntil(shooter::isReady));
-
-            addBlock(shooter.yieldState(Shooter.State.AMP));
-
-            addBlock(new TorqueWaitUntil(shooter::isReadyToAmp));
-
-            addBlock(new TorqueRunWhile(shooter.yieldGateState(Shooter.GateState.OUT), () -> true));
-        }
-
-    }
-
     private static final double FLYWHEEL_TOLERANCE = 120, ROTARY_TOLERANCE = 3, AMP_ROTARY_TOLERANCE = 8;
 
     private final TorqueNEO rotary, flywheelTop, flywheelBottom, gate;
@@ -128,8 +109,6 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
     private boolean debugMode = false, idle = true, consent = false, emergencyCurrentLimit = false, shift = false;
 
     private Shot shot = new Shot(0, 0);
-
-    private AutoAmp autoAmp;
 
     public void setConsent(boolean consent) {
         this.consent = consent;
@@ -206,8 +185,8 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         rpmRegression = new TorquePolyRegression(distances, rpms, 1);
         angleRegression = new TorquePolyRegression(distances, angles, 2);
 
-        SmartDashboard.putNumber("Top Shot Velocity", 0);
-        SmartDashboard.putNumber("Bottom Shot Velocity", 0);
+        SmartDashboard.putNumber("Shot Velocity", 0);
+        SmartDashboard.putNumber("Shot Velocity", 0);
         SmartDashboard.putNumber("Shot Angle", 0);
     }
 
@@ -307,7 +286,6 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         Debug.log("Shooter Rotary Positon", getRotaryEncoder());
         Debug.log("Shooter Top Velocity", getTopFlywheelVelocity());
         Debug.log("Shooter Bottom Velocity", -getBottomFlywheelVelocity());
-        Debug.log("Shooter Gate Current", gate.getCurrent());
         Debug.log("Shooter is Ready", isReadyToShoot());
         Debug.log("Distance to Tag", perception.getDistanceToSpeaker());
         Debug.log("Top Flywheel Ready", isTopFlywheelReady());
@@ -315,22 +293,10 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         Debug.log("Rotary Ready", isRotaryAtState());
         Debug.log("Has Note", hasNote());
         Debug.log("Debug Mode", debugMode);
-
-        Debug.log("Flywheel Top Current", flywheelTop.getCurrent());
-        Debug.log("Flywheel Bottom Current", flywheelBottom.getCurrent());
-
-        Debug.log("Flywheel Top Voltage", flywheelTop.getVolts());
-        Debug.log("Flywheel Bottom Voltage", flywheelBottom.getVolts());
-
-        Debug.log("drivebase aligned", drivebase.isAligned());
-        Debug.log("Idle Mode", idle);
         Debug.log("Shooter Shot Velocity", shot.topVelocity);
         Debug.log("Shooter Consent", consent);
         Debug.log("Shooter Shift", shift);
 
-        if (autoAmp == null) {
-            autoAmp = new AutoAmp();
-        }
 
         if (mode.isTeleop() && intake.isIntaking()) {
             if (intake.isAtState() && !hasNote()) {
@@ -346,8 +312,8 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
             flywheelBottom.setCurrentLimit(90);
             flywheelTop.setCurrentLimit(90);
         } else if (mode.isAuto()) {
-            flywheelBottom.setCurrentLimit(80);
-            flywheelTop.setCurrentLimit(80);
+            flywheelBottom.setCurrentLimit(70);
+            flywheelTop.setCurrentLimit(70);
         } else if (intake.isIntaking()) {
             flywheelBottom.setCurrentLimit(60);
             flywheelTop.setCurrentLimit(60);
@@ -365,10 +331,9 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
 
         // Testing to get new data points
         if (wantsState(State.SMART) && debugMode && mode.isTeleop()) {
-            double topVelocity = SmartDashboard.getNumber("Top Shot Velocity", -1);
-            double bottomVelocity = SmartDashboard.getNumber("Bottom Shot Velocity", -1);
+            double velocity = SmartDashboard.getNumber("Shot Velocity", -1);
             double angle = TorqueMath.constrain(SmartDashboard.getNumber("Shot Angle", -1), 0, 190);
-            shot = new Shot(topVelocity, bottomVelocity, angle);
+            shot = new Shot(velocity, angle);
         }
 
         if (isReadyToShoot())
@@ -376,16 +341,11 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         else if (!wantsToShoot())
             loopsThatShooterHasBeenReadyToShoot = 0;
 
-        // if (loopsThatShooterHasBeenReadyToShoot > 15 && (!shift && mode.isT ?
-        // drivebase.hasBeenAligned() : true)) {
-        // if ((mode.isTeleop() && consent) || mode.isAuto())
-        // gateState = GateState.OUT;
-        // }
-
         if (loopsThatShooterHasBeenReadyToShoot > 15) {
-            if ((mode.isTeleop() && consent) || mode.isAuto())
+            if ((mode.isTeleop() && consent && (!shift ? drivebase.hasBeenAligned() : true)) || mode.isAuto())
                 gateState = GateState.OUT;
-        }
+        } else
+            gateState = GateState.OFF;
 
         Debug.log("Shot", shot.toString());
 
@@ -408,7 +368,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         }
 
         rotary.setVolts(TorqueMath.constrain(rotaryPID.calculate(getRotaryEncoder(), shot.angle),
-                wantsState(State.AMP) ? 3 : 3));
+                wantsState(State.AMP) ? 3 : 8));
 
         Debug.log("Shooter Gate State", gateState.toString());
 

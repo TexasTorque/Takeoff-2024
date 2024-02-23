@@ -131,7 +131,7 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
 
     @Override
     public void update(final TorqueMode mode) {
-        field.updateForAlliance();
+        field.updateAlliance();
         updateOdometryLocalization();
         updateVisionLocalization();
 
