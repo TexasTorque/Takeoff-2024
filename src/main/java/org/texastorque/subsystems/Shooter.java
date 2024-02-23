@@ -120,7 +120,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         rotary = new TorqueNEO(Ports.SHOOTER_ROTARY);
         rotary.setVoltageCompensation(12.6);
         rotary.setCurrentLimit(35);
-        rotary.setBreakMode(true);
+        rotary.setBreakMode(false);
         rotary.invertMotor(true);
         rotary.burnFlash();
 
@@ -349,30 +349,30 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
 
         Debug.log("Shot", shot.toString());
 
-        if (wantsState(Shooter.State.OFF) && hasNote() && mode.isTeleop() && idle) {
-            final double desiredVolts = TorqueMath.constrain(Math.pow(shootingWarmupTimer.get(), 2) * .25, 0, 3.5);
-            flywheelTop.setVolts(desiredVolts);
-            flywheelBottom.setVolts(desiredVolts);
-        } else if (wantsState(Shooter.State.OFF) && mode.isTeleop() && idle) {
-            final double desiredVolts = -TorqueMath.constrain(Math.pow(intakeWarmupTimer.get(), 2) * .25, 0, 2.5);
-            flywheelTop.setVolts(desiredVolts);
-            flywheelBottom.setVolts(desiredVolts);
-        } else {
-            flywheelTop.setVolts(flywheelTopPID.calculate(getTopFlywheelVelocity(), shot.topVelocity)
-                    + flywheelFF.calculate(shot.topVelocity));
-            flywheelBottom.setVolts(flywheelBottomPID.calculate(-getBottomFlywheelVelocity(), shot.bottomVelocity)
-                    + flywheelFF.calculate(shot.bottomVelocity));
+        // if (wantsState(Shooter.State.OFF) && hasNote() && mode.isTeleop() && idle) {
+        //     final double desiredVolts = TorqueMath.constrain(Math.pow(shootingWarmupTimer.get(), 2) * .25, 0, 3.5);
+        //     flywheelTop.setVolts(desiredVolts);
+        //     flywheelBottom.setVolts(desiredVolts);
+        // } else if (wantsState(Shooter.State.OFF) && mode.isTeleop() && idle) {
+        //     final double desiredVolts = -TorqueMath.constrain(Math.pow(intakeWarmupTimer.get(), 2) * .25, 0, 2.5);
+        //     flywheelTop.setVolts(desiredVolts);
+        //     flywheelBottom.setVolts(desiredVolts);
+        // } else {
+        //     flywheelTop.setVolts(flywheelTopPID.calculate(getTopFlywheelVelocity(), shot.topVelocity)
+        //             + flywheelFF.calculate(shot.topVelocity));
+        //     flywheelBottom.setVolts(flywheelBottomPID.calculate(-getBottomFlywheelVelocity(), shot.bottomVelocity)
+        //             + flywheelFF.calculate(shot.bottomVelocity));
 
-            intakeWarmupTimer.restart();
-            shootingWarmupTimer.restart();
-        }
+        //     intakeWarmupTimer.restart();
+        //     shootingWarmupTimer.restart();
+        // }
 
         rotary.setVolts(TorqueMath.constrain(rotaryPID.calculate(getRotaryEncoder(), shot.angle),
                 wantsState(State.AMP) ? 3 : 8));
 
         Debug.log("Shooter Gate State", gateState.toString());
 
-        gate.setVolts(gateState.voltage);
+        // gate.setVolts(gateState.voltage);
 
         if (mode.isTeleop()) {
             desiredState = State.OFF;

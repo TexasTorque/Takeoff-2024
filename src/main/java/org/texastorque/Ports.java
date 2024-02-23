@@ -5,8 +5,8 @@ import org.texastorque.torquelib.swerve.base.TorqueSwerveModule.SwervePorts;
 public final class Ports {
     public static final SwervePorts BL_MOD = new SwervePorts(1, 2, 9);
     public static final SwervePorts FL_MOD = new SwervePorts(3, 4, 10);
-    public static final SwervePorts FR_MOD = new SwervePorts(5, 6, 12);
-    public static final SwervePorts BR_MOD = new SwervePorts(7, 8, 11);
+    public static final SwervePorts FR_MOD = new SwervePorts(5, 6, 11);
+    public static final SwervePorts BR_MOD = new SwervePorts(7, 8, 12);
 
     public static final int SHOOTER_ROTARY = 13;
     public static final int SHOOTER_ROTARY_ENCODER = 15;
@@ -27,5 +27,5 @@ public final class Ports {
 
     public static final int LIGHTS_SUPERSTRUCTURE = 0;
 
-    public static final int SHOOTER_NOTE_SENSOR = 1;
+    public static final int SHOOTER_NOTE_SENSOR = 0;
 }

@@ -8,12 +8,14 @@ import org.texastorque.torquelib.base.TorqueMode;
 import org.texastorque.torquelib.base.TorqueState;
 import org.texastorque.torquelib.base.TorqueStatorSubsystem;
 import org.texastorque.torquelib.motors.TorqueNEO;
+import org.texastorque.torquelib.util.TorqueMath;
+
 import edu.wpi.first.math.controller.PIDController;
 
 public class Intake extends TorqueStatorSubsystem<Intake.State> implements Subsystems {
     private static volatile Intake instance;
 
-    private final static double ROTARY_DOWN = 13;
+    private final static double ROTARY_DOWN = 14;
 
     public static enum State implements TorqueState {
         OFF(0, 0), INTAKE(ROTARY_DOWN, 10),
@@ -94,7 +96,7 @@ public class Intake extends TorqueStatorSubsystem<Intake.State> implements Subsy
 
         rotaryLeft.setVolts(rotaryLeftPID.calculate(rotaryLeft.getPosition(),
                 desiredState.rotaryPosition));
-        rotaryRight.setVolts(rotaryRightPID.calculate(rotaryLeft.getPosition(),
+        rotaryRight.setVolts(rotaryRightPID.calculate(rotaryRight.getPosition(),
                 desiredState.rotaryPosition));
     }
 
