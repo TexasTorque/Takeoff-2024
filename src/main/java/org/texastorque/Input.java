@@ -24,7 +24,7 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
     private final TorqueBoolSupplier resetGyro, speedUp, speedDown, runSmartIntake,
             runDumbIntake, runOuttake, speakerSmartShot, speakerLayup, speakerSafeZone, amp, trap,
             deaccelerateClick, deaccelerateHold, manualGateOut, manualGateIn, babyBird, debugMode, speakerMid,
-            shooterIdle;
+            shooterIdle, shooterShift;
 
     private Input() {
         driver = new TorqueController(0, 0.1);
@@ -49,6 +49,7 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
         speakerLayup = new TorqueBoolSupplier(operator::isYButtonDown);
         speakerSafeZone = new TorqueBoolSupplier(operator::isAButtonDown);
         speakerMid = new TorqueBoolSupplier(operator::isBButtonDown);
+        shooterShift = new TorqueToggleSupplier(operator::isLeftBumperDown);
 
         amp = new TorqueBoolSupplier(operator::isLeftTriggerDown);
         trap = new TorqueBoolSupplier(() -> false);
@@ -56,9 +57,9 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
         manualGateOut = new TorqueBoolSupplier(operator::isDPADUpDown);
         manualGateIn = new TorqueBoolSupplier(operator::isDPADDownDown);
 
-        shooterIdle = new TorqueToggleSupplier(operator::isRightBumperDown);
+        shooterIdle = new TorqueToggleSupplier(operator::isLeftCenterButtonDown);
 
-        babyBird = new TorqueBoolSupplier(operator::isLeftBumperDown);
+        babyBird = new TorqueBoolSupplier(operator::isRightBumperDown);
 
         debugMode = new TorqueToggleSupplier(
                 () -> operator.isLeftCenterButtonDown() && operator.isRightCenterButtonDown());
@@ -97,10 +98,12 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
         });
 
         shooter.setIdle(!shooterIdle.get());
-        shooter.setConsent(TorqueMath.toleranced(operator.getLeftYAxis(), 0, CONTROLLER_DEADBAND) && TorqueMath.toleranced(operator.getLeftXAxis(), 0, CONTROLLER_DEADBAND));
+        shooter.setConsent(TorqueMath.toleranced(operator.getLeftYAxis(), 0, CONTROLLER_DEADBAND)
+                && TorqueMath.toleranced(operator.getLeftXAxis(), 0, CONTROLLER_DEADBAND));
         shooter.setDebugMode(debugMode.get());
 
         shooter.setEmergencyCurrentLimit(driver.isAButtonDown());
+        shooter.setShift(shooterShift.get());
     }
 
     public void updateDrivebase() {
