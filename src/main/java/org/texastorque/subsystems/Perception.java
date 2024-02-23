@@ -135,6 +135,11 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
         updateOdometryLocalization();
         updateVisionLocalization();
 
+        Debug.log("gyro yaw", gyro.getFusedHeading());
+        Debug.log("gyro pitch", gyro.getPitch());
+        Debug.log("gyro roll", gyro.getRoll());
+        
+
         field2d.setRobotPose(getFilteredPose());
         if (!Robot.isReal() && shooter.wantsState(Shooter.State.SMART) && mode.isAuto()) {
             field2d.setRobotPose(new Pose2d(getPose().getTranslation(), getAngleToSpeaker()));

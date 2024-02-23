@@ -193,6 +193,7 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
     @Override
     public final void update(final TorqueMode mode) {
         Debug.log("Is Aligned", isAligned());
+        Debug.log("Has Been Aligned", hasBeenAligned());
         Debug.log("Align Target", getAlignTarget());
         Debug.log("Drivebase State", desiredState.toString());
 

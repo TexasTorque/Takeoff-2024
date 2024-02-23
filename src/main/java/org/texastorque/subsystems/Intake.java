@@ -8,7 +8,6 @@ import org.texastorque.torquelib.base.TorqueMode;
 import org.texastorque.torquelib.base.TorqueState;
 import org.texastorque.torquelib.base.TorqueStatorSubsystem;
 import org.texastorque.torquelib.motors.TorqueNEO;
-import org.texastorque.torquelib.util.TorqueMath;
 
 import edu.wpi.first.math.controller.PIDController;
 
