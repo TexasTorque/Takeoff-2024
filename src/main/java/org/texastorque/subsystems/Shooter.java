@@ -39,11 +39,13 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
 
     public static enum State implements TorqueState {
         OFF(new Shot(0, ROTARY_OFF_POSITION), false),
+        TRAP(new Shot(2000, 80), false),
+        CLIMB(new Shot(0, 95), false),
         AUTO_OFF(new Shot(0, 90), false),
         INTAKE(new Shot(-1900, 193), false),
         BABYBIRD(new Shot(-1200, 90), false),
         AMP(new Shot(1500, 55), true),
-        TRAP(new Shot(0, 108), true),
+        // TRAP(new Shot(0, 108), true),
         LAYUP(new Shot(3900, 63), new Shot(3900, 122), true),
         MID(new Shot(4300, 37), new Shot(4300, 133), true),
         SAFEZONE(new Shot(4300, 33), new Shot(4300, 139), true),
@@ -247,6 +249,10 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
 
     public boolean isRotaryAtState() {
         return Math.abs(getRotaryEncoder() - shot.angle) <= ROTARY_TOLERANCE;
+    }
+
+    public boolean wantsToClimb() {
+        return wantsState(State.CLIMB) || wantsState(State.TRAP);
     }
 
     public boolean wantsToShoot() {

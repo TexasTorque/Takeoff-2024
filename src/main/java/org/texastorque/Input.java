@@ -24,7 +24,8 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
     private final TorqueBoolSupplier resetGyro, speedUp, speedDown, runSmartIntake,
             runDumbIntake, runOuttake, speakerSmartShot, speakerLayup, speakerSafeZone, amp, trap,
             deaccelerateClick, deaccelerateHold, manualGateOut, manualGateIn, babyBird, debugMode, speakerMid,
-            shooterIdle, shooterShift, climbUp, climbDown, climbLeftUp, climbRightUp, climbLeftDown, climbRightDown;
+            shooterIdle, shooterShift, climbUp, climbDown, climbLeftUp, climbRightUp, climbLeftDown, climbRightDown,
+            shooterClimbMode, shooterTrapMode, tareClimber;
 
     private Input() {
         driver = new TorqueController(0, 0.1);
@@ -68,6 +69,11 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
         climbLeftDown = new TorqueBoolSupplier(driver::isDPADDownLeftDown);
         climbRightDown = new TorqueBoolSupplier(driver::isDPADDownRightDown);
 
+        shooterTrapMode = new TorqueBoolSupplier(operator::isXButtonDown);
+        shooterClimbMode = new TorqueToggleSupplier(operator::isDPADLeftDown);
+
+        tareClimber = new TorqueBoolSupplier(driver::isLeftCenterButtonDown);
+
         debugMode = new TorqueToggleSupplier(
                 () -> operator.isLeftCenterButtonDown() && operator.isRightCenterButtonDown());
     }
@@ -88,8 +94,6 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
     }
 
     public void updateShooter() {
-        speakerSmartShot.onTrue(() -> shooter.setState(Shooter.State.SMART));
-
         speakerLayup.onTrue(() -> shooter.setState(Shooter.State.LAYUP));
         speakerSafeZone.onTrue(() -> shooter.setState(Shooter.State.SAFEZONE));
         speakerMid.onTrue(() -> shooter.setState(Shooter.State.MID));
@@ -112,6 +116,11 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
 
         shooter.setEmergencyCurrentLimit(driver.isAButtonDown());
         shooter.setShift(shooterShift.get());
+
+        shooterClimbMode.onTrue(() -> shooter.setState(Shooter.State.CLIMB));
+        shooterTrapMode.onTrue(() -> shooter.setState(Shooter.State.TRAP));
+
+        speakerSmartShot.onTrue(() -> shooter.setState(Shooter.State.SMART));
     }
 
     public void updateDrivebase() {
@@ -144,6 +153,8 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
         climbRightUp.onTrue(() -> climber.setState(Climber.State.RIGHT_UP));
         climbLeftDown.onTrue(() -> climber.setState(Climber.State.LEFT_DOWN));
         climbRightDown.onTrue(() -> climber.setState(Climber.State.RIGHT_DOWN));
+
+        tareClimber.onTrue(() -> climber.tareClimber());
 
     }
 
