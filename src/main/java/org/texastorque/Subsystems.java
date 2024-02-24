@@ -9,5 +9,5 @@ public interface Subsystems {
     public final Intake intake = Intake.getInstance();
     public final Shooter shooter = Shooter.getInstance();
     public final Lights lights = Lights.getInstance();
-    // public final Climber climber = Climber.getInstance();
+    public final Climber climber = Climber.getInstance();
 }

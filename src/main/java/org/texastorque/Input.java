@@ -24,7 +24,7 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
     private final TorqueBoolSupplier resetGyro, speedUp, speedDown, runSmartIntake,
             runDumbIntake, runOuttake, speakerSmartShot, speakerLayup, speakerSafeZone, amp, trap,
             deaccelerateClick, deaccelerateHold, manualGateOut, manualGateIn, babyBird, debugMode, speakerMid,
-            shooterIdle, shooterShift;
+            shooterIdle, shooterShift, climbUp, climbDown, climbLeftUp, climbRightUp, climbLeftDown, climbRightDown;
 
     private Input() {
         driver = new TorqueController(0, 0.1);
@@ -61,6 +61,13 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
 
         babyBird = new TorqueBoolSupplier(operator::isRightBumperDown);
 
+        climbUp = new TorqueBoolSupplier(driver::isDPADUpDown);
+        climbDown = new TorqueBoolSupplier(driver::isDPADDownDown);
+        climbLeftUp = new TorqueBoolSupplier(driver::isDPADUpLeftDown);
+        climbRightUp = new TorqueBoolSupplier(driver::isDPADUpRightDown);
+        climbLeftDown = new TorqueBoolSupplier(driver::isDPADDownLeftDown);
+        climbRightDown = new TorqueBoolSupplier(driver::isDPADDownRightDown);
+
         debugMode = new TorqueToggleSupplier(
                 () -> operator.isLeftCenterButtonDown() && operator.isRightCenterButtonDown());
     }
@@ -70,6 +77,7 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
         updateDrivebase();
         updateIntake();
         updateShooter();
+        updateClimb();
         updateRumble();
     }
 
@@ -127,6 +135,16 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
                 * Drivebase.MAX_ANGULAR_VELOCITY;
 
         drivebase.setInputSpeedsTeleop(new TorqueSwerveSpeeds(xVelocity, yVelocity, rotationVelocity));
+    }
+
+    public void updateClimb() {
+        climbUp.onTrue(() -> climber.setState(Climber.State.UP));
+        climbDown.onTrue(() -> climber.setState(Climber.State.DOWN));
+        climbLeftUp.onTrue(() -> climber.setState(Climber.State.LEFT_UP));
+        climbRightUp.onTrue(() -> climber.setState(Climber.State.RIGHT_UP));
+        climbLeftDown.onTrue(() -> climber.setState(Climber.State.LEFT_DOWN));
+        climbRightDown.onTrue(() -> climber.setState(Climber.State.RIGHT_DOWN));
+
     }
 
     public void updateRumble() {
