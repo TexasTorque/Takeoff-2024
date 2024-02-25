@@ -12,13 +12,12 @@ import org.texastorque.torquelib.util.TorqueMath;
 public class Climber extends TorqueStatorSubsystem<Climber.State> implements Subsystems {
     public static volatile Climber instance;
 
-    private static final double CLIMB_VOLTS = 12
-    
-    ;
+    private static final double CLIMB_VOLTS = 12;
+
     private static final double CLIMBER_MIN = -10, CLIMBER_MAX = 10; // zero'd from mid
 
     private final TorqueNEO left, right;
-    
+
     private double leftTare, rightTare;
     private double leftPosition, rightPosition;
 
@@ -36,10 +35,6 @@ public class Climber extends TorqueStatorSubsystem<Climber.State> implements Sub
         private State(final double leftVolts, final double rightVolts) {
             this.leftVolts = leftVolts;
             this.rightVolts = rightVolts;
-        }
-
-        public boolean isBoth() {
-            return !(leftVolts == 0 || rightVolts == 0);
         }
     }
 
@@ -62,7 +57,8 @@ public class Climber extends TorqueStatorSubsystem<Climber.State> implements Sub
     }
 
     @Override
-    public void initialize(TorqueMode mode) {}
+    public void initialize(TorqueMode mode) {
+    }
 
     @Override
     public void update(TorqueMode mode) {
@@ -73,19 +69,18 @@ public class Climber extends TorqueStatorSubsystem<Climber.State> implements Sub
         Debug.log("Right Climb Position", rightPosition);
         Debug.log("Climb State", desiredState.toString());
 
-        if (!shooter.wantsToClimb() && !shooter.inDebugMode()) {
+        if (!shooter.wantsToClimb() && !shooter.inDebugMode())
             desiredState = State.OFF;
-        }
 
         double leftSpeed = desiredState.leftVolts;
         double rightSpeed = desiredState.rightVolts;
 
-        if (!shooter.inDebugMode()) {
-            leftSpeed = TorqueMath.linearConstraint(leftSpeed, leftPosition, CLIMBER_MIN, CLIMBER_MAX);
-            rightSpeed = TorqueMath.linearConstraint(rightSpeed, rightPosition, CLIMBER_MIN, CLIMBER_MAX);
-        } else {
+        if (shooter.inDebugMode()) {
             leftSpeed /= 3;
             rightSpeed /= 3;
+        } else {
+            leftSpeed = TorqueMath.linearConstraint(leftSpeed, leftPosition, CLIMBER_MIN, CLIMBER_MAX);
+            rightSpeed = TorqueMath.linearConstraint(rightSpeed, rightPosition, CLIMBER_MIN, CLIMBER_MAX);
         }
 
         left.setVolts(leftSpeed);

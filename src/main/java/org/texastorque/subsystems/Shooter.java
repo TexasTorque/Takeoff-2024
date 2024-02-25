@@ -35,20 +35,20 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         private static final Shot empty = new Shot(0, 0, 0);
     }
 
-    private static final double ROTARY_OFF_POSITION = 119;
+    private static final double ROTARY_OFF_POSITION = 102;
 
     public static enum State implements TorqueState {
         OFF(new Shot(0, ROTARY_OFF_POSITION), false),
-        TRAP(new Shot(2000, 80), false),
-        CLIMB(new Shot(0, 95), false),
+        TRAP(new Shot(2400, 70), false),
+        CLIMB(new Shot(0, 90), false),
         AUTO_OFF(new Shot(0, 90), false),
-        INTAKE(new Shot(-1900, 193), false),
+        INTAKE(new Shot(-2500, 181), false),
         BABYBIRD(new Shot(-1200, 90), false),
         AMP(new Shot(1500, 55), true),
-        // TRAP(new Shot(0, 108), true),
         LAYUP(new Shot(3900, 63), new Shot(3900, 122), true),
         MID(new Shot(4300, 37), new Shot(4300, 133), true),
         SAFEZONE(new Shot(4300, 33), new Shot(4300, 139), true),
+        LASER(new Shot(5000, 0), true),
         FUTURE_SMART(true),
         SMART(true);
 
@@ -111,6 +111,8 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
     private boolean debugMode = false, idle = true, consent = false, emergencyCurrentLimit = false, shift = false;
 
     private Shot shot = new Shot(0, 0);
+
+    private double angleOffset = 0;
 
     public void setConsent(boolean consent) {
         this.consent = consent;
@@ -189,6 +191,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
 
         SmartDashboard.putNumber("Shot Velocity", 0);
         SmartDashboard.putNumber("Shot Angle", 0);
+        SmartDashboard.putNumber("Angle Offset", 0);
     }
 
     @Override
@@ -223,7 +226,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
 
     public double getRotaryEncoder() {
         double rawValueDegrees = rotaryEncoder.getAbsolutePosition().getValue() * 360;
-        if (rawValueDegrees > 195)
+        if (rawValueDegrees > 200)
             return 0;
         else
             return rawValueDegrees;
@@ -303,6 +306,8 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         Debug.log("Shooter Consent", consent);
         Debug.log("Shooter Shift", shift);
 
+        angleOffset = SmartDashboard.getNumber("Angle Offset", 0);
+
         if (mode.isTeleop() && intake.isIntaking()) {
             if (intake.isAtState() && !hasNote()) {
                 desiredState = State.INTAKE;
@@ -347,18 +352,21 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
             loopsThatShooterHasBeenReadyToShoot = 0;
 
         if (loopsThatShooterHasBeenReadyToShoot > 15) {
-            if ((mode.isTeleop() && consent && ((!shift && wantsState(State.SMART)) ? drivebase.hasBeenAligned() : true)) || mode.isAuto())
+            if ((mode.isTeleop() && consent
+                    && ((!shift && wantsState(State.SMART)) ? drivebase.hasBeenAligned() : true)) || mode.isAuto())
                 gateState = GateState.OUT;
         }
 
         Debug.log("Shot", shot.toString());
         Debug.log("Gate State", gateState.toString());
 
-        if (wantsState(Shooter.State.OFF) && hasNote() && mode.isTeleop() && idle) {
+        shot = new Shot(shot.topVelocity, shot.angle + angleOffset);
+
+        if (wantsState(Shooter.State.OFF) && hasNote() && mode.isTeleop() && idle && !isDebugMode()) {
             final double desiredVolts = TorqueMath.constrain(Math.pow(shootingWarmupTimer.get(), 2) * .25, 0, 3.5);
             flywheelTop.setVolts(desiredVolts);
             flywheelBottom.setVolts(desiredVolts);
-        } else if (wantsState(Shooter.State.OFF) && mode.isTeleop() && idle) {
+        } else if (wantsState(Shooter.State.OFF) && mode.isTeleop() && idle && !isDebugMode()) {
             final double desiredVolts = -TorqueMath.constrain(Math.pow(intakeWarmupTimer.get(), 2) * .25, 0, 2.5);
             flywheelTop.setVolts(desiredVolts);
             flywheelBottom.setVolts(desiredVolts);
@@ -375,7 +383,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         }
 
         rotary.setVolts(TorqueMath.constrain(rotaryPID.calculate(getRotaryEncoder(), shot.angle),
-                wantsState(State.AMP) ? 3 : 8));
+                (wantsState(State.AMP) || (isDebugMode() ? wantsState(State.SMART) : false)) ? 3 : 8));
 
         Debug.log("Shooter Gate State", gateState.toString());
 

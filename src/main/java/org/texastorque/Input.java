@@ -25,7 +25,7 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
             runDumbIntake, runOuttake, speakerSmartShot, speakerLayup, speakerSafeZone, amp, trap,
             deaccelerateClick, deaccelerateHold, manualGateOut, manualGateIn, babyBird, debugMode, speakerMid,
             shooterIdle, shooterShift, climbUp, climbDown, climbLeftUp, climbRightUp, climbLeftDown, climbRightDown,
-            shooterClimbMode, shooterTrapMode, tareClimber;
+            shooterClimbMode, tareClimber, laser;
 
     private Input() {
         driver = new TorqueController(0, 0.1);
@@ -53,12 +53,12 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
         shooterShift = new TorqueToggleSupplier(operator::isLeftBumperDown);
 
         amp = new TorqueBoolSupplier(operator::isLeftTriggerDown);
-        trap = new TorqueBoolSupplier(() -> false);
 
         manualGateOut = new TorqueBoolSupplier(operator::isDPADUpDown);
         manualGateIn = new TorqueBoolSupplier(operator::isDPADDownDown);
 
-        shooterIdle = new TorqueToggleSupplier(operator::isLeftCenterButtonDown);
+        shooterIdle = new TorqueToggleSupplier(() -> operator.isLeftCenterButtonDown() && !operator.isRightCenterButtonDown());
+        laser = new TorqueBoolSupplier(() -> operator.isRightCenterButtonDown() && !operator.isLeftCenterButtonDown());
 
         babyBird = new TorqueBoolSupplier(operator::isRightBumperDown);
 
@@ -69,7 +69,7 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
         climbLeftDown = new TorqueBoolSupplier(driver::isDPADDownLeftDown);
         climbRightDown = new TorqueBoolSupplier(driver::isDPADDownRightDown);
 
-        shooterTrapMode = new TorqueBoolSupplier(operator::isXButtonDown);
+        trap = new TorqueBoolSupplier(operator::isXButtonDown);
         shooterClimbMode = new TorqueToggleSupplier(operator::isDPADLeftDown);
 
         tareClimber = new TorqueBoolSupplier(driver::isLeftCenterButtonDown);
@@ -117,8 +117,10 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
         shooter.setEmergencyCurrentLimit(driver.isAButtonDown());
         shooter.setShift(shooterShift.get());
 
+        laser.onTrue(() -> shooter.setState(Shooter.State.LASER));
+
         shooterClimbMode.onTrue(() -> shooter.setState(Shooter.State.CLIMB));
-        shooterTrapMode.onTrue(() -> shooter.setState(Shooter.State.TRAP));
+        trap.onTrue(() -> shooter.setState(Shooter.State.TRAP));
 
         speakerSmartShot.onTrue(() -> shooter.setState(Shooter.State.SMART));
     }
@@ -155,7 +157,6 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
         climbRightDown.onTrue(() -> climber.setState(Climber.State.RIGHT_DOWN));
 
         tareClimber.onTrue(() -> climber.tareClimber());
-
     }
 
     public void updateRumble() {

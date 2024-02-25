@@ -106,10 +106,10 @@ public final class Lights extends TorqueStatelessSubsystem implements Subsystems
     }
 
     public final LightAction getColor(final TorqueMode mode) {
-        if (shooter.hasNote())
-            return shooter.isShift() ? purple : green;
-        else if (perception.seesTags() && shooter.hasNote())
+        if (perception.seesTags() && shooter.hasNote())
             return shooter.isShift() ? purple : blinkGreen;
+        else if (shooter.hasNote())
+            return shooter.isShift() ? purple : green;
         else if (mode.isAuto())
             return rainbow;
         else

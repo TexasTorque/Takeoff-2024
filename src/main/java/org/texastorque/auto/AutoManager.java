@@ -10,7 +10,6 @@ public final class AutoManager extends TorqueAutoManager {
 
     @Override
     public final void loadPaths() {
-        System.out.println("LOADED PATHS");
         pathLoader.preloadPath("go_0_to_2");
         pathLoader.preloadPath("go_0_to_10");
         pathLoader.preloadPath("go_10_to_20");

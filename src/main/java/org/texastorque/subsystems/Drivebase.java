@@ -237,7 +237,7 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
         // If we are in the align state then we want to set our rotational velocity to
         // the output of the align to angle PID controller.
         if (wantsState(State.ALIGN_TO_ANGLE)) {
-            inputSpeeds.omegaRadiansPerSecond = TorqueMath.constrain(
+            inputSpeeds.omegaRadiansPerSecond = -TorqueMath.constrain(
                     alignPID.calculate(perception.getHeading().getDegrees(), getAlignTarget()), Math.PI);
         }
 
