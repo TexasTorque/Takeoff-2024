@@ -1,6 +1,7 @@
 package org.texastorque.auto;
 
 import org.texastorque.auto.sequences.BaseAuto;
+import org.texastorque.auto.sequences.Line;
 import org.texastorque.torquelib.auto.*;
 
 import com.pathplanner.lib.path.PathPlannerPath;
@@ -29,6 +30,7 @@ public final class AutoManager extends TorqueAutoManager {
 
         pathLoader.preloadPath("go_1_to_10");
         pathLoader.preloadPath("go_10_to_20");
+        pathLoader.preloadPath("line");
     }
 
     public final PathPlannerPath getPath(final String pathName) {
@@ -51,6 +53,8 @@ public final class AutoManager extends TorqueAutoManager {
         addSequence("10 to 20 to 30", new BaseAuto(10, 20, 30));
 
         addSequence("50 to 40 to 30", new BaseAuto(50, 40, 30));
+
+        addSequence(new Line());
     }
 
     public static final synchronized AutoManager getInstance() {

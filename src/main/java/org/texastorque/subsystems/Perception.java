@@ -103,8 +103,8 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
                 new Pose2d(), ODOMETRY_STDS, VISION_STDS);
 
         // Add toast cameras
-        toast.addCamera(new Camera("SHTR_R", Camera.transformInchDeg(-6.9, 11.75, 9.3, 0, 35, 180)));
-        toast.addCamera(new Camera("SHTR_L", Camera.transformInchDeg(-6.9, -11.75, 9.3, 0, 35, 180)));
+        toast.addCamera(new Camera("SHTR_R", Camera.transformInchDeg(-6.8, 11.75, 9.3, 0, 35, 180)));
+        toast.addCamera(new Camera("SHTR_L", Camera.transformInchDeg(-6.8, -11.75, 9.3, 0, 35, 180)));
         toast.addCamera(new Camera("INTK_R", new Transform3d()));
         toast.addCamera(new Camera("INTK_L", new Transform3d()));
 

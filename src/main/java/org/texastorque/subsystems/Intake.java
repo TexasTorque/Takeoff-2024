@@ -90,7 +90,7 @@ public class Intake extends TorqueStatorSubsystem<Intake.State> implements Subsy
 
         } else if (!isIntaking() && !isOutaking() && shooter.isShift()) {
             desiredState = State.PRIME;
-        } else if (shooter.wantsState(Shooter.State.CLIMB) || shooter.wantsState(Shooter.State.TRAP) || (shooter.isDebugMode() ? shooter.wantsState(Shooter.State.SMART) : false)) {
+        } else if (shooter.wantsState(Shooter.State.CLIMB) || shooter.wantsState(Shooter.State.TRAP)) {
             desiredState = State.OUT;
         }
 
