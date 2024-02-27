@@ -241,10 +241,18 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
     }
 
     /**
-     * Gyro heading (yaw, CCW around the Z-axis) as a Rotation2d.
+     * Gyro heading (yaw, CCW around the +Z-axis) as a Rotation2d.
      */
     public Rotation2d getHeading() {
         return gyro.getHeadingCCW();
+    }
+
+    /**
+     * Gryo roll (should be CCW from behind the robot).
+     * @return
+     */
+    public Rotation2d getRoll() {
+        return Rotation2d.fromDegrees(gyro.getRoll());
     }
 
     public boolean seesTags() {

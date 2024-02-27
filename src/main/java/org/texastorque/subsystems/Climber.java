@@ -16,10 +16,14 @@ public class Climber extends TorqueStatorSubsystem<Climber.State> implements Sub
 
     private static final double CLIMBER_MIN = -10, CLIMBER_MAX = 10; // zero'd from mid
 
+    private static final double MIN_ANGLE = 2 /* deg */, kV = 0.02; /* V/deg */
+
     private final TorqueNEO left, right;
 
     private double leftTare, rightTare;
     private double leftPosition, rightPosition;
+
+
 
     public static enum State implements TorqueState {
         OFF(0, 0),
@@ -28,7 +32,8 @@ public class Climber extends TorqueStatorSubsystem<Climber.State> implements Sub
         LEFT_UP(CLIMB_VOLTS, 0),
         RIGHT_UP(0, CLIMB_VOLTS),
         LEFT_DOWN(-CLIMB_VOLTS, 0),
-        RIGHT_DOWN(0, -CLIMB_VOLTS);
+        RIGHT_DOWN(0, -CLIMB_VOLTS),
+        BALANCE_UP(CLIMB_VOLTS, CLIMB_VOLTS);
 
         public final double leftVolts, rightVolts;
 
@@ -69,18 +74,37 @@ public class Climber extends TorqueStatorSubsystem<Climber.State> implements Sub
         Debug.log("Right Climb Position", rightPosition);
         Debug.log("Climb State", desiredState.toString());
 
+        double roll = perception.getRoll().getDegrees();
+        // deadbands the angle to call angles close to zero effectively zero
+        roll = TorqueMath.scaledLinearDeadband(roll, MIN_ANGLE); 
+
         if (!shooter.wantsToClimb() && !shooter.inDebugMode())
             desiredState = State.OFF;
 
         double leftSpeed = desiredState.leftVolts;
         double rightSpeed = desiredState.rightVolts;
 
+        if (wantsState(State.BALANCE_UP)) {
+            // v = Vmax(1±kθ, 1)
+            leftSpeed = leftSpeed * Math.max(1 + kV * roll, 1);
+            rightSpeed = rightSpeed * Math.max(1 - kV * roll, 1);
+
+            // Examples:
+            // - given roll=5° kV=.02 v_l=v_r=12
+            //   v_l = 12 * max(1 + .02*5, 1) = 12 * 1 = 12v
+            //   v_r = 12 * max(1 - .02*5, 1) = 12 * 0.9 = 10.8v
+            // - given roll=-10° kV=.02 v_l=v_r=12
+            //   v_l = 12 * max(1 + .02*-10, 1) = 12 * 0.8 = 9.6v
+            //   v_r = 12 * max(1 - .02*-10, 1) = 12 * 1 = 12v
+        }
+
         if (shooter.inDebugMode()) {
             leftSpeed /= 3;
             rightSpeed /= 3;
         } else {
-            leftSpeed = TorqueMath.linearConstraint(leftSpeed, leftPosition, CLIMBER_MIN, CLIMBER_MAX);
-            rightSpeed = TorqueMath.linearConstraint(rightSpeed, rightPosition, CLIMBER_MIN, CLIMBER_MAX);
+            // Comenting out the linear constraint for now, unecesary 
+            // leftSpeed = TorqueMath.linearConstraint(leftSpeed, leftPosition, CLIMBER_MIN, CLIMBER_MAX);
+            // rightSpeed = TorqueMath.linearConstraint(rightSpeed, rightPosition, CLIMBER_MIN, CLIMBER_MAX);
         }
 
         left.setVolts(leftSpeed);
