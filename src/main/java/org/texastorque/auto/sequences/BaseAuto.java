@@ -21,6 +21,8 @@ import edu.wpi.first.wpilibj.Timer;
 
 public class BaseAuto extends TorqueSequence implements Subsystems {
 
+    private Timer totalAutoTimer = new Timer();
+
     /**
      * Creats a torque follow path command using a path supplier and provides our
      * drivebase.
@@ -183,11 +185,22 @@ public class BaseAuto extends TorqueSequence implements Subsystems {
 
     public BaseAuto(final int... notes) {
         noteSequence = new NoteSequence(notes);
+
+        addBlock(new TorqueRun(() -> totalAutoTimer.restart()));
       
         addBlock(new TorqueRun(() -> perception.setFutureShootingPose(perception.getPose())));
         addBlock(new TorqueRunSequence(new Shoot()));
 
         addBlock(new TorqueWhile(noteSequence::hasNext, new CollectAndShootNote(noteSequence)));
+        // addBlock(new TorqueWhile(noteSequence::hasNext, new CollectAndShootNote(noteSequence)),
+        //     new TorqueWaitUntil(() -> {
+        //         if (totalAutoTimer.get() > 14.75) {
+        //             shooter.setGateState(Shooter.GateState.OUT);
+        //             return true;
+        //         }
+        //         return false;
+        //     })
+        // );
     }
 
 }

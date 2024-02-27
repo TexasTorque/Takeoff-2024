@@ -201,7 +201,7 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
         Debug.log("Align Target", getAlignTarget());
         Debug.log("Drivebase State", desiredState.toString());
 
-        if (shooter.wantsState(Shooter.State.SMART) && !inputSpeeds.hasTranslationalVelocity() && !shooter.isShift() && mode.isTeleop() && !shooter.isDebugMode()) {
+        if (shooter.wantsState(Shooter.State.SMART) && !inputSpeeds.hasTranslationalVelocity() && !shooter.isShift() && mode.isTeleop() && !shooter.inDebugMode()) {
             desiredState = State.ALIGN_TO_ANGLE;
             // If we are not in the slowdown sequence speed setting
             if (speedSetting != SpeedSetting.SEQ) {

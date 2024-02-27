@@ -89,6 +89,8 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
 
     private static final double FLYWHEEL_TOLERANCE = 120, ROTARY_TOLERANCE = 2.5; // testing a higher tolerance
 
+    private final double MAX_ANGLE = 20;
+
     private final TorqueNEO rotary, flywheelTop, flywheelBottom, gate;
 
     private final CANcoder rotaryEncoder, flywheelTopEncoder, flywheelBottomEncoder;
@@ -278,12 +280,12 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         return consent;
     }
 
-    public boolean isDebugMode() {
-        return debugMode;
-    }
-
     public boolean isReadyToIntake() {
         return isTopFlywheelReady() && isBottomFlywheelReady();
+    }
+
+    public Shot constrainShotAngle(Shot shot, double theta) {
+        return new Shot(shot.topVelocity, shot.bottomVelocity, Math.max(shot.angle, theta));
     }
 
     @Override
@@ -386,6 +388,8 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
             intakeWarmupTimer.restart();
             shootingWarmupTimer.restart();
         }
+
+        shot = constrainShotAngle(shot, MAX_ANGLE);
 
         rotary.setVolts(TorqueMath.constrain(rotaryPID.calculate(getRotaryEncoder(), shot.angle),
                 (wantsState(State.AMP) || (wantsState(State.INTAKE) && getRotaryEncoder() > 140)) ? 3 : 8));

@@ -86,7 +86,9 @@ public final class Lights extends TorqueStatelessSubsystem implements Subsystems
 
     private LightAction blinkGreen = new Blink(() -> Color.kGreen, 6),
             green = new Solid(() -> Color.kGreen),
-            rainbow = new Rainbow(), red = new Solid(() -> Color.kRed), purple = new Solid(() -> Color.kPurple);
+            rainbow = new Rainbow(), red = new Solid(() -> Color.kRed),
+            purple = new Solid(() -> Color.kPurple),
+            blinkYellow = new Blink(() -> Color.kYellow, 6);
 
     private Lights() {
         shooterLEDs = new AddressableLED(Ports.LIGHTS_SUPERSTRUCTURE);
@@ -110,6 +112,8 @@ public final class Lights extends TorqueStatelessSubsystem implements Subsystems
             return shooter.isShift() ? purple : blinkGreen;
         else if (shooter.hasNote())
             return shooter.isShift() ? purple : green;
+        else if (shooter.inDebugMode())
+            return blinkYellow;
         else if (mode.isAuto())
             return rainbow;
         else
