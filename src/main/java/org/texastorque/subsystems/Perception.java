@@ -102,9 +102,11 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
                 drivebase.getModulePositions(),
                 new Pose2d(), ODOMETRY_STDS, VISION_STDS);
 
-        // Add toast cameras
-        toast.addCamera(new Camera("SHTR_R", Camera.transformInchDeg(-6.8, 12.5, 9.3, 0, 35, 180)));
-        toast.addCamera(new Camera("SHTR_L", Camera.transformInchDeg(-6.8, -12.5, 9.3, 0, 35, 180)));
+        // Add toast camera -- question: does pitch need to be here?
+        toast.addCamera(new Camera("SHTR_R", 
+            Camera.transformInchDeg(-5.0, 12.54, 14.181, 0, 35, 180)));
+        toast.addCamera(new Camera("SHTR_L", 
+            Camera.transformInchDeg(-5.0, -12.54, 14.181, 0, 35, 180)));
         toast.addCamera(new Camera("INTK_R", new Transform3d()));
         toast.addCamera(new Camera("INTK_L", new Transform3d()));
 
