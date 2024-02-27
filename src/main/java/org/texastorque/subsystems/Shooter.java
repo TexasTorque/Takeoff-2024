@@ -46,9 +46,9 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         INTAKE(new Shot(-2500, 184), false),
         BABYBIRD(new Shot(-2500, 90), false),
         AMP(new Shot(1200, 52), true),
-        LAYUP(new Shot(3900, 63), new Shot(3900, 122), true),
-        MID(new Shot(4300, 37), new Shot(4300, 133), true),
-        SAFEZONE(new Shot(4300, 33), new Shot(4300, 139), true),
+        LAYUP(new Shot(4200, 63), new Shot(4200, 112), true),
+        MID(new Shot(4400, 37), new Shot(4400, 126), true),
+        SAFEZONE(new Shot(4600, 33), new Shot(4300, 132), true),
         LASER(new Shot(5000, 0), true),
         FUTURE_SMART(true),
         SMART(true);
@@ -89,7 +89,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
 
     private static final double FLYWHEEL_TOLERANCE = 120, ROTARY_TOLERANCE = 2.5; // testing a higher tolerance
 
-    private final double MAX_ANGLE = 20;
+    private final double MAX_ANGLE = 5;
 
     private final TorqueNEO rotary, flywheelTop, flywheelBottom, gate;
 
@@ -129,7 +129,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         rotary.invertMotor(true);
         rotary.burnFlash();
 
-        rotaryPID = new PIDController(.25, 0, 0); // .25?
+        rotaryPID = new PIDController(.3, 0, 0); // .25?
         rotaryEncoder = new CANcoder(Ports.SHOOTER_ROTARY_ENCODER);
 
         flywheelTop = new TorqueNEO(Ports.FLYWHEEL_TOP);
@@ -163,12 +163,13 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
 
         shotTable = new TreeMap<Double, Shot>();
 
-        shotTable.put(1.28, new Shot(4000, 50));
-        shotTable.put(1.96, new Shot(4200, 41));
-        shotTable.put(2.5, new Shot(4400, 34));
-        shotTable.put(2.97, new Shot(4500, 28));
-        shotTable.put(3.45, new Shot(4700, 25.5));
-        shotTable.put(3.85, new Shot(4900, 21));
+        shotTable.put(1.18, new Shot(4200, 50));
+        shotTable.put(1.87, new Shot(4400, 41));
+        shotTable.put(2.43, new Shot(4600, 33));
+        shotTable.put(2.89, new Shot(4700, 28));
+        shotTable.put(3.58, new Shot(4900, 22));
+        shotTable.put(4., new Shot(5200, 18.5));
+        shotTable.put(5., new Shot(5400, 15)); // kinda crappy
 
         Set<Entry<Double, Shot>> entries = shotTable.entrySet();
         double[] distances = new double[entries.size()];
@@ -305,17 +306,6 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         Debug.log("Shooter Shot Angle", shot.angle);
         Debug.log("Shooter Consent", consent);
         Debug.log("Shooter Shift", shift);
-
-        // if (mode.isTeleop() && intake.isIntaking()) {
-        // if (!intake.isDownEnough() && !hasNote()) {
-        // desiredState = State.INTAKE_REV;
-        // } else if (intake.isAtState() && !hasNote()) {
-        // desiredState = State.INTAKE;
-        // gateState = GateState.IN;
-        // } else {
-        // desiredState = State.OFF;
-        // }
-        // }
 
         if (mode.isTeleop() && intake.isIntaking()) {
             if (intake.isAtState() && !hasNote()) {
