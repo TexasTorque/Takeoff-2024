@@ -7,14 +7,11 @@ import org.texastorque.torquelib.base.TorqueMode;
 import org.texastorque.torquelib.base.TorqueState;
 import org.texastorque.torquelib.base.TorqueStatorSubsystem;
 import org.texastorque.torquelib.motors.TorqueNEO;
-import org.texastorque.torquelib.util.TorqueMath;
 
 public class Climber extends TorqueStatorSubsystem<Climber.State> implements Subsystems {
     public static volatile Climber instance;
 
     private static final double CLIMB_VOLTS = 12;
-
-    private static final double CLIMBER_MIN = -10, CLIMBER_MAX = 10; // zero'd from mid
 
     private final TorqueNEO left, right;
 
@@ -78,9 +75,9 @@ public class Climber extends TorqueStatorSubsystem<Climber.State> implements Sub
         if (shooter.inDebugMode()) {
             leftSpeed /= 3;
             rightSpeed /= 3;
-        } else {
-            leftSpeed = TorqueMath.linearConstraint(leftSpeed, leftPosition, CLIMBER_MIN, CLIMBER_MAX);
-            rightSpeed = TorqueMath.linearConstraint(rightSpeed, rightPosition, CLIMBER_MIN, CLIMBER_MAX);
+        } else if (drivebase.isDecelerating()) { // test
+            leftSpeed /= 6;
+            rightSpeed /= 6;
         }
 
         left.setVolts(leftSpeed);

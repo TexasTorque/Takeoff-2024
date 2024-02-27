@@ -45,7 +45,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         INTAKE_REV(new Shot(-2500, ROTARY_OFF_POSITION), false),
         INTAKE(new Shot(-2500, 184), false),
         BABYBIRD(new Shot(-2500, 90), false),
-        AMP(new Shot(1500, 55), true),
+        AMP(new Shot(1200, 52), true),
         LAYUP(new Shot(3900, 63), new Shot(3900, 122), true),
         MID(new Shot(4300, 37), new Shot(4300, 133), true),
         SAFEZONE(new Shot(4300, 33), new Shot(4300, 139), true),
@@ -87,7 +87,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         }
     }
 
-    private static final double FLYWHEEL_TOLERANCE = 120, ROTARY_TOLERANCE = 1.5, FLYWHEEL_INTAKE_TOLERANCE = 500;
+    private static final double FLYWHEEL_TOLERANCE = 120, ROTARY_TOLERANCE = 2.5; // testing a higher tolerance
 
     private final TorqueNEO rotary, flywheelTop, flywheelBottom, gate;
 
@@ -127,7 +127,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         rotary.invertMotor(true);
         rotary.burnFlash();
 
-        rotaryPID = new PIDController(.3, 0, 0); // .25?
+        rotaryPID = new PIDController(.25, 0, 0); // .25?
         rotaryEncoder = new CANcoder(Ports.SHOOTER_ROTARY_ENCODER);
 
         flywheelTop = new TorqueNEO(Ports.FLYWHEEL_TOP);
@@ -209,7 +209,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
     }
 
     public boolean isReadyToShoot() {
-        if (!wantsToShoot() || drivebase.wantsState(Drivebase.State.PATHING))
+        if (!wantsToShoot())
             return false;
         return isReady();
     }
@@ -236,13 +236,12 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
 
     private boolean isTopFlywheelReady() {
         return Math.abs(Math.abs(getTopFlywheelVelocity()) -
-                Math.abs(shot.topVelocity)) <= (intake.isIntaking() ? FLYWHEEL_INTAKE_TOLERANCE : FLYWHEEL_TOLERANCE);
+                Math.abs(shot.topVelocity)) <= FLYWHEEL_TOLERANCE;
     }
 
     private boolean isBottomFlywheelReady() {
         return Math.abs(Math.abs(getBottomFlywheelVelocity()) -
-                Math.abs(shot.bottomVelocity)) <= (intake.isIntaking() ? FLYWHEEL_INTAKE_TOLERANCE
-                        : FLYWHEEL_TOLERANCE);
+                Math.abs(shot.bottomVelocity)) <= FLYWHEEL_TOLERANCE;
     }
 
     public boolean isRotaryAtState() {
@@ -306,16 +305,15 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         Debug.log("Shooter Shift", shift);
 
         // if (mode.isTeleop() && intake.isIntaking()) {
-        //     if (!intake.isDownEnough() && !hasNote()) {
-        //         desiredState = State.INTAKE_REV;
-        //     } else if (intake.isAtState() && !hasNote()) {
-        //         desiredState = State.INTAKE;
-        //         gateState = GateState.IN;
-        //     } else {
-        //         desiredState = State.OFF;
-        //     }
+        // if (!intake.isDownEnough() && !hasNote()) {
+        // desiredState = State.INTAKE_REV;
+        // } else if (intake.isAtState() && !hasNote()) {
+        // desiredState = State.INTAKE;
+        // gateState = GateState.IN;
+        // } else {
+        // desiredState = State.OFF;
         // }
-
+        // }
 
         if (mode.isTeleop() && intake.isIntaking()) {
             if (intake.isAtState() && !hasNote()) {
@@ -327,7 +325,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
             }
         }
 
-        if (emergencyCurrentLimit) {
+        if (emergencyCurrentLimit || wantsState(State.AMP)) {
             flywheelBottom.setCurrentLimit(90);
             flywheelTop.setCurrentLimit(90);
         } else if (mode.isAuto()) {
@@ -362,7 +360,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
 
         if (loopsThatShooterHasBeenReadyToShoot > 15) {
             if ((mode.isTeleop() && consent
-                    && ((!shift && wantsState(State.SMART)) ? drivebase.hasBeenAligned() : true)) || mode.isAuto())
+                    && ((!shift && wantsState(State.SMART)) ? drivebase.hasBeenAligned() : true)) || (mode.isAuto() && !drivebase.wantsState(Drivebase.State.PATHING)))
                 gateState = GateState.OUT;
         }
 

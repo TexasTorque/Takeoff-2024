@@ -96,8 +96,7 @@ public class BaseAuto extends TorqueSequence implements Subsystems {
 
     /**
      * This should shoot the gamepeice using smartshot, therefor aligning drivebase,
-     * and will wait until the shooter is ready + a small delay for the peice to
-     * leave.
+     * and will wait until the shooter is ready 
      */
     public class Shoot extends TorqueSequence {
         public Shoot() {

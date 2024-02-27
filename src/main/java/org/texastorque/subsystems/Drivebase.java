@@ -188,6 +188,10 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
         return loopsThatDBIsAligned > 15;
     }
 
+    public boolean isDecelerating() {
+        return speedSetting == SpeedSetting.SEQ;
+    }
+
     private boolean lockingOnToGoal = false;
 
     @Override
@@ -197,9 +201,7 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
         Debug.log("Align Target", getAlignTarget());
         Debug.log("Drivebase State", desiredState.toString());
 
-        // If shooter is in smart mode then the driver can still drive around but
-        // the rotation should stay locked to the goal.
-        if (shooter.wantsState(Shooter.State.SMART) && shooter.hasConsent() && !shooter.isShift() && mode.isTeleop() && !shooter.isDebugMode()) {
+        if (shooter.wantsState(Shooter.State.SMART) && !inputSpeeds.hasTranslationalVelocity() && !shooter.isShift() && mode.isTeleop() && !shooter.isDebugMode()) {
             desiredState = State.ALIGN_TO_ANGLE;
             // If we are not in the slowdown sequence speed setting
             if (speedSetting != SpeedSetting.SEQ) {
