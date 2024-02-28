@@ -25,7 +25,7 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
             runDumbIntake, runOuttake, speakerSmartShot, speakerLayup, speakerSafeZone, amp, trap,
             deaccelerateClick, deaccelerateHold, manualGateOut, manualGateIn, babyBird, debugMode, speakerMid,
             shooterIdle, shooterShift, climbUp, climbDown, climbLeftUp, climbRightUp, climbLeftDown, climbRightDown,
-            shooterClimbMode, tareClimber, laser;
+            shooterClimbMode, laser;
 
     private Input() {
         driver = new TorqueController(0, 0.1);
@@ -58,7 +58,7 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
         manualGateIn = new TorqueBoolSupplier(operator::isDPADDownDown);
 
         shooterIdle = new TorqueToggleSupplier(() -> operator.isLeftCenterButtonDown() && !operator.isRightCenterButtonDown());
-        laser = new TorqueBoolSupplier(() -> operator.isRightCenterButtonDown() && !operator.isLeftCenterButtonDown());
+        laser = new TorqueBoolSupplier(operator::isXButtonDown);
 
         babyBird = new TorqueBoolSupplier(operator::isRightBumperDown);
 
@@ -69,10 +69,8 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
         climbLeftDown = new TorqueBoolSupplier(driver::isDPADDownLeftDown);
         climbRightDown = new TorqueBoolSupplier(driver::isDPADDownRightDown);
 
-        trap = new TorqueBoolSupplier(operator::isXButtonDown);
+        trap = new TorqueBoolSupplier(operator::isRightCenterButtonDown);
         shooterClimbMode = new TorqueToggleSupplier(operator::isDPADLeftDown);
-
-        tareClimber = new TorqueBoolSupplier(driver::isLeftCenterButtonDown);
 
         debugMode = new TorqueToggleSupplier(
                 () -> operator.isLeftCenterButtonDown() && operator.isRightCenterButtonDown());
@@ -156,7 +154,14 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
         climbLeftDown.onTrue(() -> climber.setState(Climber.State.LEFT_DOWN));
         climbRightDown.onTrue(() -> climber.setState(Climber.State.RIGHT_DOWN));
 
-        tareClimber.onTrue(() -> climber.tareClimber());
+        double trapInput = operator.getRightYAxis();
+        if (trapInput > .5) {
+            climber.setTrapState(Climber.TrapState.OUT);
+        } else if (trapInput < -.5) {
+            climber.setTrapState(Climber.TrapState.IN);
+        } else {
+            climber.setTrapState(Climber.TrapState.OFF);
+        }
     }
 
     public void updateRumble() {

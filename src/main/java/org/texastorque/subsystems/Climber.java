@@ -2,7 +2,6 @@ package org.texastorque.subsystems;
 
 import org.texastorque.Ports;
 import org.texastorque.Subsystems;
-import org.texastorque.torquelib.Debug;
 import org.texastorque.torquelib.base.TorqueMode;
 import org.texastorque.torquelib.base.TorqueState;
 import org.texastorque.torquelib.base.TorqueStatorSubsystem;
@@ -12,11 +11,12 @@ public class Climber extends TorqueStatorSubsystem<Climber.State> implements Sub
     public static volatile Climber instance;
 
     private static final double CLIMB_VOLTS = 12;
+    private static final double TRAP_VOLTS = 6;
 
     private final TorqueNEO left, right;
+    private final TorqueNEO trap;
 
-    private double leftTare, rightTare;
-    private double leftPosition, rightPosition;
+    private TrapState trapState = TrapState.OFF;
 
     public static enum State implements TorqueState {
         OFF(0, 0),
@@ -32,6 +32,16 @@ public class Climber extends TorqueStatorSubsystem<Climber.State> implements Sub
         private State(final double leftVolts, final double rightVolts) {
             this.leftVolts = leftVolts;
             this.rightVolts = rightVolts;
+        }
+    }
+
+    public static enum TrapState implements TorqueState {
+        IN(TRAP_VOLTS), OUT(-TRAP_VOLTS), OFF(0);
+
+        private final double volts;
+
+        private TrapState(final double volts) {
+            this.volts = volts;
         }
     }
 
@@ -51,6 +61,13 @@ public class Climber extends TorqueStatorSubsystem<Climber.State> implements Sub
         right.setBreakMode(true);
         right.invertMotor(true);
         right.burnFlash();
+
+        trap = new TorqueNEO(Ports.HOOK);
+        trap.setVoltageCompensation(12.6);
+        trap.setCurrentLimit(25);
+        trap.setBreakMode(true);
+        trap.invertMotor(false);
+        trap.burnFlash();
     }
 
     @Override
@@ -59,27 +76,24 @@ public class Climber extends TorqueStatorSubsystem<Climber.State> implements Sub
 
     @Override
     public void update(TorqueMode mode) {
-        leftPosition = left.getPosition() - leftTare;
-        rightPosition = right.getPosition() - rightTare;
-
-        Debug.log("Left Climb Position", leftPosition);
-        Debug.log("Right Climb Position", rightPosition);
-        Debug.log("Climb State", desiredState.toString());
-
         if (!shooter.wantsToClimb() && !shooter.inDebugMode())
             desiredState = State.OFF;
+            trapState = TrapState.OFF;
 
         double leftSpeed = desiredState.leftVolts;
         double rightSpeed = desiredState.rightVolts;
+        double trapSpeed = trapState.volts;
 
         if (shooter.inDebugMode()) {
             leftSpeed /= 3;
             rightSpeed /= 3;
-        } else if (drivebase.isDecelerating()) { // test
+            trapSpeed /= 2;
+        } else if (drivebase.isDecelerating()) {
             leftSpeed /= 6;
             rightSpeed /= 6;
         }
 
+        trap.setVolts(trapSpeed);
         left.setVolts(leftSpeed);
         right.setVolts(rightSpeed);
     }
@@ -89,9 +103,8 @@ public class Climber extends TorqueStatorSubsystem<Climber.State> implements Sub
         desiredState = State.OFF;
     }
 
-    public void tareClimber() {
-        leftTare = left.getPosition();
-        rightTare = right.getPosition();
+    public void setTrapState(TrapState trapState) {
+        this.trapState = trapState;
     }
 
     public static final synchronized Climber getInstance() {
