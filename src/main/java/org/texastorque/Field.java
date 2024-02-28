@@ -14,6 +14,7 @@ import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 public final class Field {
     private static volatile Field instance;
@@ -26,6 +27,10 @@ public final class Field {
     public Pose2d SPEAKER_POSE_ANGLE_LEFT = new Pose2d();
     public boolean isRedAlliance;
 
+    public Field() {
+        SmartDashboard.putNumber("Speaker Angle Threshold", 3);
+    }
+
     public void updateAlliance() {
         isRedAlliance = DriverStation.getAlliance().isPresent()
                 && DriverStation.getAlliance().get() == DriverStation.Alliance.Red;
@@ -35,8 +40,8 @@ public final class Field {
         SPEAKER_POSE_DISTANCE = new Pose2d(-.04 * (isRedAlliance ? -1 : 1) + speakerPosition, 5.55,
                 Rotation2d.fromDegrees(0));
 
-        SPEAKER_POSE_ANGLE_RIGHT = new Pose2d(speakerPosition, 6.5, Rotation2d.fromDegrees(0));
-        SPEAKER_POSE_ANGLE_LEFT = new Pose2d(speakerPosition, 5.45, Rotation2d.fromDegrees(0));
+        SPEAKER_POSE_ANGLE_RIGHT = new Pose2d(speakerPosition, 6., Rotation2d.fromDegrees(0));
+        SPEAKER_POSE_ANGLE_LEFT = new Pose2d(speakerPosition, 5.6, Rotation2d.fromDegrees(0));
     }
 
     public boolean isPoseOnField(final Pose2d pose) {
@@ -49,8 +54,9 @@ public final class Field {
     }
 
     public Rotation2d getAngleToSpeaker(final Pose2d pose) {
+        double position = SmartDashboard.getNumber("Speaker Angle Threshold", 0);
         return Rotation2d.fromRadians(Math.atan2(
-                (pose.getY() < 3 ? SPEAKER_POSE_ANGLE_RIGHT.getY() : SPEAKER_POSE_ANGLE_LEFT.getY()) - pose.getY(),
+                (pose.getY() < position ? SPEAKER_POSE_ANGLE_RIGHT.getY() : SPEAKER_POSE_ANGLE_LEFT.getY()) - pose.getY(),
                 SPEAKER_POSE_ANGLE_RIGHT.getX() - pose.getX()))
                 .plus(Rotation2d.fromRadians(isRedAlliance ? 0 : Math.PI));
     }

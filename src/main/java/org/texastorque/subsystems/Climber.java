@@ -2,6 +2,7 @@ package org.texastorque.subsystems;
 
 import org.texastorque.Ports;
 import org.texastorque.Subsystems;
+import org.texastorque.torquelib.Debug;
 import org.texastorque.torquelib.base.TorqueMode;
 import org.texastorque.torquelib.base.TorqueState;
 import org.texastorque.torquelib.base.TorqueStatorSubsystem;
@@ -11,7 +12,7 @@ public class Climber extends TorqueStatorSubsystem<Climber.State> implements Sub
     public static volatile Climber instance;
 
     private static final double CLIMB_VOLTS = 12;
-    private static final double TRAP_VOLTS = 6;
+    private static final double TRAP_VOLTS = 2;
 
     private final TorqueNEO left, right;
     private final TorqueNEO trap;
@@ -36,7 +37,7 @@ public class Climber extends TorqueStatorSubsystem<Climber.State> implements Sub
     }
 
     public static enum TrapState implements TorqueState {
-        IN(TRAP_VOLTS), OUT(-TRAP_VOLTS), OFF(0);
+        IN(TRAP_VOLTS), OUT(-TRAP_VOLTS), OFF(0), IDLE(-TRAP_VOLTS / 6);
 
         private final double volts;
 
@@ -66,7 +67,7 @@ public class Climber extends TorqueStatorSubsystem<Climber.State> implements Sub
         trap.setVoltageCompensation(12.6);
         trap.setCurrentLimit(25);
         trap.setBreakMode(true);
-        trap.invertMotor(false);
+        trap.invertMotor(true);
         trap.burnFlash();
     }
 
@@ -76,9 +77,12 @@ public class Climber extends TorqueStatorSubsystem<Climber.State> implements Sub
 
     @Override
     public void update(TorqueMode mode) {
-        if (!shooter.wantsToClimb() && !shooter.inDebugMode())
+        if (!shooter.wantsToClimb() && !shooter.inDebugMode()) {
             desiredState = State.OFF;
-            trapState = TrapState.OFF;
+            trapState = TrapState.IDLE;
+        }
+
+        Debug.log("Trap State", trapState.toString());
 
         double leftSpeed = desiredState.leftVolts;
         double rightSpeed = desiredState.rightVolts;
@@ -101,6 +105,7 @@ public class Climber extends TorqueStatorSubsystem<Climber.State> implements Sub
     @Override
     public void clean(TorqueMode mode) {
         desiredState = State.OFF;
+        trapState = TrapState.OFF;
     }
 
     public void setTrapState(TrapState trapState) {

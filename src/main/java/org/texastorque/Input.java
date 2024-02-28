@@ -118,6 +118,7 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
         laser.onTrue(() -> shooter.setState(Shooter.State.LASER));
 
         shooterClimbMode.onTrue(() -> shooter.setState(Shooter.State.CLIMB));
+        
         trap.onTrue(() -> shooter.setState(Shooter.State.TRAP));
 
         speakerSmartShot.onTrue(() -> shooter.setState(Shooter.State.SMART));
@@ -159,9 +160,7 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
             climber.setTrapState(Climber.TrapState.OUT);
         } else if (trapInput < -.5) {
             climber.setTrapState(Climber.TrapState.IN);
-        } else {
-            climber.setTrapState(Climber.TrapState.OFF);
-        }
+        } 
     }
 
     public void updateRumble() {

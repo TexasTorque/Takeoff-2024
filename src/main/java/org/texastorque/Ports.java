@@ -23,7 +23,7 @@ public final class Ports {
     // TBD
     public static final int CLIMBER_LEFT = 25;
     public static final int CLIMBER_RIGHT = 26;
-    public static final int HOOK = 27;
+    public static final int HOOK = 21;
 
     public static final int LIGHTS_SUPERSTRUCTURE = 0;
 
