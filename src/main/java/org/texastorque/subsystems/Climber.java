@@ -12,10 +12,15 @@ public class Climber extends TorqueStatorSubsystem<Climber.State> implements Sub
     public static volatile Climber instance;
 
     private static final double CLIMB_VOLTS = 12;
-    private static final double TRAP_VOLTS = 2;
+    private static final double TRAP_VOLTS = 1;
+    // private static final double TRAP_POSITION = 0;
+    private static final double TRAP_TOLERANCE = .3;
 
     private final TorqueNEO left, right;
     private final TorqueNEO trap;
+
+    private double leftTare, rightTare;
+    private double leftPosition, rightPosition;
 
     private TrapState trapState = TrapState.OFF;
 
@@ -37,7 +42,7 @@ public class Climber extends TorqueStatorSubsystem<Climber.State> implements Sub
     }
 
     public static enum TrapState implements TorqueState {
-        IN(TRAP_VOLTS), OUT(-TRAP_VOLTS), OFF(0), IDLE(-TRAP_VOLTS / 6);
+        IN(TRAP_VOLTS), OUT(-TRAP_VOLTS), OFF(0), IDLE(-TRAP_VOLTS / 3);
 
         private final double volts;
 
@@ -75,14 +80,28 @@ public class Climber extends TorqueStatorSubsystem<Climber.State> implements Sub
     public void initialize(TorqueMode mode) {
     }
 
+    public boolean isReady() {
+        return Math.abs(Math.abs(leftPosition) - 8) <= TRAP_TOLERANCE
+                && Math.abs(Math.abs(rightPosition) - 8) <= TRAP_TOLERANCE;
+    }
+
     @Override
     public void update(TorqueMode mode) {
+
+        leftPosition = left.getPosition() - leftTare;
+        rightPosition = right.getPosition() - rightTare;
+
         if (!shooter.wantsToClimb() && !shooter.inDebugMode()) {
             desiredState = State.OFF;
             trapState = TrapState.IDLE;
         }
 
         Debug.log("Trap State", trapState.toString());
+
+        Debug.log("Climber Left", leftPosition);
+        Debug.log("Climber Right", rightPosition);
+
+        Debug.log("Is Ready", isReady());
 
         double leftSpeed = desiredState.leftVolts;
         double rightSpeed = desiredState.rightVolts;
@@ -92,14 +111,16 @@ public class Climber extends TorqueStatorSubsystem<Climber.State> implements Sub
             leftSpeed /= 3;
             rightSpeed /= 3;
             trapSpeed /= 2;
-        } else if (drivebase.isDecelerating()) {
-            leftSpeed /= 6;
-            rightSpeed /= 6;
         }
 
         trap.setVolts(trapSpeed);
         left.setVolts(leftSpeed);
         right.setVolts(rightSpeed);
+    }
+
+    public void tareClimber() {
+        leftTare = left.getPosition();
+        rightTare = right.getPosition();
     }
 
     @Override

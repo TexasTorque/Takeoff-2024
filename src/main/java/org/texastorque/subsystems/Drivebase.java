@@ -144,14 +144,17 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
     public final void initialize(final TorqueMode mode) {
         // Set the angle target for ALIGN_TO_ANGLE state, basically makes that state
         // an "align to goal" state.
-        setAlignTarget(perception::getFilteredAngleToSpeaker);
 
         mode.onAuto(() -> {
             desiredState = State.FIELD_RELATIVE;
+            setAlignTarget(perception::getFutureAngleToSpeaker);
+
         });
 
         mode.onTeleop(() -> {
             desiredState = State.FIELD_RELATIVE;
+            setAlignTarget(perception::getFilteredAngleToSpeaker);
+
         });
     }
 
@@ -201,7 +204,9 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
         Debug.log("Align Target", getAlignTarget());
         Debug.log("Drivebase State", desiredState.toString());
 
-        if (shooter.wantsState(Shooter.State.SMART) && !inputSpeeds.hasTranslationalVelocity() && !shooter.isShift() && mode.isTeleop() && !shooter.inDebugMode()) {
+        if ((shooter.wantsState(Shooter.State.SMART) || shooter.wantsState(Shooter.State.FUTURE_SMART)) &&
+                !inputSpeeds.hasTranslationalVelocity() && !drivebase.wantsState(State.PATHING) && !shooter.isShift()
+                && !shooter.inDebugMode()) {
             desiredState = State.ALIGN_TO_ANGLE;
             // If we are not in the slowdown sequence speed setting
             if (speedSetting != SpeedSetting.SEQ) {

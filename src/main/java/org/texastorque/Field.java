@@ -28,7 +28,11 @@ public final class Field {
     public boolean isRedAlliance;
 
     public Field() {
-        SmartDashboard.putNumber("Speaker Angle Threshold", 3);
+        // SmartDashboard.putNumber("Left Position", 5.8);
+        // SmartDashboard.putNumber("Right Position", 6);
+
+        SmartDashboard.putNumber("Left Position", 5.55);
+        SmartDashboard.putNumber("Right Position", 5.55);
     }
 
     public void updateAlliance() {
@@ -40,8 +44,11 @@ public final class Field {
         SPEAKER_POSE_DISTANCE = new Pose2d(-.04 * (isRedAlliance ? -1 : 1) + speakerPosition, 5.55,
                 Rotation2d.fromDegrees(0));
 
-        SPEAKER_POSE_ANGLE_RIGHT = new Pose2d(speakerPosition, 6., Rotation2d.fromDegrees(0));
-        SPEAKER_POSE_ANGLE_LEFT = new Pose2d(speakerPosition, 5.6, Rotation2d.fromDegrees(0));
+        double leftPosition = SmartDashboard.getNumber("Left Position", 0);
+        double rightPosition = SmartDashboard.getNumber("Right Position", 0);
+
+        SPEAKER_POSE_ANGLE_RIGHT = new Pose2d(speakerPosition, rightPosition, Rotation2d.fromDegrees(0));
+        SPEAKER_POSE_ANGLE_LEFT = new Pose2d(speakerPosition, leftPosition, Rotation2d.fromDegrees(0));
     }
 
     public boolean isPoseOnField(final Pose2d pose) {
@@ -54,9 +61,9 @@ public final class Field {
     }
 
     public Rotation2d getAngleToSpeaker(final Pose2d pose) {
-        double position = SmartDashboard.getNumber("Speaker Angle Threshold", 0);
         return Rotation2d.fromRadians(Math.atan2(
-                (pose.getY() < position ? SPEAKER_POSE_ANGLE_RIGHT.getY() : SPEAKER_POSE_ANGLE_LEFT.getY()) - pose.getY(),
+                (pose.getY() < 3 ? SPEAKER_POSE_ANGLE_RIGHT.getY() : SPEAKER_POSE_ANGLE_LEFT.getY())
+                        - pose.getY(),
                 SPEAKER_POSE_ANGLE_RIGHT.getX() - pose.getX()))
                 .plus(Rotation2d.fromRadians(isRedAlliance ? 0 : Math.PI));
     }
