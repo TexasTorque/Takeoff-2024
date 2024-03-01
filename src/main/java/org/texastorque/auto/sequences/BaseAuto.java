@@ -98,7 +98,7 @@ public class BaseAuto extends TorqueSequence implements Subsystems {
 
     /**
      * This should shoot the gamepeice using smartshot, therefor aligning drivebase,
-     * and will wait until the shooter is ready 
+     * and will wait until the shooter is ready
      */
     public class Shoot extends TorqueSequence {
         public Shoot() {
@@ -183,23 +183,29 @@ public class BaseAuto extends TorqueSequence implements Subsystems {
 
     private final NoteSequence noteSequence;
 
+    public BaseAuto() {
+        noteSequence = null;
+        addBlock(new TorqueRunSequence(new Shoot()));
+    }
+
     public BaseAuto(final int... notes) {
         noteSequence = new NoteSequence(notes);
 
         addBlock(new TorqueRun(() -> totalAutoTimer.restart()));
-      
+
         addBlock(new TorqueRun(() -> perception.setFutureShootingPose(perception.getPose())));
         addBlock(new TorqueRunSequence(new Shoot()));
 
         addBlock(new TorqueWhile(noteSequence::hasNext, new CollectAndShootNote(noteSequence)));
-        // addBlock(new TorqueWhile(noteSequence::hasNext, new CollectAndShootNote(noteSequence)),
-        //     new TorqueWaitUntil(() -> {
-        //         if (totalAutoTimer.get() > 14.75) {
-        //             shooter.setGateState(Shooter.GateState.OUT);
-        //             return true;
-        //         }
-        //         return false;
-        //     })
+        // addBlock(new TorqueWhile(noteSequence::hasNext, new
+        // CollectAndShootNote(noteSequence)),
+        // new TorqueWaitUntil(() -> {
+        // if (totalAutoTimer.get() > 14.75) {
+        // shooter.setGateState(Shooter.GateState.OUT);
+        // return true;
+        // }
+        // return false;
+        // })
         // );
     }
 

@@ -130,7 +130,7 @@ public class Climber extends TorqueStatorSubsystem<Climber.State> implements Sub
         if (hookState == HookState.TRAP) {
             hookSpeed = TorqueMath.constrain(hookPID.calculate(perception.getGyroPitch(), 8.75),
                     SmartDashboard.getNumber("Hook Max Volts", 0));
-        } else if (drivebase.isDecelerating() && (shooter.wantsState(Shooter.State.CLIMB) || shooter.wantsState(Shooter.State.TRAP)) ) {
+        } else if (hookState == HookState.HOLD && (shooter.wantsState(Shooter.State.CLIMB) || shooter.wantsState(Shooter.State.TRAP)) ) {
             // hookSpeed = SmartDashboard.getNumber("Hold Voltage", 0);
             hookSpeed = -1.25;
 

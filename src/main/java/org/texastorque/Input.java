@@ -25,7 +25,7 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
             runDumbIntake, runOuttake, speakerSmartShot, speakerLayup, speakerSafeZone, amp, trap,
             deaccelerateClick, deaccelerateHold, manualGateOut, manualGateIn, babyBird, debugMode, speakerMid,
             shooterIdle, shooterShift, climbUp, climbDown, climbLeftUp, climbRightUp, climbLeftDown, climbRightDown,
-            shooterClimbMode, laser, tareClimber, levelForTrap;
+            shooterClimbMode, laser, tareClimber, levelForTrap, holdHook;
 
     private Input() {
         driver = new TorqueController(0, 0.1);
@@ -38,6 +38,7 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
         deaccelerateClick = new TorqueClickSupplier(driver::isLeftTriggerDown);
         deaccelerateHold = new TorqueBoolSupplier(driver::isLeftTriggerDown);
         levelForTrap = new TorqueBoolSupplier(driver::isXButtonDown);
+        holdHook = new TorqueBoolSupplier(driver::isBButtonDown);
 
         runSmartIntake = new TorqueBoolSupplier(driver::isRightTriggerDown);
         runDumbIntake = new TorqueBoolSupplier(driver::isRightBumperDown);
@@ -154,16 +155,11 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
         climbLeftDown.onTrue(() -> climber.setState(Climber.State.LEFT_DOWN));
         climbRightDown.onTrue(() -> climber.setState(Climber.State.RIGHT_DOWN));
 
-        levelForTrap.onTrue(() -> climber.setHookState(Climber.HookState.TRAP));
+        // levelForTrap.onTrue(() -> climber.setHookState(Climber.HookState.TRAP));
 
         tareClimber.onTrue(() -> climber.tareClimber());
 
-        // double trapInput = operator.getRightYAxis();
-        // if (trapInput > .5) {
-        // climber.setTrapState(Climber.TrapState.OUT);
-        // } else if (trapInput < -.5) {
-        // climber.setTrapState(Climber.TrapState.IN);
-        // }
+        holdHook.onTrue(() -> climber.setHookState(Climber.HookState.HOLD));
 
         if (driver.isDPADLeftDown()) {
             climber.setHookState(Climber.HookState.OUT);
