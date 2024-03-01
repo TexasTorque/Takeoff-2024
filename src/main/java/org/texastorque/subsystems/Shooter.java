@@ -45,12 +45,13 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         INTAKE_REV(new Shot(-2500, ROTARY_OFF_POSITION), false),
         INTAKE(new Shot(-2500, 184), false),
         BABYBIRD(new Shot(-2500, 70), false),
-        AMP(new Shot(1400, 49), true),
+        AMP(new Shot(1300, 46), true),
         LAYUP(new Shot(4200, 50), new Shot(4200, 112), true),
         MID(new Shot(4400, 32), new Shot(4400, 126), true),
         SAFEZONE(new Shot(4600, 33), new Shot(4300, 134), true),
         LASER(new Shot(5000, 0), true),
         FUTURE_SMART(true),
+        SMART_WARMUP(new Shot(6000, 30), false),
         SMART(true);
 
         public final Shot shot, shiftedShot;
@@ -282,7 +283,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
     public Shot getRegressionShot(double distance) {
         return new Shot(
                 TorqueMath.constrain(rpmRegression.predict(distance), 0, DriverStation.isAutonomous() ? 5000 : 7000),
-                TorqueMath.constrain(angleRegression.predict(distance), 0, 90));
+                TorqueMath.constrain(angleRegression.predict(distance), 0, 90) + ((DriverStation.isAutonomous()) ? 4 : 0));
     }
 
     public boolean hasConsent() {
@@ -316,7 +317,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         Debug.log("Shooter Rotary Positon", getRotaryEncoder());
 
 
-        if (mode.isAuto()) {
+        if (mode.isAuto() || wantsState(State.AMP)) {
             rotaryPID.setP(.25);
             rotaryPID.setI(0);
         } else {
@@ -398,7 +399,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         }
 
         rotary.setVolts(TorqueMath.constrain(rotaryPID.calculate(getRotaryEncoder(), shot.angle),
-                (wantsState(State.AMP) || (wantsState(State.INTAKE) && getRotaryEncoder() > 140)) ? 3 : 8));
+                (wantsState(State.AMP) || (wantsState(State.INTAKE) && getRotaryEncoder() > 140)) ? 3 : 8)); 
 
         Debug.log("Shooter Gate State", gateState.toString());
 

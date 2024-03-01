@@ -104,7 +104,10 @@ public class BaseAuto extends TorqueSequence implements Subsystems {
         public Shoot() {
             log("Auto State", () -> "SHOOTING");
 
-            addBlock(shooter.yieldState(Shooter.State.FUTURE_SMART));
+            // addBlock(shooter.yieldState(Shooter.State.FUTURE_SMART));
+
+            addBlock(shooter.yieldState(Shooter.State.SMART));
+
             if (RobotBase.isReal()) {
                 addBlock(new TorqueWaitUntil(() -> !shooter.hasNote()));
             } else {
@@ -151,10 +154,12 @@ public class BaseAuto extends TorqueSequence implements Subsystems {
             log("Auto State", () -> "WARMING UP");
 
             addBlock(shooter.yieldGateState(GateState.OFF));
+
             addBlock(new TorqueRun(() -> perception.setFutureShootingPose(
                     field.getEndPosition(TorqueFollowPath.getEndingPositionForCurrentlyLoadedPath(), isCenterLine))));
 
-            addBlock(shooter.yieldState(Shooter.State.FUTURE_SMART));
+            // addBlock(shooter.yieldState(Shooter.State.FUTURE_SMART));
+            addBlock(shooter.yieldState(Shooter.State.SMART_WARMUP));
 
             addBlock(intake.yieldState(Intake.State.AUTO_PRIME));
         }

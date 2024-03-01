@@ -19,7 +19,7 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 public final class Field {
     private static volatile Field instance;
 
-    public static final double LENGTH = Units.inchesToMeters(651.25);
+    public static final double LENGTH = 16.541;
     public static final double WIDTH = Units.inchesToMeters(315.5);
 
     public Pose2d SPEAKER_POSE_DISTANCE = new Pose2d();
