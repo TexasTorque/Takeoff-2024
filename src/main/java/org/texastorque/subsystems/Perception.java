@@ -272,6 +272,10 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
         return field.getAngleToSpeaker(futureShootingPose);
     }
 
+    public double getGyroPitch() {
+        return gyro.getPitch();
+    }
+
     /**
      * Tare the gyro, make the current heading "north" (0° yaw) and reset the pose.
      */
