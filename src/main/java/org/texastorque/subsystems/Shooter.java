@@ -283,11 +283,16 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
     public Shot getRegressionShot(double distance) {
         return new Shot(
                 TorqueMath.constrain(rpmRegression.predict(distance), 0, DriverStation.isAutonomous() ? 5000 : 7000),
-                TorqueMath.constrain(angleRegression.predict(distance), 0, 90) + ((DriverStation.isAutonomous()) ? 4 : 0));
+                TorqueMath.constrain(angleRegression.predict(distance), 0, 90) + ((DriverStation.isAutonomous()) ? angleOffset : 0));
     }
 
     public boolean hasConsent() {
         return consent;
+    }
+    
+    double angleOffset = 0;
+    public void setAutoAngleOffset(final double offset) {
+        this.angleOffset = offset;
     }
 
     public Shot constrainShotAngle(Shot shot, double theta) {

@@ -78,7 +78,7 @@ public class BaseAuto extends TorqueSequence implements Subsystems {
          * @return The next note's index.
          */
         public int peekNext() {
-            return notes.get(0);
+            return notes.isEmpty() ? 0 : notes.get(0);
         }
 
         /**
@@ -93,6 +93,13 @@ public class BaseAuto extends TorqueSequence implements Subsystems {
          */
         public boolean hasNext() {
             return notes.size() > 0;
+        }
+
+        public double getAutoAngleOffset() {
+            int nextNote = peekNext();
+            if (nextNote == 1) return 4;
+            else if (nextNote == 10) return 6;
+            else return 4;
         }
     }
 
@@ -177,11 +184,13 @@ public class BaseAuto extends TorqueSequence implements Subsystems {
             log("Can Deploy Intake", () -> deployIntakeRightAway);
 
             log("Auto State", () -> "BEGIN PATH");
+            addBlock(new TorqueRun(() -> shooter.setAutoAngleOffset(noteSequence.getAutoAngleOffset())));
 
             addBlock(followPath(() -> noteSequence.getNextPath()),
                     new DeployIntakeWhen(() -> field.isXPast(perception.getPose(), 5.5) || deployIntakeRightAway)
                             .command());
 
+            addBlock(new TorqueRun(() -> shooter.setAutoAngleOffset(noteSequence.getAutoAngleOffset())));
             addBlock(new TorqueRunSequence(new Shoot()));
         }
     }
@@ -199,19 +208,12 @@ public class BaseAuto extends TorqueSequence implements Subsystems {
         addBlock(new TorqueRun(() -> totalAutoTimer.restart()));
 
         addBlock(new TorqueRun(() -> perception.setFutureShootingPose(perception.getPose())));
+        addBlock(new TorqueRun(() -> shooter.setAutoAngleOffset(noteSequence.getAutoAngleOffset())));
+
         addBlock(new TorqueRunSequence(new Shoot()));
 
         addBlock(new TorqueWhile(noteSequence::hasNext, new CollectAndShootNote(noteSequence)));
-        // addBlock(new TorqueWhile(noteSequence::hasNext, new
-        // CollectAndShootNote(noteSequence)),
-        // new TorqueWaitUntil(() -> {
-        // if (totalAutoTimer.get() > 14.75) {
-        // shooter.setGateState(Shooter.GateState.OUT);
-        // return true;
-        // }
-        // return false;
-        // })
-        // );
+ 
     }
 
 }
