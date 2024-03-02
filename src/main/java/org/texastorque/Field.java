@@ -88,6 +88,10 @@ public final class Field {
         }
     }
 
+    public Pose2d getAllianceReflectedPose(Pose2d pose) {
+        return new Pose2d(isRedAlliance ? LENGTH - pose.getX() : pose.getX(), pose.getY(), pose.getRotation());
+    }
+
     public static synchronized final Field getInstance() {
         return instance == null ? instance = new Field() : instance;
     }

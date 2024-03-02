@@ -18,7 +18,7 @@ public class Intake extends TorqueStatorSubsystem<Intake.State> implements Subsy
 
     public static enum State implements TorqueState {
         OFF(0, 0), INTAKE(ROTARY_DOWN, 10),
-        SMART_INTAKE(ROTARY_DOWN, 10), OUTTAKE(ROTARY_DOWN, -10), AUTO_PRIME(7, 0), PRIME(5, 0),
+        SMART_INTAKE(ROTARY_DOWN, 10), OUTTAKE(ROTARY_DOWN, -10), AUTO_PRIME(7, 0), PRIME(4.5, 0),
         OUT(ROTARY_DOWN, 0);
 
         public final double rotaryPosition, rollerSpeed;
@@ -100,6 +100,9 @@ public class Intake extends TorqueStatorSubsystem<Intake.State> implements Subsy
                 desiredState.rotaryPosition));
         rotaryRight.setVolts(rotaryRightPID.calculate(rotaryRight.getPosition(),
                 desiredState.rotaryPosition));
+
+        // rotaryLeft.setVolts(6); if intake breaks, comment ^ out and comment this in.
+        // rotaryRight.setVolts(6);
     }
 
     @Override

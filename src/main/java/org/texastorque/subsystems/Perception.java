@@ -321,6 +321,10 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
         setPose(new Pose2d());
     }
 
+    public void resetPose(Pose2d pose) {
+        setPose(pose);
+    }
+
     /**
      * Get the angle from the robot to the speaker.
      */

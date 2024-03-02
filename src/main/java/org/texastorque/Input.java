@@ -172,7 +172,7 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
         boolean rumbleLeft = rumbleTimeout.get();
         boolean rumbleRight = rumbleTimeout.get();
 
-        if (TorqueMath.toleranced(DriverStation.getMatchTime(), 20, 1) && DriverStation.isTeleop()) {
+        if (TorqueMath.toleranced(DriverStation.getMatchTime(), 30, 1) && DriverStation.isTeleop()) {
             if (Timer.getFPGATimestamp() * 100 % 2 == 0) {
                 rumbleLeft = true;
                 rumbleRight = false;

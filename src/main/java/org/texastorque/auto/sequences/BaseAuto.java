@@ -16,6 +16,8 @@ import org.texastorque.torquelib.auto.commands.TorqueWaitTime;
 import org.texastorque.torquelib.auto.commands.TorqueWaitUntil;
 import org.texastorque.torquelib.auto.commands.TorqueWhile;
 import com.pathplanner.lib.path.PathPlannerPath;
+
+import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj.Timer;
 
@@ -97,9 +99,12 @@ public class BaseAuto extends TorqueSequence implements Subsystems {
 
         public double getAutoAngleOffset() {
             int nextNote = peekNext();
-            if (nextNote == 1) return 4;
-            else if (nextNote == 10) return 6;
-            else return 4;
+            if (nextNote == 1)
+                return 4;
+            else if (nextNote == 10)
+                return 6;
+            else
+                return 4;
         }
     }
 
@@ -114,6 +119,25 @@ public class BaseAuto extends TorqueSequence implements Subsystems {
             // addBlock(shooter.yieldState(Shooter.State.FUTURE_SMART));
 
             addBlock(shooter.yieldState(Shooter.State.SMART));
+
+            if (RobotBase.isReal()) {
+                addBlock(new TorqueWaitUntil(() -> !shooter.hasNote()));
+            } else {
+                addBlock(new TorqueWaitTime(1));
+            }
+            log("Auto State", () -> "GOT NOTE");
+
+            addBlock(shooter.yieldState(Shooter.State.AUTO_OFF));
+            addBlock(shooter.yieldGateState(Shooter.GateState.OFF));
+            log("Auto State", () -> "SHOT");
+        }
+
+        public Shoot(Shooter.State shooterState) {
+            log("Auto State", () -> "SHOOTING");
+
+            // addBlock(shooter.yieldState(Shooter.State.FUTURE_SMART));
+
+            addBlock(shooter.yieldState(shooterState));
 
             if (RobotBase.isReal()) {
                 addBlock(new TorqueWaitUntil(() -> !shooter.hasNote()));
@@ -197,13 +221,17 @@ public class BaseAuto extends TorqueSequence implements Subsystems {
 
     private final NoteSequence noteSequence;
 
-    public BaseAuto() {
+    public BaseAuto(final Pose2d initPose) {
         noteSequence = null;
-        addBlock(new TorqueRunSequence(new Shoot()));
+        addBlock(new TorqueRun(() -> perception.resetPose(field.getAllianceReflectedPose(initPose))));
+
+        addBlock(new TorqueRunSequence(new Shoot(Shooter.State.LAYUP)));
     }
 
-    public BaseAuto(final int... notes) {
+    public BaseAuto(final Pose2d initPose, final int... notes) {
         noteSequence = new NoteSequence(notes);
+
+        addBlock(new TorqueRun(() -> perception.resetPose(field.getAllianceReflectedPose(initPose))));
 
         addBlock(new TorqueRun(() -> totalAutoTimer.restart()));
 
@@ -213,7 +241,7 @@ public class BaseAuto extends TorqueSequence implements Subsystems {
         addBlock(new TorqueRunSequence(new Shoot()));
 
         addBlock(new TorqueWhile(noteSequence::hasNext, new CollectAndShootNote(noteSequence)));
- 
+
     }
 
 }
