@@ -46,7 +46,7 @@ public class Climber extends TorqueStatorSubsystem<Climber.State> implements Sub
     }
 
     public static enum HookState implements TorqueState {
-        IN(TRAP_VOLTS), OUT(-TRAP_VOLTS), OFF(0), IDLE(-TRAP_VOLTS / 3), TRAP, HOLD;
+        IN(TRAP_VOLTS), OUT(-TRAP_VOLTS), OFF(0), IDLE(-TRAP_VOLTS / 2), TRAP, HOLD;
 
         private final double volts;
 

@@ -48,7 +48,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         AMP(new Shot(1300, 46), true),
         LAYUP(new Shot(4200, 50), new Shot(4200, 112), true),
         MID(new Shot(4400, 32), new Shot(4400, 126), true),
-        SAFEZONE(new Shot(4600, 33), new Shot(4300, 134), true),
+        SAFEZONE(new Shot(4600, 29), new Shot(4300, 134), true),
         LASER(new Shot(5000, 0), true),
         FUTURE_SMART(true),
         SMART_WARMUP(new Shot(6000, 30), false),
@@ -106,7 +106,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
 
     private final DigitalInput noteSensor;
 
-    private final Timer shootingWarmupTimer = new Timer(), intakeWarmupTimer = new Timer();
+    private final Timer shootingWarmupTimer = new Timer(), intakeWarmupTimer = new Timer(), autoHailMaryTimer = new Timer();;
 
     private int loopsThatShooterHasBeenReadyToShoot = 0;
 
@@ -200,6 +200,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
 
     @Override
     public void initialize(TorqueMode mode) {
+        if (mode.isAuto()) autoHailMaryTimer.start();
     }
 
     public void setEmergencyCurrentLimit(final boolean limit) {
@@ -407,6 +408,12 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
                 (wantsState(State.AMP) || (wantsState(State.INTAKE) && getRotaryEncoder() > 140)) ? 3 : 8)); 
 
         Debug.log("Shooter Gate State", gateState.toString());
+
+        Debug.log("Auto Hail Mary", mode.isAuto() && autoHailMaryTimer.get() >= 14.5);
+
+        if (mode.isAuto() && autoHailMaryTimer.get() >= 14.75) {
+            gateState = GateState.OUT;
+        }
 
         gate.setVolts(gateState.voltage);
 

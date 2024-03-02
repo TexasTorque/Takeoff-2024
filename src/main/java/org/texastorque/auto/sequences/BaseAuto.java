@@ -8,6 +8,7 @@ import org.texastorque.Subsystems;
 import org.texastorque.auto.AutoManager;
 import org.texastorque.subsystems.*;
 import org.texastorque.subsystems.Shooter.GateState;
+import org.texastorque.torquelib.Debug;
 import org.texastorque.torquelib.auto.TorqueSequence;
 import org.texastorque.torquelib.auto.commands.TorqueFollowPath;
 import org.texastorque.torquelib.auto.commands.TorqueRun;
@@ -220,6 +221,7 @@ public class BaseAuto extends TorqueSequence implements Subsystems {
     }
 
     private final NoteSequence noteSequence;
+    private boolean shootingAtEndOfAuto = false;
 
     public BaseAuto(final Pose2d initPose) {
         noteSequence = null;
@@ -230,6 +232,7 @@ public class BaseAuto extends TorqueSequence implements Subsystems {
 
     public BaseAuto(final Pose2d initPose, final int... notes) {
         noteSequence = new NoteSequence(notes);
+        Debug.log("Shooting at end of auto", shootingAtEndOfAuto);
 
         addBlock(new TorqueRun(() -> perception.resetPose(field.getAllianceReflectedPose(initPose))));
 
@@ -242,6 +245,15 @@ public class BaseAuto extends TorqueSequence implements Subsystems {
 
         addBlock(new TorqueWhile(noteSequence::hasNext, new CollectAndShootNote(noteSequence)));
 
+        // addBlock(new TorqueWhile(noteSequence::hasNext, new CollectAndShootNote(noteSequence)),
+        //         new TorqueWaitUntil(() -> {
+        //             if (totalAutoTimer.get() > 14.75) {
+        //                 Debug.log("Shooting at end of auto", shootingAtEndOfAuto);
+        //                 shooter.setGateState(Shooter.GateState.OUT);
+        //                 return true;
+        //             }
+        //             return false;
+        //         }));
     }
 
 }
