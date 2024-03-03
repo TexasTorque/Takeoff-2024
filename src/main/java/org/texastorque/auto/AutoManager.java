@@ -4,11 +4,8 @@ import org.texastorque.Subsystems;
 import org.texastorque.auto.sequences.BaseAuto;
 import org.texastorque.auto.sequences.Line;
 import org.texastorque.torquelib.auto.*;
-
 import com.pathplanner.lib.path.PathPlannerPath;
-
 import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.math.geometry.Rotation2d;
 
 public final class AutoManager extends TorqueAutoManager implements Subsystems {
     private static volatile AutoManager instance;
@@ -33,6 +30,7 @@ public final class AutoManager extends TorqueAutoManager implements Subsystems {
         pathLoader.preloadPath("go_40_to_30");
 
         pathLoader.preloadPath("go_1_to_10");
+        pathLoader.preloadPath("go_1_to_15");
         pathLoader.preloadPath("go_10_to_20");
         pathLoader.preloadPath("line");
     }
@@ -56,11 +54,13 @@ public final class AutoManager extends TorqueAutoManager implements Subsystems {
         addSequence("3 to 2 to 1", new BaseAuto(new Pose2d(1.28, 4.7, perception.getHeading()), 3, 2, 1));
         addSequence("3 to 2 to 1 to 10", new BaseAuto(new Pose2d(1.28, 4.7, perception.getHeading()), 3, 2, 1, 10));
 
+        addSequence("3 to 2 to 1 to 15", new BaseAuto(new Pose2d(1.28, 4.7, perception.getHeading()), 3, 2, 1, 15));
+
         // addSequence("10 to 20 to 30", new BaseAuto(10, 20, 30));
 
         // addSequence("50 to 40 to 30", new BaseAuto(50, 40, 30));
 
-        addSequence(new Line());
+        // addSequence(new Line());
     }
 
     public static final synchronized AutoManager getInstance() {

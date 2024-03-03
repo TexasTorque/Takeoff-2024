@@ -39,16 +39,16 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
 
     public static enum State implements TorqueState {
         OFF(new Shot(0, ROTARY_OFF_POSITION), false),
-        TRAP(new Shot(2000, 72), false), //72 2160
+        TRAP(new Shot(2000, 72), false), 
         CLIMB(new Shot(0, 75), false),
         AUTO_OFF(new Shot(0, 90), false),
         INTAKE_REV(new Shot(-2500, ROTARY_OFF_POSITION), false),
         INTAKE(new Shot(-2500, 184), false),
         BABYBIRD(new Shot(-2500, 70), false),
-        AMP(new Shot(1300, 46), true),
+        AMP(new Shot(1400, 50.1), true),
         LAYUP(new Shot(4200, 50), new Shot(4200, 112), true),
         MID(new Shot(4400, 32), new Shot(4400, 126), true),
-        SAFEZONE(new Shot(4600, 29), new Shot(4300, 134), true),
+        SAFEZONE(new Shot(4600, 28), new Shot(4300, 134), true),
         LASER(new Shot(5000, 0), true),
         FUTURE_SMART(true),
         SMART_WARMUP(new Shot(6000, 30), false),
@@ -411,9 +411,9 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
 
         Debug.log("Auto Hail Mary", mode.isAuto() && autoHailMaryTimer.get() >= 14.5);
 
-        if (mode.isAuto() && autoHailMaryTimer.get() >= 14.75) {
-            gateState = GateState.OUT;
-        }
+        // if (mode.isAuto() && autoHailMaryTimer.get() >= 14.5 && field.isXPast(perception.getPose(), 5.5)) { use this for 15!
+        //     gateState = GateState.OUT;
+        // }
 
         gate.setVolts(gateState.voltage);
 

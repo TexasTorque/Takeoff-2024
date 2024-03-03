@@ -107,11 +107,7 @@ public class Climber extends TorqueStatorSubsystem<Climber.State> implements Sub
         leftPosition = left.getPosition() - leftTare;
         rightPosition = right.getPosition() - rightTare;
 
-        hookPID.setP(SmartDashboard.getNumber("Hook P", 0));
-        hookPID.setI(SmartDashboard.getNumber("Hook I", 0));
-        hookPID.setD(SmartDashboard.getNumber("Hook D", 0));
-
-        if (!shooter.wantsToClimb() && !shooter.inDebugMode()) {
+        if (!shooter.wantsToClimb() && !shooter.inDebugMode() && !shooter.wantsState(Shooter.State.AMP)) {
             desiredState = State.OFF;
             hookState = HookState.IDLE;
         }
@@ -127,13 +123,8 @@ public class Climber extends TorqueStatorSubsystem<Climber.State> implements Sub
         double rightSpeed = desiredState.rightVolts;
         double hookSpeed = hookState.volts;
 
-        if (hookState == HookState.TRAP) {
-            hookSpeed = TorqueMath.constrain(hookPID.calculate(perception.getGyroPitch(), 8.75),
-                    SmartDashboard.getNumber("Hook Max Volts", 0));
-        } else if (hookState == HookState.HOLD && (shooter.wantsState(Shooter.State.CLIMB) || shooter.wantsState(Shooter.State.TRAP)) ) {
-            // hookSpeed = SmartDashboard.getNumber("Hold Voltage", 0);
-            hookSpeed = -1.25;
-
+        if (shooter.wantsState(Shooter.State.AMP)) {
+            hookState = HookState.OUT;
         }
 
         // if (shooter.inDebugMode()) {
@@ -142,7 +133,7 @@ public class Climber extends TorqueStatorSubsystem<Climber.State> implements Sub
         // trapSpeed /= 2;
         // }
 
-        hook.setVolts(hookSpeed);
+        // hook.setVolts(hookSpeed);
         left.setVolts(leftSpeed);
         right.setVolts(rightSpeed);
     }
