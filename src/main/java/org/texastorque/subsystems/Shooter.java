@@ -90,8 +90,6 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
 
     private static final double FLYWHEEL_TOLERANCE = 120, ROTARY_TOLERANCE = 1, AUTO_ROTARY_TOLERANCE = 2.5;
 
-    // private final double MAX_ANGLE = 5;
-
     private final TorqueNEO rotary, flywheelTop, flywheelBottom, gate;
 
     private final CANcoder rotaryEncoder, flywheelTopEncoder, flywheelBottomEncoder;

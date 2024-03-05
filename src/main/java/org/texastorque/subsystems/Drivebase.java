@@ -195,8 +195,6 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
         return speedSetting == SpeedSetting.SEQ;
     }
 
-    private boolean lockingOnToGoal = false;
-
     @Override
     public final void update(final TorqueMode mode) {
         Debug.log("Is Aligned", isAligned());
@@ -207,25 +205,15 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
         if ((shooter.wantsState(Shooter.State.SMART) || shooter.wantsState(Shooter.State.FUTURE_SMART)) &&
                 !inputSpeeds.hasTranslationalVelocity() && !drivebase.wantsState(State.PATHING) && !shooter.isShift()
                 && !shooter.inDebugMode()) {
+            runSpeedSequence();
             desiredState = State.ALIGN_TO_ANGLE;
-            // If we are not in the slowdown sequence speed setting
-            if (speedSetting != SpeedSetting.SEQ) {
-                // We gotta make sure we set it up
-                speedSetting = SpeedSetting.SEQ;
-                // If this is the first loop that we are locking onto the goal then we need
-                // to create a new speed sequence. If we are already in the speed sequence
-                // state during the first loop where we are locking onto the goal then the
-                // driver was already in the speed sequence and we dont want to mess them up.
-                if (!lockingOnToGoal) {
-                    speedSequence = new SpeedSequence(Drivebase.SpeedSetting.FAST, Drivebase.SpeedSetting.SLOW, 1);
-                }
-            }
-            lockingOnToGoal = true; // we are locking on
         } else {
-            lockingOnToGoal = false; // we are not locking on
             if (mode.isTeleop())
                 desiredState = State.FIELD_RELATIVE;
         }
+
+        if (shooter.wantsState(Shooter.State.CLIMB))
+            runSpeedSequence();
 
         if (isAligned())
             loopsThatDBIsAligned++;
@@ -270,6 +258,13 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
         fr.setDesiredState(new SwerveModuleState(0, frAngle));
         bl.setDesiredState(new SwerveModuleState(0, blAngle));
         br.setDesiredState(new SwerveModuleState(0, brAngle));
+    }
+
+    public void runSpeedSequence() {
+        if (speedSetting != SpeedSetting.SEQ) {
+            speedSequence = new SpeedSequence(Drivebase.SpeedSetting.FAST, Drivebase.SpeedSetting.SLOW, 1);
+            speedSetting = SpeedSetting.SEQ;
+        }
     }
 
     @Override
