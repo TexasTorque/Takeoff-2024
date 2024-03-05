@@ -8,16 +8,18 @@ import org.texastorque.torquelib.base.TorqueMode;
 import org.texastorque.torquelib.base.TorqueState;
 import org.texastorque.torquelib.base.TorqueStatorSubsystem;
 import org.texastorque.torquelib.motors.TorqueNEO;
+
 import edu.wpi.first.math.controller.PIDController;
 
 public class Intake extends TorqueStatorSubsystem<Intake.State> implements Subsystems {
     private static volatile Intake instance;
 
-    private final static double ROTARY_DOWN = 13;
+    private final static double ROTARY_DOWN = 14;
 
     public static enum State implements TorqueState {
         OFF(0, 0), INTAKE(ROTARY_DOWN, 10),
-        SMART_INTAKE(ROTARY_DOWN, 10), OUTTAKE(ROTARY_DOWN, -10), AUTO_PRIME(7, 0), PRIME(4, 0);
+        SMART_INTAKE(ROTARY_DOWN, 10), OUTTAKE(ROTARY_DOWN, -10), AUTO_PRIME(7, 0), PRIME(4.5, 0),
+        OUT(ROTARY_DOWN, 0);
 
         public final double rotaryPosition, rollerSpeed;
 
@@ -88,14 +90,19 @@ public class Intake extends TorqueStatorSubsystem<Intake.State> implements Subsy
 
         } else if (!isIntaking() && !isOutaking() && shooter.isShift()) {
             desiredState = State.PRIME;
+        } else if (shooter.wantsState(Shooter.State.CLIMB) || shooter.wantsState(Shooter.State.TRAP)) {
+            desiredState = State.OUT;
         }
 
         rollers.setVolts(desiredState.rollerSpeed);
 
         rotaryLeft.setVolts(rotaryLeftPID.calculate(rotaryLeft.getPosition(),
                 desiredState.rotaryPosition));
-        rotaryRight.setVolts(rotaryRightPID.calculate(rotaryLeft.getPosition(),
+        rotaryRight.setVolts(rotaryRightPID.calculate(rotaryRight.getPosition(),
                 desiredState.rotaryPosition));
+
+        // rotaryLeft.setVolts(6); if intake breaks, comment ^ out and comment this in.
+        // rotaryRight.setVolts(6);
     }
 
     @Override

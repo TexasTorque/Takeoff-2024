@@ -21,10 +21,11 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
 
     private final TorqueRequestableTimeout rumbleTimeout;
 
-    private final TorqueBoolSupplier resetGyro, speedUp, speedDown, runSmartIntake,
+    private final TorqueBoolSupplier resetGyro, runSmartIntake,
             runDumbIntake, runOuttake, speakerSmartShot, speakerLayup, speakerSafeZone, amp, trap,
             deaccelerateClick, deaccelerateHold, manualGateOut, manualGateIn, babyBird, debugMode, speakerMid,
-            shooterIdle, shooterShift;
+            shooterIdle, shooterShift, climbUp, climbDown, climbLeftUp, climbRightUp, climbLeftDown, climbRightDown,
+            shooterClimbMode, laser, tareClimber, levelForTrap, holdHook;
 
     private Input() {
         driver = new TorqueController(0, 0.1);
@@ -34,11 +35,10 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
 
         resetGyro = new TorqueBoolSupplier(driver::isRightCenterButtonDown);
 
-        speedUp = new TorqueClickSupplier(() -> false);
-        speedDown = new TorqueClickSupplier(() -> false);
-
         deaccelerateClick = new TorqueClickSupplier(driver::isLeftTriggerDown);
         deaccelerateHold = new TorqueBoolSupplier(driver::isLeftTriggerDown);
+        levelForTrap = new TorqueBoolSupplier(driver::isXButtonDown);
+        holdHook = new TorqueBoolSupplier(driver::isBButtonDown);
 
         runSmartIntake = new TorqueBoolSupplier(driver::isRightTriggerDown);
         runDumbIntake = new TorqueBoolSupplier(driver::isRightBumperDown);
@@ -52,17 +52,30 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
         shooterShift = new TorqueToggleSupplier(operator::isLeftBumperDown);
 
         amp = new TorqueBoolSupplier(operator::isLeftTriggerDown);
-        trap = new TorqueBoolSupplier(() -> false);
 
         manualGateOut = new TorqueBoolSupplier(operator::isDPADUpDown);
         manualGateIn = new TorqueBoolSupplier(operator::isDPADDownDown);
 
-        shooterIdle = new TorqueToggleSupplier(operator::isLeftCenterButtonDown);
+        shooterIdle = new TorqueToggleSupplier(
+                () -> operator.isLeftCenterButtonDown() && !operator.isRightCenterButtonDown());
+        laser = new TorqueBoolSupplier(operator::isXButtonDown);
 
         babyBird = new TorqueBoolSupplier(operator::isRightBumperDown);
 
+        climbUp = new TorqueBoolSupplier(driver::isDPADUpDown);
+        climbDown = new TorqueBoolSupplier(driver::isDPADDownDown);
+        climbLeftUp = new TorqueBoolSupplier(driver::isDPADUpLeftDown);
+        climbRightUp = new TorqueBoolSupplier(driver::isDPADUpRightDown);
+        climbLeftDown = new TorqueBoolSupplier(driver::isDPADDownLeftDown);
+        climbRightDown = new TorqueBoolSupplier(driver::isDPADDownRightDown);
+
+        trap = new TorqueBoolSupplier(() -> operator.isRightCenterButtonDown() && !operator.isLeftCenterButtonDown());
+        shooterClimbMode = new TorqueToggleSupplier(operator::isDPADLeftDown);
+
         debugMode = new TorqueToggleSupplier(
                 () -> operator.isLeftCenterButtonDown() && operator.isRightCenterButtonDown());
+
+        tareClimber = new TorqueClickSupplier(driver::isLeftCenterButtonDown);
     }
 
     @Override
@@ -70,6 +83,7 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
         updateDrivebase();
         updateIntake();
         updateShooter();
+        updateClimb();
         updateRumble();
     }
 
@@ -80,8 +94,6 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
     }
 
     public void updateShooter() {
-        speakerSmartShot.onTrue(() -> shooter.setState(Shooter.State.SMART));
-
         speakerLayup.onTrue(() -> shooter.setState(Shooter.State.LAYUP));
         speakerSafeZone.onTrue(() -> shooter.setState(Shooter.State.SAFEZONE));
         speakerMid.onTrue(() -> shooter.setState(Shooter.State.MID));
@@ -104,12 +116,18 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
 
         shooter.setEmergencyCurrentLimit(driver.isAButtonDown());
         shooter.setShift(shooterShift.get());
+
+        laser.onTrue(() -> shooter.setState(Shooter.State.LASER));
+
+        shooterClimbMode.onTrue(() -> shooter.setState(Shooter.State.CLIMB));
+
+        trap.onTrue(() -> shooter.setState(Shooter.State.TRAP));
+
+        speakerSmartShot.onTrue(() -> shooter.setState(Shooter.State.SMART));
     }
 
     public void updateDrivebase() {
         resetGyro.onTrue(() -> perception.resetPoseAndGyro());
-        speedDown.onTrue(() -> drivebase.speedSetting.shiftDown());
-        speedUp.onTrue(() -> drivebase.speedSetting.shiftUp());
 
         deaccelerateClick.onTrue(() -> drivebase.speedSequence = new SpeedSequence(Drivebase.SpeedSetting.FAST,
                 Drivebase.SpeedSetting.SLOW, 1));
@@ -119,21 +137,42 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
         if (!deaccelerateHold.get())
             drivebase.speedSetting = Drivebase.SpeedSetting.FAST;
 
-        final double xVelocity = TorqueMath.scaledLinearDeadband(-driver.getLeftYAxis(), CONTROLLER_DEADBAND)
+        final double xVelocity = TorqueMath.scaledLinearDeadband(driver.getLeftYAxis(), CONTROLLER_DEADBAND)
                 * Drivebase.MAX_VELOCITY;
-        final double yVelocity = TorqueMath.scaledLinearDeadband(-driver.getLeftXAxis(), CONTROLLER_DEADBAND)
+        final double yVelocity = TorqueMath.scaledLinearDeadband(driver.getLeftXAxis(), CONTROLLER_DEADBAND)
                 * Drivebase.MAX_VELOCITY;
-        final double rotationVelocity = TorqueMath.scaledLinearDeadband(-driver.getRightXAxis(), CONTROLLER_DEADBAND)
+        final double rotationVelocity = TorqueMath.scaledLinearDeadband(driver.getRightXAxis(), CONTROLLER_DEADBAND)
                 * Drivebase.MAX_ANGULAR_VELOCITY;
 
         drivebase.setInputSpeedsTeleop(new TorqueSwerveSpeeds(xVelocity, yVelocity, rotationVelocity));
+    }
+
+    public void updateClimb() {
+        climbUp.onTrue(() -> climber.setState(Climber.State.UP));
+        climbDown.onTrue(() -> climber.setState(Climber.State.DOWN));
+        climbLeftUp.onTrue(() -> climber.setState(Climber.State.LEFT_UP));
+        climbRightUp.onTrue(() -> climber.setState(Climber.State.RIGHT_UP));
+        climbLeftDown.onTrue(() -> climber.setState(Climber.State.LEFT_DOWN));
+        climbRightDown.onTrue(() -> climber.setState(Climber.State.RIGHT_DOWN));
+
+        // levelForTrap.onTrue(() -> climber.setHookState(Climber.HookState.TRAP));
+
+        tareClimber.onTrue(() -> climber.tareClimber());
+
+        holdHook.onTrue(() -> climber.setHookState(Climber.HookState.HOLD));
+
+        if (driver.isDPADLeftDown()) {
+            climber.setHookState(Climber.HookState.OUT);
+        } else if (driver.isDPADRightDown()) {
+            climber.setHookState(Climber.HookState.IN);
+        }
     }
 
     public void updateRumble() {
         boolean rumbleLeft = rumbleTimeout.get();
         boolean rumbleRight = rumbleTimeout.get();
 
-        if (TorqueMath.toleranced(DriverStation.getMatchTime(), 20, 1) && DriverStation.isTeleop()) {
+        if (TorqueMath.toleranced(DriverStation.getMatchTime(), 30, 1) && DriverStation.isTeleop()) {
             if (Timer.getFPGATimestamp() * 100 % 2 == 0) {
                 rumbleLeft = true;
                 rumbleRight = false;

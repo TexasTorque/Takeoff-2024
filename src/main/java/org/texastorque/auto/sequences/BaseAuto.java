@@ -8,6 +8,7 @@ import org.texastorque.Subsystems;
 import org.texastorque.auto.AutoManager;
 import org.texastorque.subsystems.*;
 import org.texastorque.subsystems.Shooter.GateState;
+import org.texastorque.torquelib.Debug;
 import org.texastorque.torquelib.auto.TorqueSequence;
 import org.texastorque.torquelib.auto.commands.TorqueFollowPath;
 import org.texastorque.torquelib.auto.commands.TorqueRun;
@@ -16,10 +17,14 @@ import org.texastorque.torquelib.auto.commands.TorqueWaitTime;
 import org.texastorque.torquelib.auto.commands.TorqueWaitUntil;
 import org.texastorque.torquelib.auto.commands.TorqueWhile;
 import com.pathplanner.lib.path.PathPlannerPath;
+
+import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj.Timer;
 
 public class BaseAuto extends TorqueSequence implements Subsystems {
+
+    private Timer totalAutoTimer = new Timer();
 
     /**
      * Creats a torque follow path command using a path supplier and provides our
@@ -76,7 +81,7 @@ public class BaseAuto extends TorqueSequence implements Subsystems {
          * @return The next note's index.
          */
         public int peekNext() {
-            return notes.get(0);
+            return notes.isEmpty() ? 0 : notes.get(0);
         }
 
         /**
@@ -92,18 +97,49 @@ public class BaseAuto extends TorqueSequence implements Subsystems {
         public boolean hasNext() {
             return notes.size() > 0;
         }
+
+        public double getAutoAngleOffset() {
+            int nextNote = peekNext();
+            if (nextNote == 1)
+                return 4;
+            else if (nextNote == 10)
+                return 6;
+            else
+                return 4;
+        }
     }
 
     /**
      * This should shoot the gamepeice using smartshot, therefor aligning drivebase,
-     * and will wait until the shooter is ready + a small delay for the peice to
-     * leave.
+     * and will wait until the shooter is ready
      */
     public class Shoot extends TorqueSequence {
         public Shoot() {
             log("Auto State", () -> "SHOOTING");
 
-            addBlock(shooter.yieldState(Shooter.State.FUTURE_SMART));
+            // addBlock(shooter.yieldState(Shooter.State.FUTURE_SMART));
+
+            addBlock(shooter.yieldState(Shooter.State.SMART));
+
+            if (RobotBase.isReal()) {
+                addBlock(new TorqueWaitUntil(() -> !shooter.hasNote()));
+            } else {
+                addBlock(new TorqueWaitTime(1));
+            }
+            log("Auto State", () -> "GOT NOTE");
+
+            addBlock(shooter.yieldState(Shooter.State.AUTO_OFF));
+            addBlock(shooter.yieldGateState(Shooter.GateState.OFF));
+            log("Auto State", () -> "SHOT");
+        }
+
+        public Shoot(Shooter.State shooterState) {
+            log("Auto State", () -> "SHOOTING");
+
+            // addBlock(shooter.yieldState(Shooter.State.FUTURE_SMART));
+
+            addBlock(shooter.yieldState(shooterState));
+
             if (RobotBase.isReal()) {
                 addBlock(new TorqueWaitUntil(() -> !shooter.hasNote()));
             } else {
@@ -150,10 +186,12 @@ public class BaseAuto extends TorqueSequence implements Subsystems {
             log("Auto State", () -> "WARMING UP");
 
             addBlock(shooter.yieldGateState(GateState.OFF));
+
             addBlock(new TorqueRun(() -> perception.setFutureShootingPose(
                     field.getEndPosition(TorqueFollowPath.getEndingPositionForCurrentlyLoadedPath(), isCenterLine))));
 
-            addBlock(shooter.yieldState(Shooter.State.FUTURE_SMART));
+            // addBlock(shooter.yieldState(Shooter.State.FUTURE_SMART));
+            addBlock(shooter.yieldState(Shooter.State.SMART_WARMUP));
 
             addBlock(intake.yieldState(Intake.State.AUTO_PRIME));
         }
@@ -171,24 +209,51 @@ public class BaseAuto extends TorqueSequence implements Subsystems {
             log("Can Deploy Intake", () -> deployIntakeRightAway);
 
             log("Auto State", () -> "BEGIN PATH");
+            addBlock(new TorqueRun(() -> shooter.setAutoAngleOffset(noteSequence.getAutoAngleOffset())));
 
             addBlock(followPath(() -> noteSequence.getNextPath()),
                     new DeployIntakeWhen(() -> field.isXPast(perception.getPose(), 5.5) || deployIntakeRightAway)
                             .command());
 
+            addBlock(new TorqueRun(() -> shooter.setAutoAngleOffset(noteSequence.getAutoAngleOffset())));
             addBlock(new TorqueRunSequence(new Shoot()));
         }
     }
 
     private final NoteSequence noteSequence;
+    private boolean shootingAtEndOfAuto = false;
 
-    public BaseAuto(final int... notes) {
+    public BaseAuto(final Pose2d initPose) {
+        noteSequence = null;
+        addBlock(new TorqueRun(() -> perception.resetPose(field.getAllianceReflectedPose(initPose))));
+
+        addBlock(new TorqueRunSequence(new Shoot(Shooter.State.LAYUP)));
+    }
+
+    public BaseAuto(final Pose2d initPose, final int... notes) {
         noteSequence = new NoteSequence(notes);
-      
+        Debug.log("Shooting at end of auto", shootingAtEndOfAuto);
+
+        addBlock(new TorqueRun(() -> perception.resetPose(field.getAllianceReflectedPose(initPose))));
+
+        addBlock(new TorqueRun(() -> totalAutoTimer.restart()));
+
         addBlock(new TorqueRun(() -> perception.setFutureShootingPose(perception.getPose())));
+        addBlock(new TorqueRun(() -> shooter.setAutoAngleOffset(noteSequence.getAutoAngleOffset())));
+
         addBlock(new TorqueRunSequence(new Shoot()));
 
         addBlock(new TorqueWhile(noteSequence::hasNext, new CollectAndShootNote(noteSequence)));
+
+        // addBlock(new TorqueWhile(noteSequence::hasNext, new CollectAndShootNote(noteSequence)),
+        //         new TorqueWaitUntil(() -> {
+        //             if (totalAutoTimer.get() > 14.75) {
+        //                 Debug.log("Shooting at end of auto", shootingAtEndOfAuto);
+        //                 shooter.setGateState(Shooter.GateState.OUT);
+        //                 return true;
+        //             }
+        //             return false;
+        //         }));
     }
 
 }

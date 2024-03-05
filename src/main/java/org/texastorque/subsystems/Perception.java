@@ -102,9 +102,11 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
                 drivebase.getModulePositions(),
                 new Pose2d(), ODOMETRY_STDS, VISION_STDS);
 
-        // Add toast cameras
-        toast.addCamera(new Camera("SHTR_R", Camera.transformInchDeg(-6.9, 11.75, 9.3, 0, 35, 180)));
-        toast.addCamera(new Camera("SHTR_L", Camera.transformInchDeg(-6.9, -11.75, 9.3, 0, 35, 180)));
+        // Add toast camera -- question: does pitch need to be here?
+        toast.addCamera(new Camera("SHTR_R",
+                Camera.transformInchDeg(-5.0, 12.54, 14.181, 0, 35, 180)));
+        toast.addCamera(new Camera("SHTR_L",
+                Camera.transformInchDeg(-5.0, -12.54, 14.181, 0, 35, 180)));
         toast.addCamera(new Camera("INTK_R", new Transform3d()));
         toast.addCamera(new Camera("INTK_L", new Transform3d()));
 
@@ -134,6 +136,10 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
         field.updateAlliance();
         updateOdometryLocalization();
         updateVisionLocalization();
+
+        Debug.log("gyro yaw", gyro.getFusedHeading());
+        Debug.log("gyro pitch", gyro.getPitch());
+        Debug.log("gyro roll", gyro.getRoll());
 
         field2d.setRobotPose(getFilteredPose());
         if (!Robot.isReal() && shooter.wantsState(Shooter.State.SMART) && mode.isAuto()) {
@@ -262,12 +268,20 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
         return field.getAngleToSpeaker(getFilteredPose());
     }
 
+    public Rotation2d getFutureAngleToSpeaker() {
+        return field.getAngleToSpeaker(futureShootingPose);
+    }
+
+    public double getGyroPitch() {
+        return gyro.getPitch();
+    }
+
     /**
      * Tare the gyro, make the current heading "north" (0° yaw) and reset the pose.
      */
     public void resetPoseAndGyro() {
         gyro.setOffsetCW(Rotation2d.fromRadians(0));
-        setPose(new Pose2d(5, 5, getHeading()));
+        setPose(new Pose2d(0, 0, getHeading()));
     }
 
     public void resetGyro() {
@@ -305,6 +319,10 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
      */
     public void resetPose() {
         setPose(new Pose2d());
+    }
+
+    public void resetPose(Pose2d pose) {
+        setPose(pose);
     }
 
     /**

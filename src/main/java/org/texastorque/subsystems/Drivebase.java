@@ -144,14 +144,17 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
     public final void initialize(final TorqueMode mode) {
         // Set the angle target for ALIGN_TO_ANGLE state, basically makes that state
         // an "align to goal" state.
-        setAlignTarget(perception::getFilteredAngleToSpeaker);
 
         mode.onAuto(() -> {
             desiredState = State.FIELD_RELATIVE;
+            setAlignTarget(perception::getFutureAngleToSpeaker);
+
         });
 
         mode.onTeleop(() -> {
             desiredState = State.FIELD_RELATIVE;
+            setAlignTarget(perception::getFilteredAngleToSpeaker);
+
         });
     }
 
@@ -188,17 +191,22 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
         return loopsThatDBIsAligned > 15;
     }
 
+    public boolean isDecelerating() {
+        return speedSetting == SpeedSetting.SEQ;
+    }
+
     private boolean lockingOnToGoal = false;
 
     @Override
     public final void update(final TorqueMode mode) {
         Debug.log("Is Aligned", isAligned());
+        Debug.log("Has Been Aligned", hasBeenAligned());
         Debug.log("Align Target", getAlignTarget());
         Debug.log("Drivebase State", desiredState.toString());
 
-        // If shooter is in smart mode then the driver can still drive around but
-        // the rotation should stay locked to the goal.
-        if (shooter.wantsState(Shooter.State.SMART) && shooter.hasConsent() && !shooter.isShift() && mode.isTeleop() && !shooter.isDebugMode()) {
+        if ((shooter.wantsState(Shooter.State.SMART) || shooter.wantsState(Shooter.State.FUTURE_SMART)) &&
+                !inputSpeeds.hasTranslationalVelocity() && !drivebase.wantsState(State.PATHING) && !shooter.isShift()
+                && !shooter.inDebugMode()) {
             desiredState = State.ALIGN_TO_ANGLE;
             // If we are not in the slowdown sequence speed setting
             if (speedSetting != SpeedSetting.SEQ) {
@@ -236,7 +244,7 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
         // If we are in the align state then we want to set our rotational velocity to
         // the output of the align to angle PID controller.
         if (wantsState(State.ALIGN_TO_ANGLE)) {
-            inputSpeeds.omegaRadiansPerSecond = TorqueMath.constrain(
+            inputSpeeds.omegaRadiansPerSecond = -TorqueMath.constrain(
                     alignPID.calculate(perception.getHeading().getDegrees(), getAlignTarget()), Math.PI);
         }
 

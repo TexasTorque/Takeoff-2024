@@ -35,19 +35,23 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         private static final Shot empty = new Shot(0, 0, 0);
     }
 
-    private static final double ROTARY_OFF_POSITION = 122;
+    private static final double ROTARY_OFF_POSITION = 102;
 
     public static enum State implements TorqueState {
         OFF(new Shot(0, ROTARY_OFF_POSITION), false),
+        TRAP(new Shot(2000, 72), false), 
+        CLIMB(new Shot(0, 75), false),
         AUTO_OFF(new Shot(0, 90), false),
-        INTAKE(new Shot(-1900, 194), false),
-        BABYBIRD(new Shot(-1200, 90), false),
-        AMP(new Shot(1500, 55), true),
-        TRAP(new Shot(0, 108), true),
-        LAYUP(new Shot(3900, 63), new Shot(3900, 122), true),
-        MID(new Shot(4300, 37), new Shot(4300, 133), true),
-        SAFEZONE(new Shot(4300, 33), new Shot(4300, 139), true),
+        INTAKE_REV(new Shot(-2500, ROTARY_OFF_POSITION), false),
+        INTAKE(new Shot(-2500, 184), false),
+        BABYBIRD(new Shot(-2500, 70), false),
+        AMP(new Shot(1400, 50.1), true),
+        LAYUP(new Shot(4200, 50), new Shot(4200, 112), true),
+        MID(new Shot(4400, 32), new Shot(4400, 126), true),
+        SAFEZONE(new Shot(4600, 28), new Shot(4300, 134), true),
+        LASER(new Shot(5000, 0), true),
         FUTURE_SMART(true),
+        SMART_WARMUP(new Shot(6000, 30), false),
         SMART(true);
 
         public final Shot shot, shiftedShot;
@@ -84,7 +88,9 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         }
     }
 
-    private static final double FLYWHEEL_TOLERANCE = 120, ROTARY_TOLERANCE = 3, AMP_ROTARY_TOLERANCE = 8;
+    private static final double FLYWHEEL_TOLERANCE = 120, ROTARY_TOLERANCE = 1, AUTO_ROTARY_TOLERANCE = 2.5;
+
+    // private final double MAX_ANGLE = 5;
 
     private final TorqueNEO rotary, flywheelTop, flywheelBottom, gate;
 
@@ -100,7 +106,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
 
     private final DigitalInput noteSensor;
 
-    private final Timer shootingWarmupTimer = new Timer(), intakeWarmupTimer = new Timer();
+    private final Timer shootingWarmupTimer = new Timer(), intakeWarmupTimer = new Timer(), autoHailMaryTimer = new Timer();;
 
     private int loopsThatShooterHasBeenReadyToShoot = 0;
 
@@ -120,11 +126,11 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         rotary = new TorqueNEO(Ports.SHOOTER_ROTARY);
         rotary.setVoltageCompensation(12.6);
         rotary.setCurrentLimit(35);
-        rotary.setBreakMode(true);
+        rotary.setBreakMode(true); 
         rotary.invertMotor(true);
         rotary.burnFlash();
 
-        rotaryPID = new PIDController(.15, 0, 0);
+        rotaryPID = new PIDController(.2, .5, 0); // .25?
         rotaryEncoder = new CANcoder(Ports.SHOOTER_ROTARY_ENCODER);
 
         flywheelTop = new TorqueNEO(Ports.FLYWHEEL_TOP);
@@ -158,16 +164,18 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
 
         shotTable = new TreeMap<Double, Shot>();
 
-        shotTable.put(1.22, new Shot(4100, 64));
-        shotTable.put(1.75, new Shot(4200, 50.4));
-        shotTable.put(2.28, new Shot(4500, 43.2));
-        shotTable.put(2.5, new Shot(4600, 41));
-        shotTable.put(2.77, new Shot(4700, 36));
-        shotTable.put(3.39, new Shot(4900, 30.6));
-        shotTable.put(4.1, new Shot(5000, 28.8));
-        shotTable.put(4.7, new Shot(5550, 24.8));
-        shotTable.put(4.9, new Shot(6250, 21));
-        shotTable.put(5.4, new Shot(6250, 18.8));
+        shotTable.put(1.18, new Shot(4200, 48));
+        shotTable.put(1.87, new Shot(4400, 39));
+        shotTable.put(1.96, new Shot(4500, 34));
+
+        shotTable.put(2.43, new Shot(4600, 29));
+        shotTable.put(2.89, new Shot(4700, 24));
+        shotTable.put(3.12, new Shot(4800, 20));
+        shotTable.put(3.58, new Shot(4900, 18));
+        shotTable.put(4., new Shot(5200, 15));
+        shotTable.put(4.2, new Shot(5400, 14));
+        shotTable.put(4.6, new Shot(5500, 12));
+        shotTable.put(5.3, new Shot(5400, 10));
 
         Set<Entry<Double, Shot>> entries = shotTable.entrySet();
         double[] distances = new double[entries.size()];
@@ -186,12 +194,13 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         angleRegression = new TorquePolyRegression(distances, angles, 2);
 
         SmartDashboard.putNumber("Shot Velocity", 0);
-        SmartDashboard.putNumber("Shot Velocity", 0);
         SmartDashboard.putNumber("Shot Angle", 0);
+
     }
 
     @Override
     public void initialize(TorqueMode mode) {
+        if (mode.isAuto()) autoHailMaryTimer.start();
     }
 
     public void setEmergencyCurrentLimit(final boolean limit) {
@@ -211,8 +220,9 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
     }
 
     public boolean isReadyToShoot() {
-        if (!wantsToShoot() || drivebase.wantsState(Drivebase.State.PATHING))
+        if (!wantsToShoot())
             return false;
+
         return isReady();
     }
 
@@ -220,12 +230,12 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         return isTopFlywheelReady() && isBottomFlywheelReady() && isRotaryAtState();
     }
 
-    public boolean isReadyToAmp() {
-        return Math.abs(getRotaryEncoder() - shot.angle) <= AMP_ROTARY_TOLERANCE;
-    }
-
     public double getRotaryEncoder() {
-        return TorqueMath.constrain(rotaryEncoder.getAbsolutePosition().getValue() * 360, 0, 200);
+        double rawValueDegrees = rotaryEncoder.getAbsolutePosition().getValue() * 360;
+        if (rawValueDegrees > 200)
+            return 0;
+        else
+            return rawValueDegrees;
     }
 
     private double getTopFlywheelVelocity() {
@@ -247,7 +257,12 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
     }
 
     public boolean isRotaryAtState() {
-        return Math.abs(getRotaryEncoder() - shot.angle) <= ROTARY_TOLERANCE;
+        return Math.abs(getRotaryEncoder() - shot.angle) <= (DriverStation.isAutonomous() ? AUTO_ROTARY_TOLERANCE
+                : ROTARY_TOLERANCE);
+    }
+
+    public boolean wantsToClimb() {
+        return wantsState(State.CLIMB) || wantsState(State.TRAP);
     }
 
     public boolean wantsToShoot() {
@@ -269,15 +284,20 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
     public Shot getRegressionShot(double distance) {
         return new Shot(
                 TorqueMath.constrain(rpmRegression.predict(distance), 0, DriverStation.isAutonomous() ? 5000 : 7000),
-                TorqueMath.constrain(angleRegression.predict(distance), 0, 90));
+                TorqueMath.constrain(angleRegression.predict(distance), 0, 90) + ((DriverStation.isAutonomous()) ? angleOffset : 0));
     }
 
     public boolean hasConsent() {
         return consent;
     }
+    
+    double angleOffset = 0;
+    public void setAutoAngleOffset(final double offset) {
+        this.angleOffset = offset;
+    }
 
-    public boolean isDebugMode() {
-        return debugMode;
+    public Shot constrainShotAngle(Shot shot, double theta) {
+        return new Shot(shot.topVelocity, shot.bottomVelocity, Math.max(shot.angle, theta));
     }
 
     @Override
@@ -294,9 +314,22 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         Debug.log("Has Note", hasNote());
         Debug.log("Debug Mode", debugMode);
         Debug.log("Shooter Shot Velocity", shot.topVelocity);
+        Debug.log("Shooter Shot Angle", shot.angle);
         Debug.log("Shooter Consent", consent);
         Debug.log("Shooter Shift", shift);
 
+
+        Debug.log("Regression Shot", getRegressionShot(perception.getDistanceToSpeaker()).toString());
+        Debug.log("Shooter Rotary Positon", getRotaryEncoder());
+
+
+        if (mode.isAuto() || wantsState(State.AMP)) {
+            rotaryPID.setP(.25);
+            rotaryPID.setI(0);
+        } else {
+            rotaryPID.setP(.2);
+            rotaryPID.setI(.5);
+        }
 
         if (mode.isTeleop() && intake.isIntaking()) {
             if (intake.isAtState() && !hasNote()) {
@@ -308,7 +341,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
             }
         }
 
-        if (emergencyCurrentLimit) {
+        if (emergencyCurrentLimit || wantsState(State.AMP)) {
             flywheelBottom.setCurrentLimit(90);
             flywheelTop.setCurrentLimit(90);
         } else if (mode.isAuto()) {
@@ -342,12 +375,14 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
             loopsThatShooterHasBeenReadyToShoot = 0;
 
         if (loopsThatShooterHasBeenReadyToShoot > 15) {
-            if ((mode.isTeleop() && consent && (!shift ? drivebase.hasBeenAligned() : true)) || mode.isAuto())
+            if ((mode.isTeleop() && consent
+                    && ((!shift && wantsState(State.SMART)) ? drivebase.hasBeenAligned() : true))
+                    || (mode.isAuto() && !drivebase.wantsState(Drivebase.State.PATHING)))
                 gateState = GateState.OUT;
-        } else
-            gateState = GateState.OFF;
+        }
 
         Debug.log("Shot", shot.toString());
+        Debug.log("Gate State", gateState.toString());
 
         if (wantsState(Shooter.State.OFF) && hasNote() && mode.isTeleop() && idle) {
             final double desiredVolts = TorqueMath.constrain(Math.pow(shootingWarmupTimer.get(), 2) * .25, 0, 3.5);
@@ -358,9 +393,11 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
             flywheelTop.setVolts(desiredVolts);
             flywheelBottom.setVolts(desiredVolts);
         } else {
-            flywheelTop.setVolts(flywheelTopPID.calculate(getTopFlywheelVelocity(), shot.topVelocity)
+            flywheelTop.setVolts(flywheelTopPID.calculate(getTopFlywheelVelocity(),
+                    shot.topVelocity)
                     + flywheelFF.calculate(shot.topVelocity));
-            flywheelBottom.setVolts(flywheelBottomPID.calculate(-getBottomFlywheelVelocity(), shot.bottomVelocity)
+            flywheelBottom.setVolts(flywheelBottomPID.calculate(-getBottomFlywheelVelocity(),
+                    shot.bottomVelocity)
                     + flywheelFF.calculate(shot.bottomVelocity));
 
             intakeWarmupTimer.restart();
@@ -368,9 +405,15 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         }
 
         rotary.setVolts(TorqueMath.constrain(rotaryPID.calculate(getRotaryEncoder(), shot.angle),
-                wantsState(State.AMP) ? 3 : 8));
+                (wantsState(State.AMP) || (wantsState(State.INTAKE) && getRotaryEncoder() > 140)) ? 3 : 8)); 
 
         Debug.log("Shooter Gate State", gateState.toString());
+
+        Debug.log("Auto Hail Mary", mode.isAuto() && autoHailMaryTimer.get() >= 14.5);
+
+        // if (mode.isAuto() && autoHailMaryTimer.get() >= 14.5 && field.isXPast(perception.getPose(), 5.5)) { use this for 15!
+        //     gateState = GateState.OUT;
+        // }
 
         gate.setVolts(gateState.voltage);
 
