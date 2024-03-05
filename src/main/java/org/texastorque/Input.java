@@ -37,7 +37,9 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
 
         deaccelerateClick = new TorqueClickSupplier(driver::isLeftTriggerDown);
         deaccelerateHold = new TorqueBoolSupplier(driver::isLeftTriggerDown);
+
         levelForTrap = new TorqueBoolSupplier(driver::isXButtonDown);
+
         holdHook = new TorqueBoolSupplier(driver::isBButtonDown);
 
         runSmartIntake = new TorqueBoolSupplier(driver::isRightTriggerDown);
@@ -70,6 +72,7 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
         climbRightDown = new TorqueBoolSupplier(driver::isDPADDownRightDown);
 
         trap = new TorqueBoolSupplier(() -> operator.isRightCenterButtonDown() && !operator.isLeftCenterButtonDown());
+
         shooterClimbMode = new TorqueToggleSupplier(operator::isDPADLeftDown);
 
         debugMode = new TorqueToggleSupplier(

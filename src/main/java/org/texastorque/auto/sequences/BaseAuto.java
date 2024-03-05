@@ -115,28 +115,11 @@ public class BaseAuto extends TorqueSequence implements Subsystems {
      */
     public class Shoot extends TorqueSequence {
         public Shoot() {
-            log("Auto State", () -> "SHOOTING");
-
-            // addBlock(shooter.yieldState(Shooter.State.FUTURE_SMART));
-
-            addBlock(shooter.yieldState(Shooter.State.SMART));
-
-            if (RobotBase.isReal()) {
-                addBlock(new TorqueWaitUntil(() -> !shooter.hasNote()));
-            } else {
-                addBlock(new TorqueWaitTime(1));
-            }
-            log("Auto State", () -> "GOT NOTE");
-
-            addBlock(shooter.yieldState(Shooter.State.AUTO_OFF));
-            addBlock(shooter.yieldGateState(Shooter.GateState.OFF));
-            log("Auto State", () -> "SHOT");
+            this(Shooter.State.FUTURE_SMART);
         }
 
         public Shoot(Shooter.State shooterState) {
             log("Auto State", () -> "SHOOTING");
-
-            // addBlock(shooter.yieldState(Shooter.State.FUTURE_SMART));
 
             addBlock(shooter.yieldState(shooterState));
 
@@ -158,6 +141,7 @@ public class BaseAuto extends TorqueSequence implements Subsystems {
      * provided with a BooleanSupplier yields true.
      */
     public class DeployIntakeWhen extends TorqueSequence {
+
         private Timer timer = new Timer();
         private boolean isCenterLine = true;
 
@@ -190,8 +174,8 @@ public class BaseAuto extends TorqueSequence implements Subsystems {
             addBlock(new TorqueRun(() -> perception.setFutureShootingPose(
                     field.getEndPosition(TorqueFollowPath.getEndingPositionForCurrentlyLoadedPath(), isCenterLine))));
 
-            // addBlock(shooter.yieldState(Shooter.State.FUTURE_SMART));
-            addBlock(shooter.yieldState(Shooter.State.SMART_WARMUP));
+            addBlock(shooter.yieldState(Shooter.State.FUTURE_SMART));
+            // addBlock(shooter.yieldState(Shooter.State.SMART_WARMUP));
 
             addBlock(intake.yieldState(Intake.State.AUTO_PRIME));
         }
@@ -215,13 +199,11 @@ public class BaseAuto extends TorqueSequence implements Subsystems {
                     new DeployIntakeWhen(() -> field.isXPast(perception.getPose(), 5.5) || deployIntakeRightAway)
                             .command());
 
-            addBlock(new TorqueRun(() -> shooter.setAutoAngleOffset(noteSequence.getAutoAngleOffset())));
             addBlock(new TorqueRunSequence(new Shoot()));
         }
     }
 
     private final NoteSequence noteSequence;
-    private boolean shootingAtEndOfAuto = false;
 
     public BaseAuto(final Pose2d initPose) {
         noteSequence = null;
@@ -232,7 +214,6 @@ public class BaseAuto extends TorqueSequence implements Subsystems {
 
     public BaseAuto(final Pose2d initPose, final int... notes) {
         noteSequence = new NoteSequence(notes);
-        Debug.log("Shooting at end of auto", shootingAtEndOfAuto);
 
         addBlock(new TorqueRun(() -> perception.resetPose(field.getAllianceReflectedPose(initPose))));
 
@@ -244,16 +225,6 @@ public class BaseAuto extends TorqueSequence implements Subsystems {
         addBlock(new TorqueRunSequence(new Shoot()));
 
         addBlock(new TorqueWhile(noteSequence::hasNext, new CollectAndShootNote(noteSequence)));
-
-        // addBlock(new TorqueWhile(noteSequence::hasNext, new CollectAndShootNote(noteSequence)),
-        //         new TorqueWaitUntil(() -> {
-        //             if (totalAutoTimer.get() > 14.75) {
-        //                 Debug.log("Shooting at end of auto", shootingAtEndOfAuto);
-        //                 shooter.setGateState(Shooter.GateState.OUT);
-        //                 return true;
-        //             }
-        //             return false;
-        //         }));
     }
 
 }
