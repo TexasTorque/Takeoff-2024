@@ -26,6 +26,8 @@ public final class Ports {
     public static final int HOOK = 21;
 
     public static final int LIGHTS_SUPERSTRUCTURE = 0;
+    public static final int LIGHTS_CLIMBER_LEFT = 1;
+    public static final int LIGHTS_CLIMBER_RIGHT = 2;
 
     public static final int SHOOTER_NOTE_SENSOR = 0;
 }

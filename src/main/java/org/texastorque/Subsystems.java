@@ -11,6 +11,3 @@ public interface Subsystems {
     public final Lights lights = Lights.getInstance();
     public final Climber climber = Climber.getInstance();
 }
-//4200 112
-// 4400 126
-//4600 132

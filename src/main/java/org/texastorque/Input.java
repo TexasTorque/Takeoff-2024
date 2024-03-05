@@ -71,6 +71,7 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
         climbRightDown = new TorqueBoolSupplier(driver::isRightBumperDown);
 
         trap = new TorqueBoolSupplier(() -> operator.isRightCenterButtonDown() && !operator.isLeftCenterButtonDown());
+
         shooterClimbMode = new TorqueToggleSupplier(operator::isDPADLeftDown);
 
         debugMode = new TorqueToggleSupplier(

@@ -6,6 +6,8 @@
  */
 package org.texastorque.subsystems;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.Supplier;
 import org.texastorque.Ports;
 import org.texastorque.Subsystems;
@@ -80,7 +82,7 @@ public final class Lights extends TorqueStatelessSubsystem implements Subsystems
         return instance == null ? instance = new Lights() : instance;
     }
 
-    private final AddressableLED shooterLEDs;
+    private final List<AddressableLED> lights;
 
     private final AddressableLEDBuffer buff;
 
@@ -91,20 +93,41 @@ public final class Lights extends TorqueStatelessSubsystem implements Subsystems
             blinkYellow = new Blink(() -> Color.kYellow, 6), white = new Solid(() -> Color.kWhite);
 
     private Lights() {
-        shooterLEDs = new AddressableLED(Ports.LIGHTS_SUPERSTRUCTURE);
-        shooterLEDs.setLength(LENGTH);
-
+        lights = new ArrayList<>();
         buff = new AddressableLEDBuffer(LENGTH);
 
-        for (int i = 0; i < buff.getLength(); i++)
-            buff.setLED(i, Color.kGreen);
+        createStrips(
+            Ports.LIGHTS_SUPERSTRUCTURE,
+            Ports.LIGHTS_CLIMBER_LEFT,
+            Ports.LIGHTS_CLIMBER_RIGHT
+        );
+    }
 
-        shooterLEDs.setData(buff);
+    private void createStrips(int... ports) {
+        for (int i = 0; i < buff.getLength(); i++) {
+            buff.setLED(i, Color.kGreen);
+        }
+
+        for (int port : ports) {
+            final AddressableLED strip = new AddressableLED(port);
+            strip.setLength(LENGTH);
+            lights.add(strip);
+        }
+
+        setData(buff);
+    }
+
+    private void setData(final AddressableLEDBuffer buff) {
+        for (final AddressableLED strip : lights) {
+            strip.setData(buff);
+        }
     }
 
     @Override
     public final void initialize(final TorqueMode mode) {
-        shooterLEDs.start();
+        for (final AddressableLED strip : lights) {
+            strip.start();
+        }
     }
 
     public final LightAction getColor(final TorqueMode mode) {
@@ -128,7 +151,7 @@ public final class Lights extends TorqueStatelessSubsystem implements Subsystems
     @Override
     public final void update(final TorqueMode mode) {
         getColor(mode).run(buff);
-        shooterLEDs.setData(buff);
+        setData(buff);
     }
 
     @Override
