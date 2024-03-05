@@ -45,7 +45,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         INTAKE_REV(new Shot(-2500, ROTARY_OFF_POSITION), false),
         INTAKE(new Shot(-2500, 184), false),
         BABYBIRD(new Shot(-2500, 70), false),
-        AMP(new Shot(1400, 50.1), true),
+        AMP(new Shot(1300, 46), true),
         LAYUP(new Shot(4200, 50), new Shot(4200, 112), true),
         MID(new Shot(4400, 32), new Shot(4400, 126), true),
         SAFEZONE(new Shot(4600, 28), new Shot(4300, 134), true),
@@ -89,8 +89,6 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
     }
 
     private static final double FLYWHEEL_TOLERANCE = 120, ROTARY_TOLERANCE = 1, AUTO_ROTARY_TOLERANCE = 2.5;
-
-    // private final double MAX_ANGLE = 5;
 
     private final TorqueNEO rotary, flywheelTop, flywheelBottom, gate;
 
@@ -195,7 +193,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
 
         SmartDashboard.putNumber("Shot Velocity", 0);
         SmartDashboard.putNumber("Shot Angle", 0);
-
+        SmartDashboard.putNumber("Rotary Max Volts", 8);
     }
 
     @Override
@@ -404,16 +402,13 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
             shootingWarmupTimer.restart();
         }
 
-        rotary.setVolts(TorqueMath.constrain(rotaryPID.calculate(getRotaryEncoder(), shot.angle),
-                (wantsState(State.AMP) || (wantsState(State.INTAKE) && getRotaryEncoder() > 140)) ? 3 : 8)); 
+        double rotaryMaxVolts = wantsState(State.AMP)|| (wantsState(State.INTAKE) && getRotaryEncoder() > 140) ? 3 : 8;
+
+        if (debugMode) rotaryMaxVolts = SmartDashboard.getNumber("Rotary Max Volts", 8);
+
+        rotary.setVolts(TorqueMath.constrain(rotaryPID.calculate(getRotaryEncoder(), shot.angle), rotaryMaxVolts)); 
 
         Debug.log("Shooter Gate State", gateState.toString());
-
-        Debug.log("Auto Hail Mary", mode.isAuto() && autoHailMaryTimer.get() >= 14.5);
-
-        // if (mode.isAuto() && autoHailMaryTimer.get() >= 14.5 && field.isXPast(perception.getPose(), 5.5)) { use this for 15!
-        //     gateState = GateState.OUT;
-        // }
 
         gate.setVolts(gateState.voltage);
 

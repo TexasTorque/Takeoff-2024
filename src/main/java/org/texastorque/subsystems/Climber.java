@@ -8,8 +8,6 @@ import org.texastorque.torquelib.base.TorqueState;
 import org.texastorque.torquelib.base.TorqueStatorSubsystem;
 import org.texastorque.torquelib.motors.TorqueNEO;
 import org.texastorque.torquelib.util.TorqueMath;
-
-import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 public class Climber extends TorqueStatorSubsystem<Climber.State> implements Subsystems {
@@ -17,8 +15,7 @@ public class Climber extends TorqueStatorSubsystem<Climber.State> implements Sub
 
     private static final double CLIMB_VOLTS = 12;
     private static final double TRAP_VOLTS = 1;
-    // private static final double TRAP_POSITION = 0;
-    private static final double TRAP_TOLERANCE = .3;
+
 
     private final TorqueNEO left, right;
     private final TorqueNEO hook;
@@ -59,21 +56,19 @@ public class Climber extends TorqueStatorSubsystem<Climber.State> implements Sub
         }
     }
 
-    private PIDController hookPID;
-
     protected Climber() {
         super(State.OFF);
 
         left = new TorqueNEO(Ports.CLIMBER_LEFT);
         left.setVoltageCompensation(12.6);
-        left.setCurrentLimit(25);
+        left.setCurrentLimit(80);
         left.setBreakMode(true);
         left.invertMotor(false);
         left.burnFlash();
 
         right = new TorqueNEO(Ports.CLIMBER_RIGHT);
         right.setVoltageCompensation(12.6);
-        right.setCurrentLimit(25);
+        right.setCurrentLimit(80);
         right.setBreakMode(true);
         right.invertMotor(true);
         right.burnFlash();
@@ -84,8 +79,6 @@ public class Climber extends TorqueStatorSubsystem<Climber.State> implements Sub
         hook.setBreakMode(true);
         hook.invertMotor(true);
         hook.burnFlash();
-
-        hookPID = new PIDController(1, 0, 0);
 
         SmartDashboard.putNumber("Hook P", 1);
         SmartDashboard.putNumber("Hook I", 1);
