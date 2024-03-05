@@ -161,14 +161,6 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
 
         climbUp.onTrue(() -> climber.setState(Climber.State.UP));
         climbDown.onTrue(() -> climber.setState(Climber.State.DOWN));
-
-        tareClimber.onTrue(() -> climber.tareClimber());
-
-        if (driver.isDPADLeftDown()) {
-            climber.setHookState(Climber.HookState.OUT);
-        } else if (driver.isDPADRightDown()) {
-            climber.setHookState(Climber.HookState.IN);
-        }
     }
 
     public void updateRumble() {

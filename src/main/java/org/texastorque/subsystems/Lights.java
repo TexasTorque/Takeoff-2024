@@ -133,8 +133,6 @@ public final class Lights extends TorqueStatelessSubsystem implements Subsystems
     public final LightAction getColor(final TorqueMode mode) {
         if (perception.seesTags() && shooter.hasNote())
             return shooter.isShift() ? purple : blinkGreen;
-        else if (climber.isReady())
-            return rainbow;
         else if (shooter.wantsState(Shooter.State.CLIMB))
             return white;
         else if (shooter.hasNote())

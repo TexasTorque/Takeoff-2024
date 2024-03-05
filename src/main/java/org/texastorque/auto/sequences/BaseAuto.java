@@ -8,7 +8,6 @@ import org.texastorque.Subsystems;
 import org.texastorque.auto.AutoManager;
 import org.texastorque.subsystems.*;
 import org.texastorque.subsystems.Shooter.GateState;
-import org.texastorque.torquelib.Debug;
 import org.texastorque.torquelib.auto.TorqueSequence;
 import org.texastorque.torquelib.auto.commands.TorqueFollowPath;
 import org.texastorque.torquelib.auto.commands.TorqueRun;
