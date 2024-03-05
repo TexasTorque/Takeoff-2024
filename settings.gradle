@@ -26,5 +26,11 @@ pluginManagement {
     }
 }
 
+
 Properties props = System.getProperties();
 props.setProperty("org.gradle.internal.native.headers.unresolved.dependencies.ignore", "true");
+// These numbers are arbitrary but any reasonable computer to handle 
+props.setProperty("org.gradle.jvmargs", "-Xmx4096m -XX:MaxPermSize=2048m -XX:+HeapDumpOnOutOfMemoryError")
+props.setProperty("org.gradle.deamon", "true")
+props.setProperty("org.gradle.parallel", "true")
+props.setProperty("org.gradle.configureondemand", "true")
