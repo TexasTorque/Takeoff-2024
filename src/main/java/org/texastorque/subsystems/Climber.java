@@ -55,7 +55,7 @@ public class Climber extends TorqueStatorSubsystem<Climber.State> implements Sub
 
     @Override
     public void update(TorqueMode mode) {
-        if (!shooter.wantsToClimb() && !shooter.inDebugMode() && !shooter.wantsState(Shooter.State.AMP)) {
+        if (!shooter.wantsToClimb() && !shooter.inDebugMode()) {
             desiredState = State.OFF;
         }
 

@@ -25,7 +25,7 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
             runDumbIntake, runOuttake, speakerSmartShot, speakerLayup, speakerSafeZone, amp, trap,
             deaccelerateClick, deaccelerateHold, manualGateOut, manualGateIn, babyBird, debugMode, speakerMid,
             shooterIdle, shooterShift, climbUp, climbDown, climbLeftUp, climbRightUp, climbLeftDown, climbRightDown,
-            shooterClimbMode, laser, tareClimber;
+            shooterClimbMode, laser;
 
     private Input() {
         driver = new TorqueController(0, 0.1);
@@ -76,8 +76,6 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
 
         debugMode = new TorqueToggleSupplier(
                 () -> operator.isLeftCenterButtonDown() && operator.isRightCenterButtonDown());
-
-        tareClimber = new TorqueClickSupplier(driver::isLeftCenterButtonDown);
     }
 
     @Override
@@ -150,7 +148,7 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
         final double rotationVelocity = TorqueMath.scaledLinearDeadband(driver.getRightXAxis(), CONTROLLER_DEADBAND)
                 * Drivebase.MAX_ANGULAR_VELOCITY;
 
-        drivebase.setInputSpeedsTeleop(new TorqueSwerveSpeeds(xVelocity, yVelocity, rotationVelocity));
+        drivebase.setInputSpeeds(new TorqueSwerveSpeeds(xVelocity, yVelocity, rotationVelocity));
     }
 
     public void updateClimber() {

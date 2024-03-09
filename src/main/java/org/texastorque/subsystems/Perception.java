@@ -1,3 +1,9 @@
+/**
+ * Copyright 2023 Texas Torque.
+ *
+ * This file is part of Bravo/Charlie/Takeoff-2024, which is not licensed for distribution.
+ * For more details, see ./license.txt or write <jus@justusl.com>.
+ */
 package org.texastorque.subsystems;
 
 import java.util.HashMap;
@@ -21,6 +27,7 @@ import org.texastorque.torquelib.base.TorqueState;
 import org.texastorque.torquelib.base.TorqueStatorSubsystem;
 import org.texastorque.torquelib.control.TorqueRollingMedian;
 import org.texastorque.torquelib.sensors.TorqueNavXGyro;
+import org.texastorque.torquelib.swerve.TorqueSwerveSpeeds;
 import com.fasterxml.jackson.databind.JsonNode;
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.math.VecBuilder;
@@ -39,7 +46,6 @@ import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 /**
  * Robot perception subsystem, handles sensors that the robot uses
  * to contextualize it's surroundings.
- * 
  * 
  * Other perception subsystems are below for reference:
  * -
@@ -78,19 +84,25 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
      */
     private static final double MAX_ANGULAR_VELOCITY_RADS = Math.PI * 2, MAX_DISTANCE = 6;
 
+    // Toast handles camera interfacing, poseEstimator is used to aggregate
+    // pose estimations and find a true pose estimate
     private final Toast toast;
     private final SwerveDrivePoseEstimator poseEstimator;
 
-    private final TorqueNavXGyro gyro = TorqueNavXGyro.getInstance();
+    private final TorqueNavXGyro gyro = TorqueNavXGyro.getInstance(); 
     public final Field2d field2d = new Field2d();
-    private final TorqueRollingMedian filteredX, filteredY;
-    private final AprilTagFieldLayout fieldMap;
 
+    private final AprilTagFieldLayout fieldMap; // local instance of the field layout 
+
+    // Used to filter some noise directly out of the pose measurements.
+    private final TorqueRollingMedian filteredX, filteredY;
     private double filteredPoseX = 0;
     private double filteredPoseY = 0;
-    private boolean seesTags = false;
 
-    private Pose2d futureShootingPose = new Pose2d();
+
+    // a position that we could be at in the future that we want to
+    // run computations for.
+    private Pose2d futureShootingPose = new Pose2d(); 
 
     public Perception() {
         super(State.VISION);
@@ -108,7 +120,6 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
         toast.addCamera(new Camera("SHTR_L",
                 Camera.transformInchDeg(-5.0, -12.54, 14.181, 0, 35, 180)));
         toast.addCamera(new Camera("INTK_R", new Transform3d()));
-        toast.addCamera(new Camera("INTK_L", new Transform3d()));
 
         // Register the apriltags pipeline on all cameras
         toast.iterCams(cam -> cam.addPipeline(new AprilTags(cam.id)));
@@ -116,7 +127,6 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
         // Register the object detection pipelines on intake cameras and configure them
         // to detect notes
         toast.getCamera("INTK_R").get().addPipeline(new ObjDetector<Note>(Note::fromJSONRight));
-        toast.getCamera("INTK_L").get().addPipeline(new ObjDetector<Note>(Note::fromJSONLeft));
 
         // Log the field map to the dashboard
         Debug.field("Field", field2d);
@@ -133,40 +143,50 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
 
     @Override
     public void update(final TorqueMode mode) {
-        field.updateAlliance();
+        field.updateAlliance(); // running this every single loop is horrible practice but wtv
+
+        // Update the various perception pipelines. 
         updateOdometryLocalization();
         updateVisionLocalization();
+        updateObjectDetection();
 
+        // *** SMARTDASH BOARD LOGS *** 
+        Debug.log("Is X Past", field.isXPast(getPose(), 4));
         Debug.log("gyro yaw", gyro.getFusedHeading());
         Debug.log("gyro pitch", gyro.getPitch());
         Debug.log("gyro roll", gyro.getRoll());
 
+        Debug.log("Pose", Util.pose2d2str(poseEstimator.getEstimatedPosition()));
+        Debug.log("Filtered Pose", Util.pose2d2str(getFilteredPose()));
+        Debug.log("Heading (°)", getHeading().getDegrees());
+        Debug.log("Angle To Speaker (°)", getAngleToSpeaker().getDegrees());
+
+        // Update the field map
         field2d.setRobotPose(getFilteredPose());
         if (!Robot.isReal() && shooter.wantsState(Shooter.State.SMART) && mode.isAuto()) {
             field2d.setRobotPose(new Pose2d(getPose().getTranslation(), getAngleToSpeaker()));
         }
 
-        Debug.log("Pose", Util.pose2d2str(poseEstimator.getEstimatedPosition()));
-        Debug.log("Filtered Pose", Util.pose2d2str(getFilteredPose()));
-        Debug.log("Heading (°)", getHeading().getDegrees());
-
-        Debug.log("Angle To Speaker (°)", getAngleToSpeaker().getDegrees());
-
+        // Log the pose of the speaker using AdvantageScope
         Logger.recordOutput("Perception/SpeakerPose", new Pose2d[] {
-                field.SPEAKER_POSE_ANGLE_RIGHT });
+                field.speakerPoseAngleRight });
 
+        // Run rolling median filter aggregation
         filteredPoseX = filteredX.calculate(getPose().getX());
         filteredPoseY = filteredY.calculate(getPose().getY());
     }
 
+    /** Updates the pose estimator with swerve encoder feedback */
     public void updateOdometryLocalization() {
-        // Updates the pose estimator with swerve encoder feedback
-
         poseEstimator.update(getHeading(), drivebase.getModulePositions());
     }
 
+    // A map of all tags that are in view on this current update. Cleared between updates.
     private final Map<Integer, Pose3d> tagsInView = new HashMap<>();
 
+    private boolean seesTags = false; // do we or do we not see any apriltags
+
+    /** Update vision pipeline */
     public void updateVisionLocalization() {
         toast.update(); // Updates all the vision pipelines.
 
@@ -241,6 +261,12 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
         Logger.recordOutput("Perception/TagPoses", tagsInView.values().toArray(new Pose3d[tagsInView.values().size()]));
     }
 
+    /** Run the object detection pipeline */
+    public void updateObjectDetection() {
+        final Note note = getBestDetection().isPresent() ? getBestDetection().get() : Note.EMPTY;
+        Debug.log("Best Detection", note.toString());
+    }
+
     /**
      * Gyro heading (yaw, CCW around the Z-axis) as a Rotation2d.
      */
@@ -248,6 +274,7 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
         return gyro.getHeadingCCW();
     }
 
+    /** Getter for checking if we do or do we not see any apriltags. Helpful for driver feedback. */
     public boolean seesTags() {
         return seesTags;
     }
@@ -260,21 +287,41 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
         return gyro.getAngularVelocity();
     }
 
+    /** Construct and return a pose estimation using our rolling median filter */
     public Pose2d getFilteredPose() {
         return new Pose2d(filteredPoseX, filteredPoseY, getHeading());
     }
 
+    /** Calculate an est. angle from robot to speaker using the filtered pose */
     public Rotation2d getFilteredAngleToSpeaker() {
         return field.getAngleToSpeaker(getFilteredPose());
     }
 
+    // Coeficient for motion adjusted shooting
+    public static final double VELO_ADJ_K = 0.25;
+
+    /** Calculates a robot angle to speaker but tries to adjusts for motion (very primative impl) */
+    public Rotation2d getMotionAdjustedAngleToSpeaker() {
+        final TorqueSwerveSpeeds speeds = TorqueSwerveSpeeds.fromChassisSpeeds(drivebase.getChassisSpeeds());
+
+        final Pose2d currentPose = getFilteredPose();
+
+        final Pose2d adjustedPose = new Pose2d(
+            currentPose.getX() + speeds.vxMetersPerSecond * VELO_ADJ_K,
+            currentPose.getY() + speeds.vyMetersPerSecond * VELO_ADJ_K,
+            currentPose.getRotation()
+        );
+
+        return field.getAngleToSpeaker(adjustedPose);
+    }
+
+    /** Construct an angle to the speaker for the future pose */
     public Rotation2d getFutureAngleToSpeaker() {
         return field.getAngleToSpeaker(futureShootingPose);
     }
 
-    public double getGyroPitch() {
-        return gyro.getPitch();
-    }
+    /** Get gyro pitch, possible dead code */
+    public double getGyroPitch() { return gyro.getPitch(); }
 
     /**
      * Tare the gyro, make the current heading "north" (0° yaw) and reset the pose.
@@ -284,14 +331,17 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
         setPose(new Pose2d(0, 0, getHeading()));
     }
 
+    /** Reset the gyro angle to 0 */
     public void resetGyro() {
         gyro.setOffsetCW(Rotation2d.fromRadians(0));
     }
 
+    /** Reset the gyro to a given angle */
     public void resetGyro(final Rotation2d offset) {
         gyro.setOffsetCW(offset);
     }
 
+    /** Set the future pose that we use for state suspended calculations */
     public void setFutureShootingPose(final Pose2d pose) {
         futureShootingPose = pose;
     }
@@ -303,6 +353,7 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
         return poseEstimator.getEstimatedPosition();
     }
 
+    /** Supply the pose of the robot */
     public Supplier<Pose2d> supplyPose() {
         return () -> getPose();
     }
@@ -315,13 +366,16 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
     }
 
     /**
-     * Reset the position in the pose estimator to be at the origin..
+     * Reset the position in the pose estimator to be at the origin.
      */
     public void resetPose() {
         setPose(new Pose2d());
     }
 
-    public void resetPose(Pose2d pose) {
+    /**   
+     * Reset the position in the pose estimator to be at a given position.
+     */
+    public void resetPose(final Pose2d pose) {
         setPose(pose);
     }
 
@@ -337,8 +391,8 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
      */
     public double getDistanceToSpeaker() {
         return Math.sqrt(
-                Math.pow(field.SPEAKER_POSE_DISTANCE.getY() - getPose().getY(), 2)
-                        + Math.pow(field.SPEAKER_POSE_DISTANCE.getX() - getPose().getX(), 2));
+                Math.pow(field.speakerPoseDistance.getY() - getPose().getY(), 2)
+                        + Math.pow(field.speakerPoseDistance.getX() - getPose().getX(), 2));
     }
 
     /**
@@ -346,8 +400,8 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
      */
     public double getFutureDistanceToSpeaker() {
         return Math.sqrt(
-                Math.pow(field.SPEAKER_POSE_DISTANCE.getY() - futureShootingPose.getY(), 2)
-                        + Math.pow(field.SPEAKER_POSE_DISTANCE.getX() - futureShootingPose.getX(), 2));
+                Math.pow(field.speakerPoseDistance.getY() - futureShootingPose.getY(), 2)
+                        + Math.pow(field.speakerPoseDistance.getX() - futureShootingPose.getX(), 2));
     }
 
     private static volatile Perception instance;
@@ -356,14 +410,15 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
         return instance == null ? instance = new Perception() : instance;
     }
 
+    /** Grab note detections from the TOAST pipeline */
+    @SuppressWarnings("unchecked") // there is an unchecked cast.
     public List<Note> getNoteDetections() {
-        final List<Note> detRight = toast.getCamera("INKT_R").get().getPipeline(ObjDetector.class).get()
+        final List<Note> detRight = toast.getCamera("INTK_R").get().getPipeline(ObjDetector.class).get()
                 .getDetections();
-        final List<Note> detLeft = toast.getCamera("INKT_L").get().getPipeline(ObjDetector.class).get().getDetections();
-        detRight.addAll(detLeft);
         return detRight;
     }
 
+    /** Get the best detection of the notes. */
     public Optional<Note> getBestDetection() {
         return ObjDetector.getBestDetection(getNoteDetections());
     }
@@ -372,7 +427,6 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
      * Class representing a Note detected by an ObjDetector pipeline.
      */
     public static class Note extends Detectable {
-
         public static final Note EMPTY = new Note("empty", 0, 0, 0);
 
         public static final double F = 70, W = 640, D = 100;
@@ -398,11 +452,11 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
             return new Note(parsed.name, parsed.x, angle, parsed.confidence);
         }
 
-        public static Note fromJSONLeft(final JsonNode det) {
-            final Note parsed = parseJSON(det);
-            final double angle = calculateAngle(parsed.x);
-            return new Note(parsed.name, parsed.x, angle, parsed.confidence);
-        }
+        // public static Note fromJSONLeft(final JsonNode det) {
+        // final Note parsed = parseJSON(det);
+        // final double angle = calculateAngle(parsed.x);
+        // return new Note(parsed.name, parsed.x, angle, parsed.confidence);
+        // }
 
         public Note(final String name, final double x, final double angle, final double confidence) {
             this.name = name;

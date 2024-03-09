@@ -1,3 +1,9 @@
+/**
+ * Copyright 2023 Texas Torque.
+ *
+ * This file is part of Bravo/Charlie/Takeoff-2024, which is not licensed for distribution. For more details, see
+ * ./license.txt or write <jus@justusl.com>.
+ */
 package org.texastorque.subsystems;
 
 import org.texastorque.Input;
@@ -11,6 +17,9 @@ import org.texastorque.torquelib.motors.TorqueNEO;
 
 import edu.wpi.first.math.controller.PIDController;
 
+/**
+ * Intake subsystem: intake rotary and rollers.
+ */
 public class Intake extends TorqueStatorSubsystem<Intake.State> implements Subsystems {
     private static volatile Intake instance;
 
@@ -30,9 +39,7 @@ public class Intake extends TorqueStatorSubsystem<Intake.State> implements Subsy
     }
 
     private static final double ROTARY_TOLERANCE = 4;
-
     private final TorqueNEO rotaryLeft, rotaryRight, rollers;
-
     private final PIDController rotaryLeftPID, rotaryRightPID;
 
     public Intake() {
@@ -77,22 +84,25 @@ public class Intake extends TorqueStatorSubsystem<Intake.State> implements Subsy
 
     @Override
     public void update(final TorqueMode mode) {
+        // *** LOG TO SMARTDASHBOARD *** 
         Debug.log("Intake State", desiredState.toString());
         Debug.log("Intake Rotary Right", rotaryRight.getPosition());
         Debug.log("Intake Rotary Left", rotaryLeft.getPosition());
         Debug.log("Rotary Down Enough", isAtState());
 
+        // If we want to intake but the shooter has a note now we need to
+        // alert the drivers via a rumble and leave intaking...
         if (wantsState(State.SMART_INTAKE) && shooter.hasNote()) {
             Input.getInstance().setRumbleFor(.2);
 
+            // ... however we need to wait to make sure the shooter is out
+            // of the way before we come up.
             if (shooter.isRotaryAtState())
                 desiredState = mode.isAuto() ? State.AUTO_PRIME : State.OFF;
 
         } else if (!isIntaking() && !isOutaking() && shooter.isShift()) {
-            desiredState = State.PRIME;
-        } else if (shooter.wantsState(Shooter.State.CLIMB) || shooter.wantsState(Shooter.State.TRAP)) {
-            desiredState = State.OUT;
-        }
+            desiredState = State.PRIME; // we go into prime if we are in shift state
+        } 
 
         rollers.setVolts(desiredState.rollerSpeed);
 
@@ -101,7 +111,8 @@ public class Intake extends TorqueStatorSubsystem<Intake.State> implements Subsy
         rotaryRight.setVolts(rotaryRightPID.calculate(rotaryRight.getPosition(),
                 desiredState.rotaryPosition));
 
-        // rotaryLeft.setVolts(6); if intake breaks, comment ^ out and comment this in.
+        // If intake rotary breaks, comment ^ above rotary statements out and comment below in.
+        // rotaryLeft.setVolts(6); 
         // rotaryRight.setVolts(6);
     }
 
@@ -112,10 +123,12 @@ public class Intake extends TorqueStatorSubsystem<Intake.State> implements Subsy
         }
     }
 
+    /** Are we intaking? */
     public boolean isIntaking() {
         return wantsState(State.INTAKE) || wantsState(State.SMART_INTAKE);
     }
 
+    /** Are we outtaking? */
     public boolean isOutaking() {
         return wantsState(State.OUTTAKE);
     }

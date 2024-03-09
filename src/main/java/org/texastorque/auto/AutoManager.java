@@ -1,15 +1,26 @@
+/**
+ * Copyright 2023 Texas Torque.
+ *
+ * This file is part of Bravo/Charlie/Takeoff-2024, which is not licensed for distribution.
+ * For more details, see ./license.txt or write <jus@justusl.com>.
+ */
 package org.texastorque.auto;
 
 import org.texastorque.Subsystems;
 import org.texastorque.auto.sequences.BaseAuto;
-import org.texastorque.auto.sequences.Line;
+import org.texastorque.auto.sequences.Dash;
 import org.texastorque.torquelib.auto.*;
 import com.pathplanner.lib.path.PathPlannerPath;
 import edu.wpi.first.math.geometry.Pose2d;
 
+/** Manage the auto loader and selections */
 public final class AutoManager extends TorqueAutoManager implements Subsystems {
     private static volatile AutoManager instance;
 
+    /**
+     * Preload all the paths so that we dont make expensive reasource loader calls when
+     * the auto is suposed to be going fast!
+     */
     @Override
     public final void loadPaths() {
         pathLoader.preloadPath("go_0_to_2");
@@ -35,10 +46,17 @@ public final class AutoManager extends TorqueAutoManager implements Subsystems {
         pathLoader.preloadPath("line");
     }
 
+    /** 
+     * Get a preloaded path... the current path strategy is EXPLICITLY UNSAFE...
+     * ...if a path is called that is not loaded above then the program WILL FAIL!
+     * 
+     * Helpful for debugging, but not for production!!!!
+     */
     public final PathPlannerPath getPath(final String pathName) {
         return pathLoader.getPathUnsafe(pathName);
     }
 
+    /** Load all the permutations of auto sequences we want to run */
     @Override
     public final void loadSequences() {
         addSequence("0", new BaseAuto(new Pose2d(1.42, 6.35, perception.getHeading())));
@@ -60,7 +78,7 @@ public final class AutoManager extends TorqueAutoManager implements Subsystems {
 
         // addSequence("50 to 40 to 30", new BaseAuto(50, 40, 30));
 
-        // addSequence(new Line());
+        addSequence("DASH to 10 to 20", new Dash(10, 20));
     }
 
     public static final synchronized AutoManager getInstance() {
