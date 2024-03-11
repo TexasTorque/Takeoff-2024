@@ -65,10 +65,10 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
         climbDown = new TorqueBoolSupplier(
                 () -> driver.isDPADDownDown() || (driver.isRightTriggerDown() && driver.isLeftTriggerDown()));
 
-        climbLeftUp = new TorqueBoolSupplier(driver::isLeftTriggerDown);
-        climbLeftDown = new TorqueBoolSupplier(driver::isLeftBumperDown);
-        climbRightUp = new TorqueBoolSupplier(driver::isRightTriggerDown);
-        climbRightDown = new TorqueBoolSupplier(driver::isRightBumperDown);
+        climbLeftUp = new TorqueBoolSupplier(driver::isLeftBumperDown);
+        climbLeftDown = new TorqueBoolSupplier(driver::isLeftTriggerDown);
+        climbRightUp = new TorqueBoolSupplier(driver::isRightBumperDown);
+        climbRightDown = new TorqueBoolSupplier(driver::isRightTriggerDown);
 
         trap = new TorqueBoolSupplier(() -> operator.isRightCenterButtonDown() && !operator.isLeftCenterButtonDown());
 

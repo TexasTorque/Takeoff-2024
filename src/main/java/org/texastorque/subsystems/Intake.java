@@ -102,7 +102,9 @@ public class Intake extends TorqueStatorSubsystem<Intake.State> implements Subsy
 
         } else if (!isIntaking() && !isOutaking() && shooter.isShift()) {
             desiredState = State.PRIME; // we go into prime if we are in shift state
-        } 
+        } else if (shooter.wantsState(Shooter.State.CLIMB) || shooter.wantsState(Shooter.State.TRAP)) {
+            desiredState = State.OUT;
+        }
 
         rollers.setVolts(desiredState.rollerSpeed);
 

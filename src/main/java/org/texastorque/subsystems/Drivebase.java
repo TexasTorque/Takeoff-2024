@@ -29,13 +29,14 @@ import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.Timer;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 /**
  * Swerve drivebase subsystem.
  */
 public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
         implements Subsystems, TorquePathingDrivebase {
-    
+
     public static enum State implements TorqueState {
         FIELD_RELATIVE(null),
         ROBOT_RELATIVE(null),
@@ -53,7 +54,8 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
     }
 
     /**
-     * Enum for shifting drivebase speeds, like a transmition. However the benefit is 
+     * Enum for shifting drivebase speeds, like a transmition. However the benefit
+     * is
      * not through increase torque but rather increase controlability.
      */
     public enum SpeedSetting {
@@ -61,6 +63,7 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
 
         private static final SpeedSetting[] vals = values();
         public double speed;
+
         private SpeedSetting(final double speed) {
             this.speed = speed;
         }
@@ -68,6 +71,7 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
         public SpeedSetting shiftUp() {
             return vals[Math.min((this.ordinal() + 1), vals.length - 2)];
         }
+
         public SpeedSetting shiftDown() {
             return vals[Math.max((this.ordinal() - 1), 0)];
         }
@@ -98,18 +102,17 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
 
     private static volatile Drivebase instance;
 
-
     public static final double WIDTH = Units.inchesToMeters(21.25), // distance between swerve axis
-            MAX_VELOCITY = SwerveConfig.WHEEL_FREE_SPEED,   // maximum translational velocity of the swerve (m/s)
-            MAX_ACCELERATION = 5,                           // maximum translation acceleration of the swerver (m/s^2)
-            MAX_ANGULAR_VELOCITY = 2 * Math.PI;             // maximum rotation velocity of the swerve (rad/s)
+            MAX_VELOCITY = SwerveConfig.WHEEL_FREE_SPEED, // maximum translational velocity of the swerve (m/s)
+            MAX_ACCELERATION = 5, // maximum translation acceleration of the swerver (m/s^2)
+            MAX_ANGULAR_VELOCITY = 2 * Math.PI; // maximum rotation velocity of the swerve (rad/s)
 
     public static synchronized final Drivebase getInstance() {
         return instance == null ? instance = new Drivebase() : instance;
     }
 
     /**
-     * Represents x and y translations between the center of the robot 
+     * Represents x and y translations between the center of the robot
      * and the rotational axis of each swerve module.
      */
     private final Translation2d LOC_FL = new Translation2d(WIDTH / 2, WIDTH / 2),
@@ -117,20 +120,19 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
             LOC_BL = new Translation2d(-WIDTH / 2, WIDTH / 2),
             LOC_BR = new Translation2d(-WIDTH / 2, -WIDTH / 2);
 
-
     private final TorqueSwerveModule2022 fl, fr, bl, br;
 
+    public TorqueSwerveSpeeds inputSpeeds; // swerve velocity vector
+    public final SwerveDriveKinematics kinematics; // used to transform swerve velo vector to module vectors
+    private SwerveModuleState[] swerveStates; // used to store the req. swerve module vectors
 
-    public TorqueSwerveSpeeds inputSpeeds;          // swerve velocity vector 
-    public final SwerveDriveKinematics kinematics;  // used to transform swerve velo vector to module vectors
-    private SwerveModuleState[] swerveStates;       // used to store the req. swerve module vectors
-
-    // Store speed setting state and an instance of the speed sequence class for gradual slowing.
+    // Store speed setting state and an instance of the speed sequence class for
+    // gradual slowing.
     public SpeedSetting speedSetting = SpeedSetting.FAST;
     public SpeedSequence speedSequence = new SpeedSequence(speedSetting, speedSetting, -1);
 
     // Alginment PID controller used for aligning the drivebase to a target angle.
-    // The loopsThatDB is aligned field is used to count the number of consecutive 
+    // The loopsThatDB is aligned field is used to count the number of consecutive
     // update iterations that the drivebase has been aligned to the target angle.
     private final PIDController alignPID;
     private double loopsThatDBIsAligned = 0;
@@ -138,7 +140,7 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
     private Drivebase() {
         super(State.FIELD_RELATIVE);
 
-        // These are using the swerve-x config. 
+        // These are using the swerve-x config.
         final SwerveConfig swerveConfig = SwerveConfig.swervex;
 
         fl = new TorqueSwerveModule2022("Front Left", Ports.FL_MOD, swerveConfig, .2);
@@ -152,8 +154,10 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
         for (int i = 0; i < swerveStates.length; i++)
             swerveStates[i] = new SwerveModuleState();
 
-        alignPID = new PIDController(.1, 0, 0);
+        alignPID = new PIDController(.075, 0, 0);
         alignPID.enableContinuousInput(0, 360);
+
+        SmartDashboard.putNumber("Align PID P", .05);
     }
 
     @Override
@@ -171,15 +175,22 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
         });
     }
 
+    public SwerveModulePosition invertSwerveModuleDistance(SwerveModulePosition position) {
+        return new SwerveModulePosition(-position.distanceMeters, position.angle);
+    }
+
     /** Get aggregate module positions for feedback. */
     public SwerveModulePosition[] getModulePositions() {
         return new SwerveModulePosition[] {
-                fl.getPosition(), fr.getPosition(),
-                bl.getPosition(), br.getPosition()
+                invertSwerveModuleDistance(fl.getPosition()), invertSwerveModuleDistance(fr.getPosition()),
+                invertSwerveModuleDistance(bl.getPosition()), invertSwerveModuleDistance(br.getPosition())
         };
     }
 
-    /** An alignment target supplier, used to provide the align target during ALIGN_STATE */
+    /**
+     * An alignment target supplier, used to provide the align target during
+     * ALIGN_STATE
+     */
     private Supplier<Rotation2d> alignTarget = () -> Rotation2d.fromDegrees(0);
 
     /** Set alignment target w/ a constant rotation */
@@ -187,7 +198,10 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
         alignTarget = () -> target;
     }
 
-    /** Set alignment target w/ a constant rotation relative to the current drivebase angle */
+    /**
+     * Set alignment target w/ a constant rotation relative to the current drivebase
+     * angle
+     */
     public void setAlignTargetRelative(final Rotation2d target) {
         alignTarget = () -> target.plus(perception.getHeading());
     }
@@ -207,25 +221,25 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
         return TorqueMath.toleranced(perception.getHeading().getDegrees(), getAlignTarget(), 2);
     }
 
-    /** 
+    /**
      * Check that the drivebase has been aligned for some acceptable ammount
      * of update iterations
      */
     public boolean hasBeenAligned() {
-        return loopsThatDBIsAligned > Shooter.loopsOK();
+        return loopsThatDBIsAligned > 3;
     }
 
     @Override
     public final void update(final TorqueMode mode) {
-        // *** LOG SOME STUFF TO SMART DASHBOARD *** 
+        // *** LOG SOME STUFF TO SMART DASHBOARD ***
         Debug.log("Is Aligned", isAligned());
         Debug.log("Has Been Aligned", hasBeenAligned());
         Debug.log("Align Target", getAlignTarget());
         Debug.log("Drivebase State", desiredState.toString());
 
-
-        if ((shooter.wantsState(Shooter.State.SMART) || shooter.wantsState(Shooter.State.FUTURE_SMART)) && !shooter.isShift()
-                && !shooter.inDebugMode()) { //&& mode.isTeleop()) {
+        if ((shooter.wantsState(Shooter.State.SMART) || shooter.wantsState(Shooter.State.FUTURE_SMART))
+                && !shooter.isShift()
+                && !shooter.inDebugMode()) {
             runSpeedSequence();
             desiredState = State.ALIGN_TO_ANGLE;
         } else if (wantsState(State.DASH)) {
@@ -235,8 +249,11 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
                 desiredState = State.FIELD_RELATIVE;
         }
 
+        if (shooter.wantsState(Shooter.State.CLIMB)) {
+            runSpeedSequence();
+        }
 
-        // Handle alignment readiness counter. Increment every loop the drivebase is 
+        // Handle alignment readiness counter. Increment every loop the drivebase is
         // aligned properly. Set back to zero if the drivebase is not aligned properly.
         // This makes the variable hold the ammount of consecutive iterations that
         // the drivebase has been properly alligned.
@@ -271,20 +288,24 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
         if (inputSpeeds.hasZeroVelocity()) {
             manuallySetModuleAngles(
                     swerveStates[0].angle,
-                    swerveStates[1].angle, 
+                    swerveStates[1].angle,
                     swerveStates[2].angle,
                     swerveStates[3].angle);
-        // Otherwise set the states to the desired module states.
+            // Otherwise set the states to the desired module states.
         } else {
             fl.setDesiredState(swerveStates[0]);
             fr.setDesiredState(swerveStates[1]);
             bl.setDesiredState(swerveStates[2]);
             br.setDesiredState(swerveStates[3]);
         }
+
+        Debug.log("Speed Setting", speedSetting.toString());
+        Debug.log("Speed Value", speedSequence.get());
     }
 
     /**
-     * Set the swerve module's to a given rotation with 0 m/s translational velocity.
+     * Set the swerve module's to a given rotation with 0 m/s translational
+     * velocity.
      */
     private void manuallySetModuleAngles(final Rotation2d flAngle, final Rotation2d frAngle, final Rotation2d blAngle,
             final Rotation2d brAngle) {
@@ -303,7 +324,8 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
     }
 
     /**
-     * Returns the current pose of the robot, used to satisfy the TorquePathingDrivebase interface.
+     * Returns the current pose of the robot, used to satisfy the
+     * TorquePathingDrivebase interface.
      */
     @Override
     public Pose2d getPose() {
@@ -311,7 +333,8 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
     }
 
     /**
-     * Sets the pose of the robot, used to satisfy the the TorquePathingDrivebase interface.
+     * Sets the pose of the robot, used to satisfy the the TorquePathingDrivebase
+     * interface.
      */
     @Override
     public void setPose(Pose2d pose) {
@@ -320,7 +343,8 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
 
     /**
      * Set the input speeds of the drivebase. This is actually an important setter.
-     * But it also must be present to satisfy the the TorquePathingDrivebase interface.
+     * But it also must be present to satisfy the the TorquePathingDrivebase
+     * interface.
      */
     @Override
     public void setInputSpeeds(TorqueSwerveSpeeds speeds) {
@@ -338,19 +362,21 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
      * onBeginPathing() is called when the robot is about to start pathing.
      * onEndPathing() is called when the robot is about to end pathing
      * 
-     * These are used for making sure that the drivebase knows when it 
+     * These are used for making sure that the drivebase knows when it
      * is following a path.
      */
     public void onBeginPathing() {
         setState(State.PATHING);
     }
+
     public void onEndPathing() {
         setState(State.FIELD_RELATIVE);
     }
 
     /**
      * Returns the normal distance between the rotational axis of the outermost
-     * wheel and the center of the robot, used to satisfy the TorquePathingDrivebase interface.
+     * wheel and the center of the robot, used to satisfy the TorquePathingDrivebase
+     * interface.
      */
     public double getRadius() {
         return WIDTH * Math.sqrt(2);

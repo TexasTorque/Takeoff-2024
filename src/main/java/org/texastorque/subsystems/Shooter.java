@@ -18,6 +18,7 @@ import org.texastorque.torquelib.auto.commands.TorqueRun;
 import org.texastorque.torquelib.base.TorqueMode;
 import org.texastorque.torquelib.base.TorqueState;
 import org.texastorque.torquelib.base.TorqueStatorSubsystem;
+import org.texastorque.torquelib.control.TorqueRollingMean;
 import org.texastorque.torquelib.motors.TorqueNEO;
 import org.texastorque.torquelib.util.TorqueMath;
 import org.texastorque.torquelib.util.TorquePolyRegression;
@@ -49,7 +50,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         private static final Shot empty = new Shot(0, 0, new Rotation2d(0));
     }
 
-    private static final Rotation2d ROTARY_OFF_POSITION = Rotation2d.fromDegrees(102);
+    private static final Rotation2d ROTARY_OFF_POSITION = Rotation2d.fromDegrees(111);
 
     /**
      * Shooter states usually contain a shot. Sometimes they contain an empty shot
@@ -60,28 +61,29 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
      */
     public static enum State implements TorqueState {
         OFF(new Shot(0, ROTARY_OFF_POSITION), false),
-        AUTO_OFF(new Shot(0, Rotation2d.fromDegrees(90)), false),
+        AUTO_OFF(new Shot(0, Rotation2d.fromDegrees(99)), false),
 
         // These shots run the flywheels backwards because they are used for intaking
         // the note
         // into the shooter
-        INTAKE(new Shot(-2500, Rotation2d.fromDegrees(184)), false),
-        BABYBIRD(new Shot(-2500, Rotation2d.fromDegrees(70)), false),
+        INTAKE(new Shot(-2500, Rotation2d.fromDegrees(198)), false),
+        BABYBIRD(new Shot(-2500, Rotation2d.fromDegrees(79)), false),
 
         // Amp and trap are special setpoints
-        AMP(new Shot(1300, Rotation2d.fromDegrees(46)), true), // 80.7 <-- real angle
-        CLIMB(new Shot(0, Rotation2d.fromDegrees(75)), false),
-        TRAP(new Shot(2000, Rotation2d.fromDegrees(72)), true),
+        AMP(new Shot(1600, Rotation2d.fromDegrees(84)), false), // 80.7 <-- real angle
+        AMP_INIITAL(new Shot(0, Rotation2d.fromDegrees(125)), false),
+        CLIMB(new Shot(0, Rotation2d.fromDegrees(84)), false),
+        TRAP(new Shot(2000, Rotation2d.fromDegrees(81)), true),
 
         // Layup, black line, and safe zone backup shots. These have reversable "shift
         // shots"
-        LAYUP(new Shot(4200, Rotation2d.fromDegrees(50)), new Shot(4200, Rotation2d.fromDegrees(112)), true),
+        LAYUP(new Shot(4200, Rotation2d.fromDegrees(64)), new Shot(4200, Rotation2d.fromDegrees(121)), true),
 
         // Used for tossing a note across the field
-        LASER(new Shot(3400, Rotation2d.fromDegrees(45)), true),
+        LASER(new Shot(3400, Rotation2d.fromDegrees(54)), true),
 
-        MID(new Shot(4400, Rotation2d.fromDegrees(32)), new Shot(4400, Rotation2d.fromDegrees(126)), true),
-        SAFEZONE(new Shot(4600, Rotation2d.fromDegrees(28)), new Shot(4300, Rotation2d.fromDegrees(134)), true),
+        MID(new Shot(4400, Rotation2d.fromDegrees(41)), new Shot(4400, Rotation2d.fromDegrees(135)), true),
+        SAFEZONE(new Shot(4600, Rotation2d.fromDegrees(37)), new Shot(4300, Rotation2d.fromDegrees(143)), true),
 
         // Future and Smart shots are special.
         // - Smart: will be overridden later w/ a calculated shot for our *current*
@@ -90,7 +92,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         // position
         // this future position is stored in a class variable in the shooter.
         FUTURE_SMART(true),
-        SMART_WARMUP(new Shot(5000, Rotation2d.fromDegrees(36)), false),
+        SMART_WARMUP(new Shot(5000, Rotation2d.fromDegrees(45)), false),
         SMART(true);
 
         public final Shot shot, shiftedShot;
@@ -134,16 +136,17 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
      * Chute state is a specialty state used for the flap motor.
      */
     public static enum ChuteState implements TorqueState {
-        IN(0), SHOOTING(8), AMP(16);
+        IN(Rotation2d.fromDegrees(170)), OUT(Rotation2d.fromDegrees(331.2));
 
-        private final double position;
+        private Rotation2d position;
 
-        private ChuteState(final double position) {
+        private ChuteState(final Rotation2d position) {
             this.position = position;
         }
     }
 
-    private static final double FLYWHEEL_TOLERANCE = 120, ROTARY_TOLERANCE = 1.5, MAX_SHOT_VELO_RPM = 5500;
+    private static final double FLYWHEEL_TOLERANCE = 200, ROTARY_TOLERANCE = 1, MAX_SHOT_VELO_RPM = 5500,
+            FLYWHEEL_ERROR_TOLERANCE = 120, ROTARY_ERROR_TOLERANCE = .5, CHUTE_TOLERANCE = 15, CHUTE_OFFSET = 346;
 
     // Subsystem hardware...
     private final TorqueNEO rotary, flywheelTop, flywheelBottom, gate, chute;
@@ -152,7 +155,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
 
     // ...and controllers
     private final PIDController rotaryPID, flywheelTopPID, flywheelBottomPID, chutePID;
-    private ArmFeedforward rotaryFF;
+    private ArmFeedforward rotaryFF, chuteFF;
     private final SimpleMotorFeedforward flywheelFF;
 
     /**
@@ -185,6 +188,8 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
      * are in a good state to shoot so we avoid shooting too quickly based on noise.
      */
     private int loopsThatShooterHasBeenReadyToShoot = 0;
+
+    private TorqueRollingMean flywheelBottomMean, flywheelTopMean, rotaryMean;
 
     /**
      * These are special cases that the subsystem needs to be aware of.
@@ -285,7 +290,8 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         chute.setBreakMode(true);
 
         chuteEncoder = new CANcoder(Ports.CHUTE_ENCODER);
-        chutePID = new PIDController(1, 0, 0);
+        chutePID = new PIDController(.05, 0, 0);
+        chuteFF = new ArmFeedforward(0, .4, 0);
 
         // *** CONFIGURE NOTE SENSOR ***
 
@@ -295,16 +301,15 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
 
         final TreeMap<Double, Shot> shotTable = new TreeMap<Double, Shot>();
 
-        shotTable.put(1.22, new Shot(4100, Rotation2d.fromDegrees(61)));
-        shotTable.put(1.75, new Shot(4200, Rotation2d.fromDegrees(47.4)));
-        shotTable.put(2.28, new Shot(4500, Rotation2d.fromDegrees(40.2)));
-        shotTable.put(2.5, new Shot(4600, Rotation2d.fromDegrees(38)));
-        shotTable.put(2.77, new Shot(4700, Rotation2d.fromDegrees(33)));
-        shotTable.put(3.39, new Shot(4900, Rotation2d.fromDegrees(27.6)));
-        shotTable.put(4.1, new Shot(5000, Rotation2d.fromDegrees(25.8)));
-        shotTable.put(4.7, new Shot(5550, Rotation2d.fromDegrees(22.5)));
-        shotTable.put(4.9, new Shot(6250, Rotation2d.fromDegrees(19)));
-        shotTable.put(5.4, new Shot(6250, Rotation2d.fromDegrees(17.8)));
+        shotTable.put(1.19, new Shot(4200, Rotation2d.fromDegrees(64)));
+        shotTable.put(1.61, new Shot(4400, Rotation2d.fromDegrees(56)));
+        shotTable.put(2.2, new Shot(4600, Rotation2d.fromDegrees(47)));
+        shotTable.put(2.63, new Shot(4800, Rotation2d.fromDegrees(41)));
+        shotTable.put(3.08, new Shot(5000, Rotation2d.fromDegrees(36)));
+        shotTable.put(3.58, new Shot(5200, Rotation2d.fromDegrees(33)));
+        shotTable.put(4., new Shot(5400, Rotation2d.fromDegrees(31)));
+        shotTable.put(4.5, new Shot(5600, Rotation2d.fromDegrees(29.5)));
+        shotTable.put(4.9, new Shot(5800, Rotation2d.fromDegrees(29)));
 
         Set<Entry<Double, Shot>> entries = shotTable.entrySet();
         double[] distances = new double[entries.size()];
@@ -321,6 +326,10 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
 
         rpmRegression = new TorquePolyRegression(distances, rpms, 1);
         angleRegression = new TorquePolyRegression(distances, angles, 2);
+
+        flywheelBottomMean = new TorqueRollingMean(5);
+        flywheelTopMean = new TorqueRollingMean(5);
+        rotaryMean = new TorqueRollingMean(5);
 
         // *** SMARTDASHBOARD ENTRIES FOR DEBUG MODE ***
 
@@ -339,6 +348,10 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         SmartDashboard.putNumber("CHUTE PID P", 0);
         SmartDashboard.putNumber("CHUTE PID I", 0);
         SmartDashboard.putNumber("CHUTE PID D", 0);
+
+        SmartDashboard.putNumber("Chute FF G", 0);
+
+        SmartDashboard.putNumber("Chute Amp Position", 0);
     }
 
     @Override
@@ -365,12 +378,25 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
 
     public boolean hasBeenReadyToShoot() {
         return loopsThatShooterHasBeenReadyToShoot > loopsOK();
+
+        // double flywheelBottomMeanError = flywheelBottomMean
+        // .calculate(Math.abs(shot.bottomVelocity) -
+        // Math.abs(getBottomFlywheelVelocity()));
+        // double flywheelTopMeanError = flywheelTopMean
+        // .calculate(Math.abs(shot.topVelocity) - Math.abs(getTopFlywheelVelocity()));
+        // double rotaryMeanError = rotaryMean
+        // .calculate(Math.abs(shot.angle.getDegrees()) -
+        // Math.abs(getRotaryEncoderDegrees()));
+
+        // return wantsToShoot() && flywheelBottomMeanError <= FLYWHEEL_ERROR_TOLERANCE
+        // && flywheelTopMeanError <= FLYWHEEL_ERROR_TOLERANCE
+        // && rotaryMeanError <= ROTARY_ERROR_TOLERANCE;
     }
 
     /** Get the degree angle measured by the rotary encoder. */
     public double getRotaryEncoderDegrees() {
         double rawValueDegrees = rotaryEncoder.getAbsolutePosition().getValue() * 360;
-        return rawValueDegrees > 200 ? 0 : rawValueDegrees;
+        return rawValueDegrees > 200 ? 9 : rawValueDegrees + 9;
     }
 
     /** Get the RPM velocity measured by the top flywheel encoder. */
@@ -444,6 +470,26 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         return wantsState(State.CLIMB) || wantsState(State.TRAP);
     }
 
+    public boolean isChuteReadyForAmp() {
+        return chuteState == ChuteState.OUT && ((getChuteEncoderDegrees() >= ChuteState.OUT.position.getDegrees()) || TorqueMath
+                .toleranced(getChuteEncoderDegrees(), chuteState.position.getDegrees(), CHUTE_TOLERANCE));
+    }
+
+    public double getChuteEncoderDegrees() {
+        if (chuteEncoder.getAbsolutePosition().getValue() <= .3)
+            return 360;
+        else
+            return chuteEncoder.getAbsolutePosition().getValue() * 360;
+    }
+
+    public double getChuteEncoderActualDegrees() { // relative to the rotary
+        return getRotaryEncoderDegrees() + (getChuteEncoderDegrees() - CHUTE_OFFSET);
+    }
+
+    public double getChuteSetpointActualRadians(double position) {
+        return Rotation2d.fromDegrees(getRotaryEncoderDegrees() + (position - CHUTE_OFFSET)).getRadians();
+    }
+
     @Override
     public void update(TorqueMode mode) {
 
@@ -465,7 +511,10 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         Debug.log("Shooter Shift", shift);
         Debug.log("Regression Shot", getRegressionShot(perception.getDistanceToSpeaker()).toString());
         Debug.log("Shooter Rotary Positon", getRotaryEncoderDegrees());
-        Debug.log("Cbute Position", chuteEncoder.getAbsolutePosition().getValue());
+        Debug.log("Chute Position Degrees (NO OFFSET)", getChuteEncoderDegrees());
+        Debug.log("Chute Encoder Actual Degrees (OFFSET AND ROTARY)", getChuteEncoderActualDegrees());
+        Debug.log("Chute Position Actual Radians", getChuteSetpointActualRadians(chuteState.position.getDegrees()));
+        Debug.log("Has Been Ready", hasBeenReadyToShoot());
 
         // rotaryPID.setP(SmartDashboard.getNumber("Rotary PID P", 0));
         // rotaryPID.setI(SmartDashboard.getNumber("Rotary PID I", 0));
@@ -477,9 +526,12 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
 
         // rotaryFF = new ArmFeedforward(kS, kG, kV);
 
-        chutePID.setP(SmartDashboard.getNumber("CHUTE PID P", 0));
-        chutePID.setI(SmartDashboard.getNumber("CHUTE PID I", 0));
-        chutePID.setD(SmartDashboard.getNumber("CHUTE PID D", 0));
+        // chutePID.setP(SmartDashboard.getNumber("CHUTE PID P", 0));
+        // chutePID.setI(SmartDashboard.getNumber("CHUTE PID I", 0));
+        // chutePID.setD(SmartDashboard.getNumber("CHUTE PID D", 0));
+
+        // chuteFF = new ArmFeedforward(0, SmartDashboard.getNumber("Chute FF G", 0),
+        // 0);
 
         // Handle intaking. If we are in teleop and the intake says that we are
         // intaking, then
@@ -498,6 +550,13 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
                 gateState = GateState.OFF;
             }
         }
+
+        Debug.log("is Chute Ready", isChuteReadyForAmp());
+
+        if (wantsState(State.AMP) && !isChuteReadyForAmp())
+            desiredState = State.AMP_INIITAL;
+
+        Debug.log("Shooter State after Amp", desiredState.toString());
 
         // Current limit handling.
         if (emergencyCurrentLimit || wantsState(State.AMP)) {
@@ -590,8 +649,33 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
             intakeWarmupTimer.restart();
             shootingWarmupTimer.restart();
         }
+
         flywheelTop.setVolts(flywheelVoltsTop);
         flywheelBottom.setVolts(flywheelVoltsBottom);
+
+        Debug.log("State before Amp", desiredState.toString());
+
+        if (wantsState(State.AMP))
+            chuteState = ChuteState.OUT;
+        else if (wantsState(State.AMP_INIITAL)
+                && TorqueMath.toleranced(getRotaryEncoderDegrees(), State.AMP_INIITAL.shot.angle.getDegrees(), 5)) {
+            chuteState = ChuteState.OUT;
+        } else if (desiredState.isAShot && !shift)
+            chuteState = ChuteState.OUT;
+        else
+            chuteState = ChuteState.IN;
+
+        Debug.log("Shooter Chute State", chuteState.toString());
+        Debug.log("Chute Setpoint Position", chuteState.position.getDegrees());
+
+        chute.setVolts(
+                -TorqueMath.constrain(chutePID.calculate(getChuteEncoderDegrees(), chuteState.position.getDegrees())
+                        + chuteFF.calculate(getChuteSetpointActualRadians(chuteState.position.getDegrees()), 0), 6));
+
+        Debug.log("Chute Volts", -TorqueMath.constrain(
+                chutePID.calculate(getChuteEncoderDegrees(), chuteState.position.getDegrees())
+                        + chuteFF.calculate(getChuteSetpointActualRadians(chuteState.position.getDegrees()), 0),
+                4));
 
         double rotaryVolts = rotaryPID.calculate(getRotaryEncoderDegrees(), shot.angle.getDegrees())
                 + rotaryFF.calculate(shot.angle.getRadians(), 0);
@@ -606,13 +690,6 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
 
         // Output the gate state voltage.
         gate.setVolts(gateState.voltage);
-
-        if (wantsState(State.AMP)) chuteState = ChuteState.AMP;
-        else chuteState = ChuteState.SHOOTING;
-
-        Debug.log("Shooter Chute State", chuteState.toString());
-
-        chute.setVolts(chutePID.calculate(chuteEncoder.getAbsolutePosition().getValue(), chuteState.position));
 
         if (mode.isTeleop()) {
             desiredState = State.OFF;

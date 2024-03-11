@@ -24,7 +24,7 @@ public final class Ports {
     public static final int CLIMBER_LEFT = 25;
     public static final int CLIMBER_RIGHT = 26;
     public static final int CHUTE = 21;
-    public static final int CHUTE_ENCODER = 22;
+    public static final int CHUTE_ENCODER = 14;
 
     public static final int LIGHTS_SUPERSTRUCTURE = 0;
     public static final int LIGHTS_CLIMBER_LEFT = 1;
