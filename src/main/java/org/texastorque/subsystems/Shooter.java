@@ -91,7 +91,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         // position
         // this future position is stored in a class variable in the shooter.
         FUTURE_SMART(true),
-        // FUTURE_SMART_ALIGN(true),
+        FUTURE_SMART_ALIGN(true),
         SMART_WARMUP(new Shot(5000, Rotation2d.fromDegrees(45)), false),
         SMART(true);
 
@@ -572,7 +572,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         // Set shot parameter and handle shot overridding.
         if (wantsState(State.SMART)) {
             shot = getRegressionShot(perception.getDistanceToSpeaker());
-        } else if (wantsState(State.FUTURE_SMART)) {
+        } else if (wantsState(State.FUTURE_SMART) || wantsState(State.FUTURE_SMART_ALIGN)) {
             shot = getRegressionShot(perception.getFutureDistanceToSpeaker());
         } else {
             shot = desiredState.getShot(shift);

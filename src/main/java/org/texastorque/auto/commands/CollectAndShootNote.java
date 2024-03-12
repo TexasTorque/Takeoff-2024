@@ -8,7 +8,7 @@ import org.texastorque.torquelib.auto.TorqueSequence;
 import org.texastorque.torquelib.auto.commands.TorqueFollowPath;
 import org.texastorque.torquelib.auto.commands.TorqueRun;
 import org.texastorque.torquelib.auto.commands.TorqueRunSequence;
-
+import org.texastorque.subsystems.*;
 import com.pathplanner.lib.path.PathPlannerPath;
 
 /**
@@ -33,10 +33,12 @@ public class CollectAndShootNote extends TorqueSequence implements Subsystems {
 
         log("Auto State", () -> "BEGIN PATH");
 
+
+
         addBlock(followPath(() -> noteSequence.getNextPath()),
-                new DeployIntakeWhen(() -> field.isXPast(perception.getPose(), 5.5) || deployIntakeRightAway)
+                new DeployIntakeWhen(() -> field.isXPast(perception.getPose(), 5) || deployIntakeRightAway)
                         .command());
 
-        addBlock(new TorqueRunSequence(new Shoot()));
+        addBlock(new TorqueRunSequence(new Shoot(deployIntakeRightAway ? Shooter.State.FUTURE_SMART_ALIGN : Shooter.State.FUTURE_SMART)));
     }
 }

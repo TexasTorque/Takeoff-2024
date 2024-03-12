@@ -242,7 +242,7 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
         alignPID.setP(SmartDashboard.getNumber("Align PID P", 0));
         alignPID.setI(SmartDashboard.getNumber("Align PID I", 0));
 
-        if ((shooter.wantsState(Shooter.State.SMART))
+        if ((shooter.wantsState(Shooter.State.SMART) || shooter.wantsState(Shooter.State.FUTURE_SMART_ALIGN))
                 && !shooter.isShift()
                 && !shooter.inDebugMode()) {
             runSpeedSequence();
