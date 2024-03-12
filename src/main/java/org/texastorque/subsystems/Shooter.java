@@ -28,7 +28,6 @@ import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.controller.SimpleMotorFeedforward;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj.DigitalInput;
-import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
@@ -145,8 +144,8 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         }
     }
 
-    private static final double FLYWHEEL_TOLERANCE = 200, ROTARY_TOLERANCE = 1, MAX_SHOT_VELO_RPM = 5500,
-            FLYWHEEL_ERROR_TOLERANCE = 120, ROTARY_ERROR_TOLERANCE = .5, CHUTE_TOLERANCE = 15, CHUTE_OFFSET = 346;
+    private static final double FLYWHEEL_TOLERANCE = 200, ROTARY_TOLERANCE = 1.5, MAX_SHOT_VELO_RPM = 5500,
+            FLYWHEEL_ERROR_TOLERANCE = 120, ROTARY_ERROR_TOLERANCE = .5, CHUTE_TOLERANCE = 20, CHUTE_OFFSET = 346;
 
     // Subsystem hardware...
     private final TorqueNEO rotary, flywheelTop, flywheelBottom, gate, chute;
@@ -702,7 +701,8 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
      * considered OK to shoot.
      */
     public static int loopsOK() {
-        return DriverStation.isAutonomous() ? 15 : 5;
+        // return DriverStation.isAutonomous() ? 1$a5 : 5;
+        return 5;
     }
 
     /** Compute the maximum allowed voltage for the rotary motor. */

@@ -138,7 +138,7 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
 
         deaccelerateHold.onTrue(() -> drivebase.speedSetting = SpeedSetting.SEQ);
 
-        if (!deaccelerateHold.get())
+        if (!deaccelerateHold.get() && !shooterClimbMode.get())
             drivebase.speedSetting = Drivebase.SpeedSetting.FAST;
 
         final double xVelocity = TorqueMath.scaledLinearDeadband(driver.getLeftYAxis(), CONTROLLER_DEADBAND)
@@ -186,5 +186,9 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
 
     public static final synchronized Input getInstance() {
         return instance == null ? instance = new Input() : instance;
+    }
+
+    public boolean isClimbing() {
+        return shooterClimbMode.get();
     }
 }

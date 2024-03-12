@@ -9,6 +9,8 @@ package org.texastorque.subsystems;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Supplier;
+
+import org.texastorque.Input;
 import org.texastorque.Ports;
 import org.texastorque.Subsystems;
 import org.texastorque.torquelib.base.TorqueMode;
@@ -19,7 +21,7 @@ import edu.wpi.first.wpilibj.AddressableLEDBuffer;
 import edu.wpi.first.wpilibj.util.Color;
 
 /**
- * LED light controller. Basically a state observer. 
+ * LED light controller. Basically a state observer.
  */
 public final class Lights extends TorqueStatelessSubsystem implements Subsystems {
 
@@ -92,9 +94,9 @@ public final class Lights extends TorqueStatelessSubsystem implements Subsystems
     private final List<AddressableLED> lights;
     private final AddressableLEDBuffer buff;
 
-    private LightAction 
-            red = new Solid(() -> Color.kRed), 
-        
+    private LightAction red = new Solid(() -> Color.kRed),
+            rainbow = new Rainbow(),
+
             blinkYellow = new Blink(() -> Color.kYellow, 6),
 
             green = new Solid(() -> Color.kGreen),
@@ -108,8 +110,7 @@ public final class Lights extends TorqueStatelessSubsystem implements Subsystems
         buff = new AddressableLEDBuffer(LENGTH);
 
         createStrips(
-            Ports.LIGHTS_SUPERSTRUCTURE
-        );
+                Ports.LIGHTS_SUPERSTRUCTURE);
     }
 
     /** Instantiate the various color strips */
@@ -146,7 +147,10 @@ public final class Lights extends TorqueStatelessSubsystem implements Subsystems
         if (shooter.inDebugMode()) {
             return blinkYellow;
         }
-        
+
+        if (Input.getInstance().isClimbing())
+            return rainbow;
+
         // Otherwise we check if we have a note
         if (shooter.hasNote()) {
             // And then if we see a tag
@@ -159,7 +163,7 @@ public final class Lights extends TorqueStatelessSubsystem implements Subsystems
                 // ...again, either green for normal mode and purple for shift mode
                 return shooter.isShift() ? purple : green;
             }
-        // And if we dont have a note then we want to be solid red
+            // And if we dont have a note then we want to be solid red
         } else {
             return red;
         }

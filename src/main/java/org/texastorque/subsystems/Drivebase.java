@@ -154,10 +154,11 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
         for (int i = 0; i < swerveStates.length; i++)
             swerveStates[i] = new SwerveModuleState();
 
-        alignPID = new PIDController(.075, 0, 0);
+        alignPID = new PIDController(.1, 0, 0);
         alignPID.enableContinuousInput(0, 360);
 
         SmartDashboard.putNumber("Align PID P", .05);
+        SmartDashboard.putNumber("Align PID I", .05);
     }
 
     @Override
@@ -236,6 +237,10 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
         Debug.log("Has Been Aligned", hasBeenAligned());
         Debug.log("Align Target", getAlignTarget());
         Debug.log("Drivebase State", desiredState.toString());
+        Debug.log("Speed Setting at Start", speedSetting.toString());
+
+        alignPID.setP(SmartDashboard.getNumber("Align PID P", 0));
+        alignPID.setI(SmartDashboard.getNumber("Align PID I", 0));
 
         if ((shooter.wantsState(Shooter.State.SMART) || shooter.wantsState(Shooter.State.FUTURE_SMART))
                 && !shooter.isShift()
@@ -298,9 +303,6 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
             bl.setDesiredState(swerveStates[2]);
             br.setDesiredState(swerveStates[3]);
         }
-
-        Debug.log("Speed Setting", speedSetting.toString());
-        Debug.log("Speed Value", speedSequence.get());
     }
 
     /**
