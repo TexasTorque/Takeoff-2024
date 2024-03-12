@@ -89,20 +89,19 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
     private final Toast toast;
     private final SwerveDrivePoseEstimator poseEstimator;
 
-    private final TorqueNavXGyro gyro = TorqueNavXGyro.getInstance(); 
+    private final TorqueNavXGyro gyro = TorqueNavXGyro.getInstance();
     public final Field2d field2d = new Field2d();
 
-    private final AprilTagFieldLayout fieldMap; // local instance of the field layout 
+    private final AprilTagFieldLayout fieldMap; // local instance of the field layout
 
     // Used to filter some noise directly out of the pose measurements.
     private final TorqueRollingMedian filteredX, filteredY;
     private double filteredPoseX = 0;
     private double filteredPoseY = 0;
 
-
     // a position that we could be at in the future that we want to
     // run computations for.
-    private Pose2d futureShootingPose = new Pose2d(); 
+    private Pose2d futureShootingPose = new Pose2d();
 
     public Perception() {
         super(State.VISION);
@@ -145,12 +144,12 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
     public void update(final TorqueMode mode) {
         field.updateAlliance(); // running this every single loop is horrible practice but wtv
 
-        // Update the various perception pipelines. 
+        // Update the various perception pipelines.
         updateOdometryLocalization();
         updateVisionLocalization();
         updateObjectDetection();
 
-        // *** SMARTDASH BOARD LOGS *** 
+        // *** SMARTDASH BOARD LOGS ***
         Debug.log("Is X Past", field.isXPast(getPose(), 4));
         Debug.log("gyro yaw", gyro.getFusedHeading());
         Debug.log("gyro pitch", gyro.getPitch());
@@ -181,7 +180,8 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
         poseEstimator.update(getHeading(), drivebase.getModulePositions());
     }
 
-    // A map of all tags that are in view on this current update. Cleared between updates.
+    // A map of all tags that are in view on this current update. Cleared between
+    // updates.
     private final Map<Integer, Pose3d> tagsInView = new HashMap<>();
 
     private boolean seesTags = false; // do we or do we not see any apriltags
@@ -193,6 +193,8 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
         // This gets comented/uncomented out based on if or if not we want to use
         // vision to update our odometry while we are pathing (like physically following
         // the path)
+        Debug.log("Using Vision", !drivebase.wantsState(Drivebase.State.PATHING));
+
         if (drivebase.wantsState(Drivebase.State.PATHING)) {
             return;
         }
@@ -274,7 +276,10 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
         return gyro.getHeadingCCW();
     }
 
-    /** Getter for checking if we do or do we not see any apriltags. Helpful for driver feedback. */
+    /**
+     * Getter for checking if we do or do we not see any apriltags. Helpful for
+     * driver feedback.
+     */
     public boolean seesTags() {
         return seesTags;
     }
@@ -300,17 +305,19 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
     // Coeficient for motion adjusted shooting
     public static final double VELO_ADJ_K = 0.25;
 
-    /** Calculates a robot angle to speaker but tries to adjusts for motion (very primative impl) */
+    /**
+     * Calculates a robot angle to speaker but tries to adjusts for motion (very
+     * primative impl)
+     */
     public Rotation2d getMotionAdjustedAngleToSpeaker() {
         final TorqueSwerveSpeeds speeds = TorqueSwerveSpeeds.fromChassisSpeeds(drivebase.getChassisSpeeds());
 
         final Pose2d currentPose = getFilteredPose();
 
         final Pose2d adjustedPose = new Pose2d(
-            currentPose.getX() + speeds.vxMetersPerSecond * VELO_ADJ_K,
-            currentPose.getY() + speeds.vyMetersPerSecond * VELO_ADJ_K,
-            currentPose.getRotation()
-        );
+                currentPose.getX() + speeds.vxMetersPerSecond * VELO_ADJ_K,
+                currentPose.getY() + speeds.vyMetersPerSecond * VELO_ADJ_K,
+                currentPose.getRotation());
 
         return field.getAngleToSpeaker(adjustedPose);
     }
@@ -321,7 +328,9 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
     }
 
     /** Get gyro pitch, possible dead code */
-    public double getGyroPitch() { return gyro.getPitch(); }
+    public double getGyroPitch() {
+        return gyro.getPitch();
+    }
 
     /**
      * Tare the gyro, make the current heading "north" (0° yaw) and reset the pose.
@@ -372,7 +381,7 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
         setPose(new Pose2d());
     }
 
-    /**   
+    /**
      * Reset the position in the pose estimator to be at a given position.
      */
     public void resetPose(final Pose2d pose) {

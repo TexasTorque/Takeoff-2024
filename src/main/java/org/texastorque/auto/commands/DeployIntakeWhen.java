@@ -57,6 +57,5 @@ public class DeployIntakeWhen extends TorqueSequence implements Subsystems {
         addBlock(shooter.yieldState(Shooter.State.FUTURE_SMART));
 
         addBlock(intake.yieldState(Intake.State.AUTO_PRIME));
-
     }
 }

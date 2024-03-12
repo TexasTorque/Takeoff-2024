@@ -91,6 +91,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         // position
         // this future position is stored in a class variable in the shooter.
         FUTURE_SMART(true),
+        // FUTURE_SMART_ALIGN(true),
         SMART_WARMUP(new Shot(5000, Rotation2d.fromDegrees(45)), false),
         SMART(true);
 
