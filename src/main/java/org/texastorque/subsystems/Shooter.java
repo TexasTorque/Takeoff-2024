@@ -147,7 +147,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
     }
 
     private static final double FLYWHEEL_TOLERANCE = 200, ROTARY_TOLERANCE = 1.5, MAX_SHOT_VELO_RPM = 5500,
-            FLYWHEEL_ERROR_TOLERANCE = 120, ROTARY_ERROR_TOLERANCE = .5, CHUTE_TOLERANCE = 20, CHUTE_OFFSET = 346;
+            FLYWHEEL_ERROR_TOLERANCE = 120, ROTARY_ERROR_TOLERANCE = .5, CHUTE_TOLERANCE = 20, CHUTE_OFFSET = 346, FLYWHEEL_INTAKE_CURRENT_SPIKE = 35;
 
     // Subsystem hardware...
     private final TorqueNEO rotary, flywheelTop, flywheelBottom, gate, chute;
@@ -174,7 +174,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
      * note.
      */
     private final Timer shootingWarmupTimer = new Timer(),
-            intakeWarmupTimer = new Timer();
+            intakeWarmupTimer = new Timer(), timeSinceStartedIntaking = new Timer();
 
     /**
      * The global gate and chute state and current shot.
@@ -472,8 +472,9 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
     }
 
     public boolean isChuteReadyForAmp() {
-        return chuteState == ChuteState.OUT && ((getChuteEncoderDegrees() >= ChuteState.OUT.position.getDegrees()) || TorqueMath
-                .toleranced(getChuteEncoderDegrees(), chuteState.position.getDegrees(), CHUTE_TOLERANCE));
+        return chuteState == ChuteState.OUT
+                && ((getChuteEncoderDegrees() >= ChuteState.OUT.position.getDegrees()) || TorqueMath
+                        .toleranced(getChuteEncoderDegrees(), chuteState.position.getDegrees(), CHUTE_TOLERANCE));
     }
 
     public double getChuteEncoderDegrees() {
@@ -489,6 +490,10 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
 
     public double getChuteSetpointActualRadians(double position) {
         return Rotation2d.fromDegrees(getRotaryEncoderDegrees() + (position - CHUTE_OFFSET)).getRadians();
+    }
+
+    public boolean isFlywheelCurrentSpiked() {
+        return intake.isIntaking() && timeSinceStartedIntaking.get() >= .5 && flywheelTop.getCurrent() >= FLYWHEEL_INTAKE_CURRENT_SPIKE;
     }
 
     @Override
@@ -517,23 +522,6 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         Debug.log("Chute Position Actual Radians", getChuteSetpointActualRadians(chuteState.position.getDegrees()));
         Debug.log("Has Been Ready", hasBeenReadyToShoot());
 
-        // rotaryPID.setP(SmartDashboard.getNumber("Rotary PID P", 0));
-        // rotaryPID.setI(SmartDashboard.getNumber("Rotary PID I", 0));
-        // rotaryPID.setD(SmartDashboard.getNumber("Rotary PID D", 0));
-
-        // double kS = SmartDashboard.getNumber("Rotary FF kS", 0);
-        // double kV = SmartDashboard.getNumber("Rotary FF kV", 0);
-        // double kG = SmartDashboard.getNumber("Rotary FF kG", 0);
-
-        // rotaryFF = new ArmFeedforward(kS, kG, kV);
-
-        // chutePID.setP(SmartDashboard.getNumber("CHUTE PID P", 0));
-        // chutePID.setI(SmartDashboard.getNumber("CHUTE PID I", 0));
-        // chutePID.setD(SmartDashboard.getNumber("CHUTE PID D", 0));
-
-        // chuteFF = new ArmFeedforward(0, SmartDashboard.getNumber("Chute FF G", 0),
-        // 0);
-
         // Handle intaking. If we are in teleop and the intake says that we are
         // intaking, then
         // we want to enter our intake condition.
@@ -550,6 +538,8 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
                 desiredState = State.OFF;
                 gateState = GateState.OFF;
             }
+        } else {
+            timeSinceStartedIntaking.restart();
         }
 
         Debug.log("is Chute Ready", isChuteReadyForAmp());

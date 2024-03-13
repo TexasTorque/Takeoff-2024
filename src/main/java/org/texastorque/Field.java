@@ -54,8 +54,8 @@ public final class Field {
         // final double rightYPosition = SmartDashboard.getNumber("Right Position", 0);
         final double rightYPosition = REAL_SPEAKER_Y_POSE;
 
-        speakerPoseAngleRight = new Pose2d(.2, rightYPosition, Rotation2d.fromDegrees(0));
-        speakerPoseAngleLeft = new Pose2d(.2, leftYPosition, Rotation2d.fromDegrees(0));
+        speakerPoseAngleRight = new Pose2d(.1, rightYPosition, Rotation2d.fromDegrees(0));
+        speakerPoseAngleLeft = new Pose2d(.1, leftYPosition, Rotation2d.fromDegrees(0));
     }
 
     public boolean isPoseOnField(final Pose2d pose) {

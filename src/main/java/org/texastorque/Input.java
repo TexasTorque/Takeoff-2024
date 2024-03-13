@@ -133,10 +133,12 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
     public void updateDrivebase() {
         resetGyro.onTrue(() -> perception.resetPoseAndGyro());
 
-        deaccelerateClick.onTrue(() -> drivebase.speedSequence = new SpeedSequence(Drivebase.SpeedSetting.FAST,
-                Drivebase.SpeedSetting.SLOW, 1));
+        if (!shooterClimbMode.get()) { // in climb mode it'll already do this
+            deaccelerateClick.onTrue(() -> drivebase.speedSequence = new SpeedSequence(Drivebase.SpeedSetting.FAST,
+                    Drivebase.SpeedSetting.SLOW, 1));
 
-        deaccelerateHold.onTrue(() -> drivebase.speedSetting = SpeedSetting.SEQ);
+            deaccelerateHold.onTrue(() -> drivebase.speedSetting = SpeedSetting.SEQ);
+        }
 
         if (!deaccelerateHold.get() && !shooterClimbMode.get())
             drivebase.speedSetting = Drivebase.SpeedSetting.FAST;
@@ -174,10 +176,19 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
                 rumbleRight = true;
             }
         }
-        driver.setRumbleLeft(rumbleLeft);
-        driver.setRumbleRight(rumbleRight);
-        operator.setRumbleLeft(rumbleLeft);
-        operator.setRumbleRight(rumbleRight);
+
+        if (intake.isIntaking() && !shooter.hasNote()) { // if the flywheels spike while intaking, do a little rumble
+            driver.setRumbleLeft(shooter.isFlywheelCurrentSpiked(), .2);
+            driver.setRumbleRight(shooter.isFlywheelCurrentSpiked(), .2);
+            operator.setRumbleLeft(shooter.isFlywheelCurrentSpiked(), .2);
+            operator.setRumbleRight(shooter.isFlywheelCurrentSpiked(), .2);
+        } else {
+            driver.setRumbleLeft(rumbleLeft);
+            driver.setRumbleRight(rumbleRight);
+            operator.setRumbleLeft(rumbleLeft);
+            operator.setRumbleRight(rumbleRight);
+        }
+
     }
 
     public void setRumbleFor(final double duration) {

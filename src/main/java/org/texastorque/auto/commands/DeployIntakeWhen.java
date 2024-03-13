@@ -50,7 +50,8 @@ public class DeployIntakeWhen extends TorqueSequence implements Subsystems {
 
         addBlock(new TorqueRun(() -> perception.setFutureShootingPose(
                 !isCenterLine ? TorqueFollowPath.getEndingPositionForCurrentlyLoadedPath()
-                        : field.calculateXOffset(TorqueFollowPath.getEndingPositionForCurrentlyLoadedPath(), .35)
+                        // : field.calculateXOffset(TorqueFollowPath.getEndingPositionForCurrentlyLoadedPath(), .35)
+                        : field.calculateXOffset(TorqueFollowPath.getEndingPositionForCurrentlyLoadedPath(), 0)
 
         )));
 
