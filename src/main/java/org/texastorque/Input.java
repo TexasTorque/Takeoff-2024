@@ -23,9 +23,9 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
 
     private final TorqueBoolSupplier resetGyro, runSmartIntake,
             runDumbIntake, runOuttake, speakerSmartShot, speakerLayup, speakerSafeZone, amp, trap,
-            deaccelerateClick, deaccelerateHold, manualGateOut, manualGateIn, babyBird, debugMode, speakerMid,
+            deaccelerateClick, deaccelerateHold, manualGateOut, manualGateIn, babyBird, speakerMid,
             shooterIdle, shooterShift, climbUp, climbDown, climbLeftUp, climbRightUp, climbLeftDown, climbRightDown,
-            shooterClimbMode, laser;
+            shooterClimbMode, laser, operatorClimbUp;
 
     private Input() {
         driver = new TorqueController(0, 0.1);
@@ -65,6 +65,8 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
         climbDown = new TorqueBoolSupplier(
                 () -> driver.isDPADDownDown() || (driver.isRightTriggerDown() && driver.isLeftTriggerDown()));
 
+        operatorClimbUp = new TorqueBoolSupplier(operator::isDPADUpDown);
+
         climbLeftUp = new TorqueBoolSupplier(driver::isLeftBumperDown);
         climbLeftDown = new TorqueBoolSupplier(driver::isLeftTriggerDown);
         climbRightUp = new TorqueBoolSupplier(driver::isRightBumperDown);
@@ -74,8 +76,8 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
 
         shooterClimbMode = new TorqueToggleSupplier(operator::isDPADLeftDown);
 
-        debugMode = new TorqueToggleSupplier(
-                () -> operator.isLeftCenterButtonDown() && operator.isRightCenterButtonDown());
+        // debugMode = new TorqueToggleSupplier(
+        //         () -> operator.isLeftCenterButtonDown() && operator.isRightCenterButtonDown());
     }
 
     @Override
@@ -103,7 +105,9 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
         amp.onTrue(() -> shooter.setState(Shooter.State.AMP));
         trap.onTrue(() -> shooter.setState(Shooter.State.TRAP));
 
-        manualGateOut.onTrue(() -> shooter.setGateState(Shooter.GateState.OUT));
+        if (!shooterClimbMode.get())
+            manualGateOut.onTrue(() -> shooter.setGateState(Shooter.GateState.OUT));
+
         manualGateIn.onTrue(() -> shooter.setGateState(Shooter.GateState.IN));
 
         babyBird.onTrue(() -> {
@@ -116,7 +120,7 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
         shooter.setConsent(TorqueMath.toleranced(operator.getLeftYAxis(), 0, CONTROLLER_DEADBAND)
                 && TorqueMath.toleranced(operator.getLeftXAxis(), 0, CONTROLLER_DEADBAND));
 
-        shooter.setDebugMode(debugMode.get());
+        // shooter.setDebugMode(debugMode.get());
 
         shooter.setEmergencyCurrentLimit(driver.isAButtonDown());
         shooter.setShift(shooterShift.get());
@@ -154,6 +158,9 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
     }
 
     public void updateClimber() {
+        if (shooterClimbMode.get())
+            operatorClimbUp.onTrue(() -> climber.setState(Climber.State.UP));
+
         climbLeftUp.onTrue(() -> climber.setState(Climber.State.LEFT_UP));
         climbRightUp.onTrue(() -> climber.setState(Climber.State.RIGHT_UP));
         climbLeftDown.onTrue(() -> climber.setState(Climber.State.LEFT_DOWN));

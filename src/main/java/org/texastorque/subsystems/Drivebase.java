@@ -29,7 +29,6 @@ import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.Timer;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 /**
  * Swerve drivebase subsystem.
@@ -154,11 +153,8 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
         for (int i = 0; i < swerveStates.length; i++)
             swerveStates[i] = new SwerveModuleState();
 
-        alignPID = new PIDController(.1, 0, 0);
+        alignPID = new PIDController(.085, 0, 0);
         alignPID.enableContinuousInput(0, 360);
-
-        SmartDashboard.putNumber("Align PID P", .085);
-        // SmartDashboard.putNumber("Align PID I", .05);
     }
 
     @Override
@@ -238,9 +234,6 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
         Debug.log("Align Target", getAlignTarget());
         Debug.log("Drivebase State", desiredState.toString());
         Debug.log("Speed Setting at Start", speedSetting.toString());
-
-        alignPID.setP(SmartDashboard.getNumber("Align PID P", 0));
-        alignPID.setI(SmartDashboard.getNumber("Align PID I", 0));
 
         if ((shooter.wantsState(Shooter.State.SMART) || shooter.wantsState(Shooter.State.FUTURE_SMART_ALIGN))
                 && !shooter.isShift()

@@ -92,7 +92,9 @@ public class Intake extends TorqueStatorSubsystem<Intake.State> implements Subsy
 
         // If we want to intake but the shooter has a note now we need to
         // alert the drivers via a rumble and leave intaking...
-        if (wantsState(State.SMART_INTAKE) && shooter.hasNote()) {
+        if (shooter.wantsState(Shooter.State.CLIMB) || shooter.wantsState(Shooter.State.TRAP)) {
+            desiredState = State.OUT;
+        } else if (wantsState(State.SMART_INTAKE) && shooter.hasNote()) {
             Input.getInstance().setRumbleFor(.2);
 
             // ... however we need to wait to make sure the shooter is out
@@ -102,9 +104,7 @@ public class Intake extends TorqueStatorSubsystem<Intake.State> implements Subsy
 
         } else if (!isIntaking() && !isOutaking() && shooter.isShift()) {
             desiredState = State.PRIME; // we go into prime if we are in shift state
-        } else if (shooter.wantsState(Shooter.State.CLIMB) || shooter.wantsState(Shooter.State.TRAP)) {
-            desiredState = State.OUT;
-        }
+        } 
 
         rollers.setVolts(desiredState.rollerSpeed);
 

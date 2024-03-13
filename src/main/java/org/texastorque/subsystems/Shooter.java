@@ -18,7 +18,6 @@ import org.texastorque.torquelib.auto.commands.TorqueRun;
 import org.texastorque.torquelib.base.TorqueMode;
 import org.texastorque.torquelib.base.TorqueState;
 import org.texastorque.torquelib.base.TorqueStatorSubsystem;
-import org.texastorque.torquelib.control.TorqueRollingMean;
 import org.texastorque.torquelib.motors.TorqueNEO;
 import org.texastorque.torquelib.util.TorqueMath;
 import org.texastorque.torquelib.util.TorquePolyRegression;
@@ -147,7 +146,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
     }
 
     private static final double FLYWHEEL_TOLERANCE = 200, ROTARY_TOLERANCE = 1.5, MAX_SHOT_VELO_RPM = 5500,
-            FLYWHEEL_ERROR_TOLERANCE = 120, ROTARY_ERROR_TOLERANCE = .5, CHUTE_TOLERANCE = 20, CHUTE_OFFSET = 346, FLYWHEEL_INTAKE_CURRENT_SPIKE = 35;
+        CHUTE_TOLERANCE = 20, CHUTE_OFFSET = 346, FLYWHEEL_INTAKE_CURRENT_SPIKE = 35;
 
     // Subsystem hardware...
     private final TorqueNEO rotary, flywheelTop, flywheelBottom, gate, chute;
@@ -189,8 +188,6 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
      * are in a good state to shoot so we avoid shooting too quickly based on noise.
      */
     private int loopsThatShooterHasBeenReadyToShoot = 0;
-
-    private TorqueRollingMean flywheelBottomMean, flywheelTopMean, rotaryMean;
 
     /**
      * These are special cases that the subsystem needs to be aware of.
@@ -302,8 +299,9 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
 
         final TreeMap<Double, Shot> shotTable = new TreeMap<Double, Shot>();
 
-        shotTable.put(1.19, new Shot(4200, Rotation2d.fromDegrees(64)));
+        shotTable.put(1.19, new Shot(4200, Rotation2d.fromDegrees(64))); // fix this jump
         shotTable.put(1.61, new Shot(4400, Rotation2d.fromDegrees(56)));
+        shotTable.put(1.85, new Shot(4500, Rotation2d.fromDegrees(52))); 
         shotTable.put(2.2, new Shot(4600, Rotation2d.fromDegrees(47)));
         shotTable.put(2.63, new Shot(4800, Rotation2d.fromDegrees(41)));
         shotTable.put(3.08, new Shot(5000, Rotation2d.fromDegrees(36)));
@@ -328,31 +326,11 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         rpmRegression = new TorquePolyRegression(distances, rpms, 1);
         angleRegression = new TorquePolyRegression(distances, angles, 2);
 
-        flywheelBottomMean = new TorqueRollingMean(5);
-        flywheelTopMean = new TorqueRollingMean(5);
-        rotaryMean = new TorqueRollingMean(5);
-
         // *** SMARTDASHBOARD ENTRIES FOR DEBUG MODE ***
 
         SmartDashboard.putNumber("Shot Velocity", 0);
         SmartDashboard.putNumber("Shot Angle", 0);
         SmartDashboard.putNumber("Rotary Max Volts", 8);
-
-        SmartDashboard.putNumber("Rotary PID P", 0);
-        SmartDashboard.putNumber("Rotary PID I", 0);
-        SmartDashboard.putNumber("Rotary PID D", 0);
-
-        SmartDashboard.putNumber("Rotary FF kS", 0);
-        SmartDashboard.putNumber("Rotary FF kG", 0);
-        SmartDashboard.putNumber("Rotary FF kV", 0);
-
-        SmartDashboard.putNumber("CHUTE PID P", 0);
-        SmartDashboard.putNumber("CHUTE PID I", 0);
-        SmartDashboard.putNumber("CHUTE PID D", 0);
-
-        SmartDashboard.putNumber("Chute FF G", 0);
-
-        SmartDashboard.putNumber("Chute Amp Position", 0);
     }
 
     @Override
@@ -379,19 +357,6 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
 
     public boolean hasBeenReadyToShoot() {
         return loopsThatShooterHasBeenReadyToShoot > loopsOK();
-
-        // double flywheelBottomMeanError = flywheelBottomMean
-        // .calculate(Math.abs(shot.bottomVelocity) -
-        // Math.abs(getBottomFlywheelVelocity()));
-        // double flywheelTopMeanError = flywheelTopMean
-        // .calculate(Math.abs(shot.topVelocity) - Math.abs(getTopFlywheelVelocity()));
-        // double rotaryMeanError = rotaryMean
-        // .calculate(Math.abs(shot.angle.getDegrees()) -
-        // Math.abs(getRotaryEncoderDegrees()));
-
-        // return wantsToShoot() && flywheelBottomMeanError <= FLYWHEEL_ERROR_TOLERANCE
-        // && flywheelTopMeanError <= FLYWHEEL_ERROR_TOLERANCE
-        // && rotaryMeanError <= ROTARY_ERROR_TOLERANCE;
     }
 
     /** Get the degree angle measured by the rotary encoder. */
@@ -493,12 +458,12 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
     }
 
     public boolean isFlywheelCurrentSpiked() {
-        return intake.isIntaking() && timeSinceStartedIntaking.get() >= .5 && flywheelTop.getCurrent() >= FLYWHEEL_INTAKE_CURRENT_SPIKE;
+        return intake.isIntaking() && timeSinceStartedIntaking.get() >= .5
+                && flywheelTop.getCurrent() >= FLYWHEEL_INTAKE_CURRENT_SPIKE;
     }
 
     @Override
     public void update(TorqueMode mode) {
-
         // *** SMARTDASHBOARD ENTRIES FOR DEBUG PURPOSES ***
         Debug.log("Shooter State", desiredState.toString());
         Debug.log("Shooter Rotary Positon", getRotaryEncoderDegrees());
@@ -546,8 +511,6 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
 
         if (wantsState(State.AMP) && !isChuteReadyForAmp())
             desiredState = State.AMP_INIITAL;
-
-        Debug.log("Shooter State after Amp", desiredState.toString());
 
         // Current limit handling.
         if (emergencyCurrentLimit || wantsState(State.AMP)) {
@@ -644,8 +607,6 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         flywheelTop.setVolts(flywheelVoltsTop);
         flywheelBottom.setVolts(flywheelVoltsBottom);
 
-        Debug.log("State before Amp", desiredState.toString());
-
         if (wantsState(State.AMP))
             chuteState = ChuteState.OUT;
         else if (wantsState(State.AMP_INIITAL)
@@ -656,18 +617,9 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         else
             chuteState = ChuteState.IN;
 
-        Debug.log("Shooter Chute State", chuteState.toString());
-        Debug.log("Chute Setpoint Position", chuteState.position.getDegrees());
-
         chute.setVolts(
                 -TorqueMath.constrain(chutePID.calculate(getChuteEncoderDegrees(), chuteState.position.getDegrees())
                         + chuteFF.calculate(getChuteSetpointActualRadians(chuteState.position.getDegrees()), 0), 6));
-
-        Debug.log("Chute Volts", -TorqueMath.constrain(
-                chutePID.calculate(getChuteEncoderDegrees(), chuteState.position.getDegrees())
-                        + chuteFF.calculate(getChuteSetpointActualRadians(chuteState.position.getDegrees()), 0),
-                4));
-
         double rotaryVolts = rotaryPID.calculate(getRotaryEncoderDegrees(), shot.angle.getDegrees())
                 + rotaryFF.calculate(shot.angle.getRadians(), 0);
 
