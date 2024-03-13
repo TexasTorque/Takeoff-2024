@@ -157,8 +157,8 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
         alignPID = new PIDController(.1, 0, 0);
         alignPID.enableContinuousInput(0, 360);
 
-        SmartDashboard.putNumber("Align PID P", .05);
-        SmartDashboard.putNumber("Align PID I", .05);
+        SmartDashboard.putNumber("Align PID P", .085);
+        // SmartDashboard.putNumber("Align PID I", .05);
     }
 
     @Override
@@ -281,7 +281,7 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
         // the output of the align to angle PID controller.
         if (wantsState(State.ALIGN_TO_ANGLE)) {
             inputSpeeds.omegaRadiansPerSecond = -TorqueMath.constrain(
-                    alignPID.calculate(perception.getHeading().getDegrees(), getAlignTarget()), Math.PI);
+                    alignPID.calculate(perception.getHeading().getDegrees(), getAlignTarget()), 2*Math.PI);
         }
 
         // Use kinematics to convert robot vector to swerve vectors, then desaturate

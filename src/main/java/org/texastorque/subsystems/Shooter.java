@@ -28,6 +28,7 @@ import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.controller.SimpleMotorFeedforward;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj.DigitalInput;
+import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
@@ -76,13 +77,13 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
 
         // Layup, black line, and safe zone backup shots. These have reversable "shift
         // shots"
-        LAYUP(new Shot(4200, Rotation2d.fromDegrees(64)), new Shot(4200, Rotation2d.fromDegrees(121)), true),
+        LAYUP(new Shot(4200, Rotation2d.fromDegrees(64)), new Shot(4200, Rotation2d.fromDegrees(124)), true),
 
         // Used for tossing a note across the field
         LASER(new Shot(3400, Rotation2d.fromDegrees(54)), true),
 
-        MID(new Shot(4400, Rotation2d.fromDegrees(41)), new Shot(4400, Rotation2d.fromDegrees(135)), true),
-        SAFEZONE(new Shot(4600, Rotation2d.fromDegrees(37)), new Shot(4300, Rotation2d.fromDegrees(143)), true),
+        MID(new Shot(4400, Rotation2d.fromDegrees(41)), new Shot(4400, Rotation2d.fromDegrees(143)), true),
+        SAFEZONE(new Shot(4600, Rotation2d.fromDegrees(37)), new Shot(4300, Rotation2d.fromDegrees(148)), true),
 
         // Future and Smart shots are special.
         // - Smart: will be overridden later w/ a calculated shot for our *current*
@@ -370,7 +371,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
 
     /** Is the shooter ready to shoot or not? */
     public boolean isReadyToShoot() {
-        if (!wantsToShoot()) {
+        if (!wantsToShoot() || (drivebase.wantsState(Drivebase.State.PATHING) && wantsState(State.FUTURE_SMART))) {
             return false;
         }
         return isTopFlywheelReady() && isBottomFlywheelReady() && isRotaryAtState();
@@ -702,8 +703,8 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
      * considered OK to shoot.
      */
     public static int loopsOK() {
-        // return DriverStation.isAutonomous() ? 1$a5 : 5;
-        return 5;
+        return DriverStation.isAutonomous() ? 5 : 10;
+        // return 5;
     }
 
     /** Compute the maximum allowed voltage for the rotary motor. */
