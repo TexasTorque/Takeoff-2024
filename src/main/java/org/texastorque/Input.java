@@ -25,7 +25,7 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
             runDumbIntake, runOuttake, speakerSmartShot, speakerLayup, speakerSafeZone, amp, trap,
             deaccelerateClick, deaccelerateHold, manualGateOut, manualGateIn, babyBird, speakerMid,
             shooterIdle, shooterShift, climbUp, climbDown, climbLeftUp, climbRightUp, climbLeftDown, climbRightDown,
-            shooterClimbMode, laser, operatorClimbUp;
+            shooterClimbMode, laser, operatorClimbUp, debugMode;
 
     private Input() {
         driver = new TorqueController(0, 0.1);
@@ -76,8 +76,8 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
 
         shooterClimbMode = new TorqueToggleSupplier(operator::isDPADLeftDown);
 
-        // debugMode = new TorqueToggleSupplier(
-        //         () -> operator.isLeftCenterButtonDown() && operator.isRightCenterButtonDown());
+        debugMode = new TorqueToggleSupplier(
+                () -> operator.isLeftCenterButtonDown() && operator.isRightCenterButtonDown());
     }
 
     @Override
@@ -120,7 +120,7 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
         shooter.setConsent(TorqueMath.toleranced(operator.getLeftYAxis(), 0, CONTROLLER_DEADBAND)
                 && TorqueMath.toleranced(operator.getLeftXAxis(), 0, CONTROLLER_DEADBAND));
 
-        // shooter.setDebugMode(debugMode.get());
+        shooter.setDebugMode(debugMode.get());
 
         shooter.setEmergencyCurrentLimit(driver.isAButtonDown());
         shooter.setShift(shooterShift.get());

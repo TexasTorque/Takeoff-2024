@@ -69,7 +69,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         BABYBIRD(new Shot(-2500, Rotation2d.fromDegrees(79)), false),
 
         // Amp and trap are special setpoints
-        AMP(new Shot(1600, Rotation2d.fromDegrees(84)), false), // 80.7 <-- real angle
+        AMP(new Shot(1500, Rotation2d.fromDegrees(84)), false), // 80.7 <-- real angle
         AMP_INIITAL(new Shot(0, Rotation2d.fromDegrees(125)), false),
         CLIMB(new Shot(0, Rotation2d.fromDegrees(84)), false),
         TRAP(new Shot(2000, Rotation2d.fromDegrees(81)), true),

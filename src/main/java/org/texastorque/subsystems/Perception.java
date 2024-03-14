@@ -158,7 +158,7 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
         Debug.log("Pose", Util.pose2d2str(poseEstimator.getEstimatedPosition()));
         Debug.log("Filtered Pose", Util.pose2d2str(getFilteredPose()));
         Debug.log("Heading (°)", getHeading().getDegrees());
-        Debug.log("Angle To Speaker (°)", getAngleToSpeaker().getDegrees());
+        Debug.log("Angle To Speaker (°)", getFilteredAngleToSpeaker().getDegrees());
 
         // Update the field map
         field2d.setRobotPose(getFilteredPose());
@@ -168,7 +168,7 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
 
         // Log the pose of the speaker using AdvantageScope
         Logger.recordOutput("Perception/SpeakerPose", new Pose2d[] {
-                field.speakerPoseAngleRight });
+                field.speakerPoseAngle });
 
         // Run rolling median filter aggregation
         filteredPoseX = filteredX.calculate(getPose().getX());
@@ -298,8 +298,12 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
     }
 
     /** Calculate an est. angle from robot to speaker using the filtered pose */
+    Rotation2d lastFilteredAngle;
+
     public Rotation2d getFilteredAngleToSpeaker() {
-        return field.getAngleToSpeaker(getFilteredPose());
+        if (!shooter.wantsState(Shooter.State.SMART))
+            lastFilteredAngle = field.getAngleToSpeaker(getFilteredPose());
+        return lastFilteredAngle;
     }
 
     // Coeficient for motion adjusted shooting

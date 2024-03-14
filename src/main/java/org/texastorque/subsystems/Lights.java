@@ -144,9 +144,10 @@ public final class Lights extends TorqueStatelessSubsystem implements Subsystems
 
     public final LightAction getColor(final TorqueMode mode) {
         // First we check if we are in debug mode and blink yellow
-        if (shooter.inDebugMode()) {
-            return blinkYellow;
-        }
+        
+        // if (shooter.inDebugMode()) {
+        //     return blinkYellow;
+        // }
 
         if (Input.getInstance().isClimbing())
             return rainbow;

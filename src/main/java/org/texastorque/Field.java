@@ -27,14 +27,14 @@ public final class Field {
     public static final double REAL_SPEAKER_Y_POSE = 5.55, FIELD_Y_BOUNDRY = 3.0;
 
     public Pose2d speakerPoseDistance = new Pose2d();
-    public Pose2d speakerPoseAngleRight = new Pose2d();
+    public Pose2d speakerPoseAngle = new Pose2d();
     public Pose2d speakerPoseAngleLeft = new Pose2d();
 
     public boolean isRedAlliance;
 
     public Field() {
-        SmartDashboard.putNumber("Left Position", 5.55);
-        SmartDashboard.putNumber("Right Position", 5.55);
+        SmartDashboard.putNumber("Speaker Y Position", 5.55);
+        SmartDashboard.putNumber("Speaker X Position", 0);
     }
 
     /**
@@ -46,16 +46,11 @@ public final class Field {
 
         final double speakerXPosition = isRedAlliance ? LENGTH : 0;
 
-        speakerPoseDistance = new Pose2d(-.04 * (isRedAlliance ? -1 : 1) + speakerXPosition, 
-                REAL_SPEAKER_Y_POSE, Rotation2d.fromDegrees(0));
+        speakerPoseDistance = new Pose2d(-.04 * (isRedAlliance ? -1 : 1) + speakerXPosition,
+                5.55, Rotation2d.fromDegrees(0));
 
-        // final double leftYPosition = SmartDashboard.getNumber("Left Position", 0);
-        final double leftYPosition = REAL_SPEAKER_Y_POSE;
-        // final double rightYPosition = SmartDashboard.getNumber("Right Position", 0);
-        final double rightYPosition = REAL_SPEAKER_Y_POSE;
+        speakerPoseAngle = new Pose2d(.1, 5.55, new Rotation2d());
 
-        speakerPoseAngleRight = new Pose2d(.1, rightYPosition, Rotation2d.fromDegrees(0));
-        speakerPoseAngleLeft = new Pose2d(.1, leftYPosition, Rotation2d.fromDegrees(0));
     }
 
     public boolean isPoseOnField(final Pose2d pose) {
@@ -70,9 +65,12 @@ public final class Field {
 
     /** Calculate the angle from some pose to the speaker */
     public Rotation2d getAngleToSpeaker(final Pose2d pose) {
-        final double speakerY = pose.getY() < FIELD_Y_BOUNDRY ? speakerPoseAngleRight.getY() : speakerPoseAngleLeft.getY();
+        // final double speakerYPosition = SmartDashboard.getNumber("Speaker Y Position", 0);
+        // final double speakerXPosition = SmartDashboard.getNumber("Speaker X Position", 0);
+        // speakerPoseAngle = new Pose2d(speakerXPosition, speakerYPosition, Rotation2d.fromDegrees(0));
+
         return Rotation2d.fromRadians(
-                Math.atan2(speakerY - pose.getY(), speakerPoseAngleRight.getX() - pose.getX()))
+                Math.atan2(speakerPoseAngle.getY() - pose.getY(), speakerPoseAngle.getX() - pose.getX()))
                 .plus(Rotation2d.fromRadians(isRedAlliance ? 0 : Math.PI));
     }
 
@@ -82,10 +80,11 @@ public final class Field {
     }
 
     /**
-     * Get the end position handling x-offseting correctly using the alliances color 
-     * @deprecated use calculateXOffset instead 
+     * Get the end position handling x-offseting correctly using the alliances color
+     * 
+     * @deprecated use calculateXOffset instead
      */
-    @Deprecated 
+    @Deprecated
     public Pose2d getEndPosition(final Pose2d pathEndPosition, final boolean isCenterLine) {
         if (!isCenterLine)
             return pathEndPosition;
