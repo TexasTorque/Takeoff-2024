@@ -140,6 +140,7 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
 
     @Override
     public void initialize(final TorqueMode mode) {
+        autoAngleOffset = 0;
     }
 
     @Override
@@ -330,9 +331,15 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
         return field.getAngleToSpeaker(adjustedPose);
     }
 
+    double autoAngleOffset = 0;
+
+    public void setAutoAngleOffset(final double offset) {
+        autoAngleOffset = offset;
+    }
+
     /** Construct an angle to the speaker for the future pose */
     public Rotation2d getFutureAngleToSpeaker() {
-        return field.getAngleToSpeaker(futureShootingPose);
+        return field.getAngleToSpeaker(futureShootingPose).plus(Rotation2d.fromDegrees(autoAngleOffset));
     }
 
     /** Get gyro pitch, possible dead code */
