@@ -73,7 +73,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         // 1500 still high on soft
         // 1400 decent on soft
         // 1300 too low on hard
-        AMP(new Shot(1400, Rotation2d.fromDegrees(84)), false), // 80.7 <-- real angle
+        AMP(new Shot(1475, Rotation2d.fromDegrees(84)), false), // 80.7 <-- real angle
         AMP_INIITAL(new Shot(0, Rotation2d.fromDegrees(125)), false),
         CLIMB(new Shot(0, Rotation2d.fromDegrees(84)), false),
         TRAP(new Shot(2000, Rotation2d.fromDegrees(81)), true),
@@ -516,6 +516,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         if (wantsState(State.AMP) && !isChuteReadyForAmp())
             desiredState = State.AMP_INIITAL;
 
+
         // Current limit handling.
         if (emergencyCurrentLimit || wantsState(State.AMP)) {
             setFlywheelCurrentLimits(90);
@@ -619,6 +620,9 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         } else if (desiredState.isAShot && !shift)
             chuteState = ChuteState.OUT;
         else
+            chuteState = ChuteState.IN;
+
+        if (getRotaryEncoderDegrees() >= State.AMP_INIITAL.shot.angle.getDegrees() + 3)
             chuteState = ChuteState.IN;
 
         chute.setVolts(

@@ -49,8 +49,12 @@ public final class Field {
         speakerPoseDistance = new Pose2d(-.04 * (isRedAlliance ? -1 : 1) + speakerXPosition,
                 5.55, Rotation2d.fromDegrees(0));
 
-        speakerPoseAngle = new Pose2d(.1, 5.55, new Rotation2d());
+        double speakerXPositionForAngle = .1;
 
+        if (isRedAlliance)
+            speakerXPositionForAngle = LENGTH - .1;
+
+        speakerPoseAngle = new Pose2d(speakerXPositionForAngle, 5.55, Rotation2d.fromDegrees(0));
     }
 
     public boolean isPoseOnField(final Pose2d pose) {
@@ -60,7 +64,7 @@ public final class Field {
 
     /** Check if an apriltag id is valid, id elementof [1, 16] */
     public boolean isIDValid(final int id) {
-        return 1 <= id && id <= 16;
+        return 3 <= id && id <= 8;
     }
 
     /** Calculate the angle from some pose to the speaker */
