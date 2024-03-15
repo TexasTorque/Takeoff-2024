@@ -36,6 +36,8 @@ public final class AutoManager extends TorqueAutoManager implements Subsystems {
         pathLoader.preloadPath("go_3_to_2");
         pathLoader.preloadPath("go_2_to_1");
 
+        pathLoader.preloadPath("go_3_to_50");
+
         pathLoader.preloadPath("go_0_to_50");
         pathLoader.preloadPath("go_50_to_40");
         pathLoader.preloadPath("go_40_to_30");
@@ -70,6 +72,7 @@ public final class AutoManager extends TorqueAutoManager implements Subsystems {
 
         addSequence("2 to 1", new BaseAuto(new Pose2d(1.33, 5.55, perception.getHeading()), 2, 1));
         addSequence("2 to 3", new BaseAuto(new Pose2d(1.33, 5.55, perception.getHeading()), 2, 3));
+        addSequence("2 to 3 to 50", new BaseAuto(new Pose2d(1.33, 5.55, perception.getHeading()), 2, 3, 50));
         // addSequence("2 to 1 to 10 to 20", new BaseAuto(2, 1, 10, 20));
 
         addSequence("3 to 2", new BaseAuto(new Pose2d(1.28, 4.7, perception.getHeading()), 3, 2));
