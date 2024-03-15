@@ -36,13 +36,13 @@ public final class Field {
         SmartDashboard.putNumber("Speaker Y Position", 5.55);
         SmartDashboard.putNumber("Speaker X Position", 0);
     }
-
     /**
      * Update the alliance information information.
      */
     public void updateAlliance() {
         isRedAlliance = DriverStation.getAlliance().isPresent()
                 && DriverStation.getAlliance().get() == DriverStation.Alliance.Red;
+
 
         final double speakerXPosition = isRedAlliance ? LENGTH : 0;
 

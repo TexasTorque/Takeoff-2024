@@ -40,8 +40,10 @@ import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.math.util.Units;
+import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 /**
  * Robot perception subsystem, handles sensors that the robot uses
@@ -159,6 +161,8 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
         Debug.log("Filtered Pose", Util.pose2d2str(getFilteredPose()));
         Debug.log("Heading (°)", getHeading().getDegrees());
         Debug.log("Angle To Speaker (°)", getFilteredAngleToSpeaker().getDegrees());
+
+        SmartDashboard.putNumber("match_time", DriverStation.getMatchTime());
 
         // Update the field map
         field2d.setRobotPose(getFilteredPose());

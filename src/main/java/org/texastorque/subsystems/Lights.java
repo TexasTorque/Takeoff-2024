@@ -96,9 +96,7 @@ public final class Lights extends TorqueStatelessSubsystem implements Subsystems
 
     private LightAction red = new Solid(() -> Color.kRed),
             rainbow = new Rainbow(),
-
-            blinkYellow = new Blink(() -> Color.kYellow, 6),
-
+            
             green = new Solid(() -> Color.kGreen),
             blinkGreen = new Blink(() -> Color.kGreen, 6),
 
@@ -144,10 +142,6 @@ public final class Lights extends TorqueStatelessSubsystem implements Subsystems
 
     public final LightAction getColor(final TorqueMode mode) {
         // First we check if we are in debug mode and blink yellow
-        
-        // if (shooter.inDebugMode()) {
-        //     return blinkYellow;
-        // }
 
         if (Input.getInstance().isClimbing())
             return rainbow;

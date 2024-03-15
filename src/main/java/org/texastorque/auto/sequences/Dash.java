@@ -18,7 +18,6 @@ import org.texastorque.torquelib.auto.commands.TorqueRun;
 import org.texastorque.torquelib.auto.commands.TorqueRunSequence;
 import org.texastorque.torquelib.auto.commands.TorqueWaitUntil;
 import org.texastorque.torquelib.auto.commands.TorqueWhile;
-import org.texastorque.torquelib.swerve.TorqueSwerveSpeeds;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj.Timer;
@@ -72,7 +71,11 @@ public class Dash extends TorqueSequence implements Subsystems {
         addBlock(new TorqueRun(() -> shooter.setState(Shooter.State.FUTURE_SMART)));
 
         addBlock(new TorqueRun(() -> perception.setFutureShootingPose(
-                field.getEndPosition(TorqueFollowPath.getEndingPositionForCurrentlyLoadedPath(), true))));
+        // : field.calculateXOffset(TorqueFollowPath.getEndingPositionForCurrentlyLoadedPath(), .35)
+            field.calculateXOffset(TorqueFollowPath.getEndingPositionForCurrentlyLoadedPath(), 0)
+
+    )));
+
         
         addBlock(new TorqueRunSequence(new Shoot()));
 

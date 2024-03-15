@@ -75,14 +75,14 @@ public final class AutoManager extends TorqueAutoManager implements Subsystems {
         addSequence("3 to 2", new BaseAuto(new Pose2d(1.28, 4.7, perception.getHeading()), 3, 2));
         addSequence("3 to 2 to 1", new BaseAuto(new Pose2d(1.28, 4.7, perception.getHeading()), 3, 2, 1));
         addSequence("3 to 2 to 1 to 10", new BaseAuto(new Pose2d(1.28, 4.7, perception.getHeading()), 3, 2, 1, 10));
-
-        addSequence("3 to 2 to 1 to 15", new BaseAuto(new Pose2d(1.28, 4.7, perception.getHeading()), 3, 2, 1, 15));
+        addSequence("3 to 50", new BaseAuto(new Pose2d(1.25, 5.37, perception.getHeading()), 3, 50));
+        // addSequence("3 to 2 to 1 to 15", new BaseAuto(new Pose2d(1.28, 4.7, perception.getHeading()), 3, 2, 1, 15));
 
         // addSequence("10 to 20 to 30", new BaseAuto(10, 20, 30));
 
         // addSequence("50 to 40 to 30", new BaseAuto(50, 40, 30));
 
-        addSequence("DASH to 10 to 20", new Dash(10, 20));
+        // addSequence("DASH to 10 to 20", new Dash(10, 20));
     }
 
     public static final synchronized AutoManager getInstance() {

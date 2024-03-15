@@ -3,7 +3,6 @@ package org.texastorque.auto.commands;
 import java.util.function.Supplier;
 
 import org.texastorque.Subsystems;
-import org.texastorque.subsystems.Drivebase;
 import org.texastorque.torquelib.auto.TorqueSequence;
 import org.texastorque.torquelib.auto.commands.TorqueFollowPath;
 import org.texastorque.torquelib.auto.commands.TorqueRun;
@@ -32,8 +31,6 @@ public class CollectAndShootNote extends TorqueSequence implements Subsystems {
         log("Can Deploy Intake", () -> deployIntakeRightAway);
 
         log("Auto State", () -> "BEGIN PATH");
-
-
 
         addBlock(followPath(() -> noteSequence.getNextPath()),
                 new DeployIntakeWhen(() -> field.isXPast(perception.getPose(), 5) || deployIntakeRightAway)
