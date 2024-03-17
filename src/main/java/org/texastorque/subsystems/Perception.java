@@ -165,6 +165,10 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
 
         SmartDashboard.putNumber("match_time", DriverStation.getMatchTime());
 
+
+        Debug.log("Future angle to speaker Adjusted", getFutureAngleToSpeaker().getDegrees());
+        Debug.log("Future angle to speaker", field.getAngleToSpeaker(futureShootingPose).getDegrees());
+
         // Update the field map
         field2d.setRobotPose(getFilteredPose());
         if (!Robot.isReal() && shooter.wantsState(Shooter.State.SMART) && mode.isAuto()) {

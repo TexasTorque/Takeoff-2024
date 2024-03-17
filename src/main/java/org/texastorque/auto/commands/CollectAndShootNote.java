@@ -30,7 +30,7 @@ public class CollectAndShootNote extends TorqueSequence implements Subsystems {
 
         
         addBlock(new TorqueRun(() -> perception.setAutoAngleOffset(
-            ((noteSequence.peekNext() == 1 || !deployIntakeRightAway) && field.isRedAlliance) ? 4 : 0))
+            ((noteSequence.peekNext() == 1 || !deployIntakeRightAway) && field.isRedAlliance) ? 8 : 0))
         );
 
         log("Can Deploy Intake", () -> deployIntakeRightAway);
