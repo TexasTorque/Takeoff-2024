@@ -6,6 +6,13 @@
   "configurations": [
     {
       "type": "java",
+      "name": "TorqueRollingMean",
+      "request": "launch",
+      "mainClass": "org.texastorque.torquelib.control.TorqueRollingMean",
+      "projectName": "Charlie-2024"
+    },
+    {
+      "type": "java",
       "name": "Field",
       "request": "launch",
       "mainClass": "org.texastorque.Field",

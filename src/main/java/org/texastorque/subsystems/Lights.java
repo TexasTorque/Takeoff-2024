@@ -1,12 +1,16 @@
 /**
  * Copyright 2023 Texas Torque.
  *
- * This file is part of Torque-2023, which is not licensed for distribution.
+ * This file is part of Bravo/Charlie/Takeoff-2024, which is not licensed for distribution.
  * For more details, see ./license.txt or write <jus@justusl.com>.
  */
 package org.texastorque.subsystems;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.Supplier;
+
+import org.texastorque.Input;
 import org.texastorque.Ports;
 import org.texastorque.Subsystems;
 import org.texastorque.torquelib.base.TorqueMode;
@@ -16,7 +20,12 @@ import edu.wpi.first.wpilibj.AddressableLED;
 import edu.wpi.first.wpilibj.AddressableLEDBuffer;
 import edu.wpi.first.wpilibj.util.Color;
 
+/**
+ * LED light controller. Basically a state observer.
+ */
 public final class Lights extends TorqueStatelessSubsystem implements Subsystems {
+
+    /** LightAction to set the LED to a constant color */
     public static class Solid extends LightAction {
         private final Supplier<Color> color;
 
@@ -31,6 +40,7 @@ public final class Lights extends TorqueStatelessSubsystem implements Subsystems
         }
     }
 
+    /** LightAction to set the LED to blink a set color at a set hertz */
     public static class Blink extends LightAction {
         private final Supplier<Color> color1, color2;
         private final double hertz;
@@ -54,6 +64,7 @@ public final class Lights extends TorqueStatelessSubsystem implements Subsystems
         }
     }
 
+    /** LightAction to set the LED to display a rainbow */
     public static class Rainbow extends LightAction {
         private int rainbowFirstPixelHue = 0;
 
@@ -80,55 +91,85 @@ public final class Lights extends TorqueStatelessSubsystem implements Subsystems
         return instance == null ? instance = new Lights() : instance;
     }
 
-    private final AddressableLED shooterLEDs;
-
+    private final List<AddressableLED> lights;
     private final AddressableLEDBuffer buff;
 
-    private LightAction blinkGreen = new Blink(() -> Color.kGreen, 6),
+    private LightAction red = new Solid(() -> Color.kRed),
+            rainbow = new Rainbow(),
+            
             green = new Solid(() -> Color.kGreen),
-            rainbow = new Rainbow(), red = new Solid(() -> Color.kRed),
+            blinkGreen = new Blink(() -> Color.kGreen, 6),
+
             purple = new Solid(() -> Color.kPurple),
-            blinkYellow = new Blink(() -> Color.kYellow, 6), white = new Solid(() -> Color.kWhite);
+            blinkPurple = new Blink(() -> Color.kPurple, 6);
 
     private Lights() {
-        shooterLEDs = new AddressableLED(Ports.LIGHTS_SUPERSTRUCTURE);
-        shooterLEDs.setLength(LENGTH);
-
+        lights = new ArrayList<>();
         buff = new AddressableLEDBuffer(LENGTH);
 
-        for (int i = 0; i < buff.getLength(); i++)
-            buff.setLED(i, Color.kGreen);
+        createStrips(
+                Ports.LIGHTS_SUPERSTRUCTURE);
+    }
 
-        shooterLEDs.setData(buff);
+    /** Instantiate the various color strips */
+    private void createStrips(int... ports) {
+        for (int i = 0; i < buff.getLength(); i++) {
+            buff.setLED(i, Color.kGreen);
+        }
+
+        for (int port : ports) {
+            final AddressableLED strip = new AddressableLED(port);
+            strip.setLength(LENGTH);
+            lights.add(strip);
+        }
+
+        setData(buff);
+    }
+
+    /** Set the LED buffer to the lights */
+    private void setData(final AddressableLEDBuffer buff) {
+        for (final AddressableLED strip : lights) {
+            strip.setData(buff);
+        }
     }
 
     @Override
     public final void initialize(final TorqueMode mode) {
-        shooterLEDs.start();
+        for (final AddressableLED strip : lights) {
+            strip.start(); // start all LED strips
+        }
     }
 
     public final LightAction getColor(final TorqueMode mode) {
-        if (perception.seesTags() && shooter.hasNote())
-            return shooter.isShift() ? purple : blinkGreen;
-        else if (climber.isReady())
+        // First we check if we are in debug mode and blink yellow
+
+        if (Input.getInstance().isClimbing())
             return rainbow;
-        else if (shooter.wantsState(Shooter.State.CLIMB))
-            return white;
-        else if (shooter.hasNote())
-            return shooter.isShift() ? purple : green;
-        else if (shooter.inDebugMode())
-            return blinkYellow;
-        else if (mode.isAuto())
-            return rainbow;
-        else
+
+        // Otherwise we check if we have a note
+        if (shooter.hasNote()) {
+            // And then if we see a tag
+            if (perception.seesTags()) {
+                // If we do see a tag we want to blink...
+                // ...either green for normal mode and purple for shift mode
+                return shooter.isShift() ? blinkPurple : blinkGreen;
+            } else {
+                // And if we do not see a tag we want to be solid...
+                // ...again, either green for normal mode and purple for shift mode
+                return shooter.isShift() ? purple : green;
+            }
+            // And if we dont have a note then we want to be solid red
+        } else {
             return red;
+        }
 
     }
 
     @Override
     public final void update(final TorqueMode mode) {
+        // We need to get and process the color, then set that buffer to the LED strips
         getColor(mode).run(buff);
-        shooterLEDs.setData(buff);
+        setData(buff);
     }
 
     @Override

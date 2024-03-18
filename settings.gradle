@@ -26,5 +26,13 @@ pluginManagement {
     }
 }
 
+
 Properties props = System.getProperties();
 props.setProperty("org.gradle.internal.native.headers.unresolved.dependencies.ignore", "true");
+props.setProperty("org.gradle.deamon", "true")
+props.setProperty("org.gradle.parallel", "true")
+props.setProperty("org.gradle.configureondemand", "true")
+
+// These numbers are arbitrary but any reasonable computer to handle for build
+// but I am not sure if this carries over into the deploy so IDK if this is a great option
+// props.setProperty("org.gradle.jvmargs", "-Xmx4096m -XX:MaxPermSize=4096m -XX:+HeapDumpOnOutOfMemoryError")
