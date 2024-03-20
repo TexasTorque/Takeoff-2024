@@ -36,7 +36,9 @@ import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Transform2d;
 import edu.wpi.first.math.geometry.Transform3d;
+import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.math.util.Units;
@@ -98,12 +100,13 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
 
     // Used to filter some noise directly out of the pose measurements.
     private final TorqueRollingMedian filteredX, filteredY;
-    private double filteredPoseX = 0;
-    private double filteredPoseY = 0;
+    private Pose2d filteredPose = new Pose2d();
 
     // a position that we could be at in the future that we want to
     // run computations for.
     private Pose2d futureShootingPose = new Pose2d();
+
+    public static final String SHTR_R = "SHTR_R", SHTR_L = "SHTR_L", INTK_R = "INTK_R";
 
     public Perception() {
         super(State.VISION);
@@ -116,18 +119,18 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
                 new Pose2d(), ODOMETRY_STDS, VISION_STDS);
 
         // Add toast camera -- question: does pitch need to be here?
-        toast.addCamera(new Camera("SHTR_R",
+        toast.addCamera(new Camera(SHTR_R,
                 Camera.transformInchDeg(-5.0, 12.54, 14.181, 0, 35, 180)));
-        toast.addCamera(new Camera("SHTR_L",
+        toast.addCamera(new Camera(SHTR_L,
                 Camera.transformInchDeg(-5.0, -12.54, 14.181, 0, 35, 180)));
-        toast.addCamera(new Camera("INTK_R", new Transform3d()));
+        toast.addCamera(new Camera(INTK_R, new Transform3d()));
 
         // Register the apriltags pipeline on all cameras
         toast.iterCams(cam -> cam.addPipeline(new AprilTags(cam.id)));
 
         // Register the object detection pipelines on intake cameras and configure them
         // to detect notes
-        toast.getCamera("INTK_R").get().addPipeline(new ObjDetector<Note>(Note::fromJSONRight));
+        toast.getCamera(INTK_R).get().addPipeline(new ObjDetector<Note>(Note::fromJSONRight));
 
         // Log the field map to the dashboard
         Debug.field("Field", field2d);
@@ -140,7 +143,6 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
 
     @Override
     public void initialize(final TorqueMode mode) {
-        autoAngleOffset = 0;
     }
 
     @Override
@@ -153,21 +155,15 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
         updateObjectDetection();
 
         // *** SMARTDASH BOARD LOGS ***
-        Debug.log("Is X Past", field.isXPast(getPose(), 4));
-        Debug.log("gyro yaw", gyro.getFusedHeading());
-        Debug.log("gyro pitch", gyro.getPitch());
-        Debug.log("gyro roll", gyro.getRoll());
+        Debug.log("Robot pitch (°)", gyro.getPitch());
+        Debug.log("Robot roll (°)", gyro.getRoll());
 
         Debug.log("Pose", Util.pose2d2str(poseEstimator.getEstimatedPosition()));
         Debug.log("Filtered Pose", Util.pose2d2str(getFilteredPose()));
         Debug.log("Heading (°)", getHeading().getDegrees());
-        Debug.log("Angle To Speaker (°)", getFilteredAngleToSpeaker().getDegrees());
+        Debug.log("Desired Heading Lock (°)", getHeadingLock().getDegrees());
 
         SmartDashboard.putNumber("match_time", DriverStation.getMatchTime());
-
-
-        Debug.log("Future angle to speaker Adjusted", getFutureAngleToSpeaker().getDegrees());
-        Debug.log("Future angle to speaker", field.getAngleToSpeaker(futureShootingPose).getDegrees());
 
         // Update the field map
         field2d.setRobotPose(getFilteredPose());
@@ -177,11 +173,13 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
 
         // Log the pose of the speaker using AdvantageScope
         Logger.recordOutput("Perception/SpeakerPose", new Pose2d[] {
-                field.speakerPoseAngle });
+                field.speakerPose });
 
         // Run rolling median filter aggregation
-        filteredPoseX = filteredX.calculate(getPose().getX());
-        filteredPoseY = filteredY.calculate(getPose().getY());
+        filteredPose = new Pose2d(
+            filteredX.calculate(getPose().getX()),
+            filteredY.calculate(getPose().getY()),
+            getHeading());
     }
 
     /** Updates the pose estimator with swerve encoder feedback */
@@ -205,10 +203,10 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
         Debug.log("Using Vision", !drivebase.wantsState(Drivebase.State.PATHING));
 
         if (drivebase.wantsState(Drivebase.State.PATHING)) {
-            return;
+            return; // do not update vision if we are pathing
         }
 
-        seesTags = false;
+        seesTags = false; // reset the seesTags field
 
         toast.iterCams((cam) -> {
             final var pipeOpt = cam.getPipeline(AprilTags.class);
@@ -232,7 +230,7 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
                 if (!detection.isValidDetection()
                         || !field.isIDValid(detection.id)
                         || Math.abs(gyro.getAngularVelocity().getRadians()) > MAX_ANGULAR_VELOCITY_RADS
-                        || detection.getDistance() > MAX_DISTANCE)
+                        || detection.getDistance2d() > MAX_DISTANCE)
                     continue;
 
                 // get tag pose in world space
@@ -303,47 +301,28 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
 
     /** Construct and return a pose estimation using our rolling median filter */
     public Pose2d getFilteredPose() {
-        return new Pose2d(filteredPoseX, filteredPoseY, getHeading());
+        return filteredPose;
     }
 
-    /** Calculate an est. angle from robot to speaker using the filtered pose */
-    Rotation2d lastFilteredAngle;
+    private Rotation2d lastFilteredAngle; // The last filtered angle we have used
 
-    public Rotation2d getFilteredAngleToSpeaker() {
+    /** Calculate the desired heading lock for the drivebase auto-align during teleop */
+    public Rotation2d getHeadingLock() {
+        // If we are in auto we want to return the angle from our set
+        // future shooting pose to the speaker.
+        if (DriverStation.isAutonomous()) {
+            return field.getAngleToSpeaker(futureShootingPose);
+        }
+        // If shooter is trying to laser then we want to get the angle 
+        // to the passing zone.
+        if (shooter.wantsState(Shooter.State.LASER)) {
+            return field.getAngleToPassingZone(getFilteredPose());
+        }
+        // If we are in smart state then we want to freeze the heading.
+        // This may be removed in the future.
         if (!shooter.wantsState(Shooter.State.SMART))
             lastFilteredAngle = field.getAngleToSpeaker(getFilteredPose());
         return lastFilteredAngle;
-    }
-
-    // Coeficient for motion adjusted shooting
-    public static final double VELO_ADJ_K = 0.25;
-
-    /**
-     * Calculates a robot angle to speaker but tries to adjusts for motion (very
-     * primative impl)
-     */
-    public Rotation2d getMotionAdjustedAngleToSpeaker() {
-        final TorqueSwerveSpeeds speeds = TorqueSwerveSpeeds.fromChassisSpeeds(drivebase.getChassisSpeeds());
-
-        final Pose2d currentPose = getFilteredPose();
-
-        final Pose2d adjustedPose = new Pose2d(
-                currentPose.getX() + speeds.vxMetersPerSecond * VELO_ADJ_K,
-                currentPose.getY() + speeds.vyMetersPerSecond * VELO_ADJ_K,
-                currentPose.getRotation());
-
-        return field.getAngleToSpeaker(adjustedPose);
-    }
-
-    double autoAngleOffset = 0;
-
-    public void setAutoAngleOffset(final double offset) {
-        autoAngleOffset = offset;
-    }
-
-    /** Construct an angle to the speaker for the future pose */
-    public Rotation2d getFutureAngleToSpeaker() {
-        return field.getAngleToSpeaker(futureShootingPose).plus(Rotation2d.fromDegrees(autoAngleOffset));
     }
 
     /** Get gyro pitch, possible dead code */
@@ -381,11 +360,6 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
         return poseEstimator.getEstimatedPosition();
     }
 
-    /** Supply the pose of the robot */
-    public Supplier<Pose2d> supplyPose() {
-        return () -> getPose();
-    }
-
     /**
      * Resets the current position of the robot to the argument.
      */
@@ -414,22 +388,113 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
         return field.getAngleToSpeaker(getPose());
     }
 
-    /**
-     * Get the distance from the robot to the speaker
-     */
+    /** Get the distance from the robot to the speaker w/ the regular pose */
     public double getDistanceToSpeaker() {
-        return Math.sqrt(
-                Math.pow(field.speakerPoseDistance.getY() - getPose().getY(), 2)
-                        + Math.pow(field.speakerPoseDistance.getX() - getPose().getX(), 2));
+        return field.distanceToSpeaker(getPose());
+    }
+
+    /** Get the distance from the robot to the speaker w/ the filtered pose */
+    public double getFilteredDistanceToSpeaker() {
+        return field.distanceToSpeaker(getFilteredPose());
+    }
+
+    /** Get the distance from the robot to the speaker */
+    public double getFutureDistanceToSpeaker() {
+        return field.distanceToSpeaker(futureShootingPose);
     }
 
     /**
-     * Get the distance from the robot to the speaker
+     * Get target offset of the given camera, this should be [-W/2, W/2]
+     * where W is the width of the frame in pixels.
+     * 
+     * +--------------------------+
+     * |            .             |
+     * |            .             |
+     * |            .      X      |
+     * |            .             |
+     * |            .             |
+     * +--------------------------+
+     * -W/2         0             W/2
+     * 
+     * ex. X ~= W/4
      */
-    public double getFutureDistanceToSpeaker() {
-        return Math.sqrt(
-                Math.pow(field.speakerPoseDistance.getY() - futureShootingPose.getY(), 2)
-                        + Math.pow(field.speakerPoseDistance.getX() - futureShootingPose.getX(), 2));
+    public Optional<AprilTagDetection> getTarget(final String cameraName) {
+
+        final var camOpt = toast.getCamera(cameraName);
+        if (camOpt.isEmpty()) {
+            return Optional.empty();
+        }
+        final var pipeOpt = camOpt.get().getPipeline(AprilTags.class);
+        if (pipeOpt.isEmpty()) {
+            return Optional.empty();
+        }
+
+        final List<AprilTagDetection> detections = pipeOpt.get().getDetections();
+
+        final int targetID = field.getSpeakerTargetID();
+        
+        for (final AprilTagDetection detection : detections) {
+
+            if (!detection.isValidDetection()) continue;
+
+            final int id = detection.id;
+
+            if (id != targetID) continue;
+
+            return Optional.of(detection);
+        }
+        return Optional.empty();
+    }
+
+    final static double HALF_W = 1920.0 / 2.0;
+
+    /**
+     * Get the fused x-offset to the target tag from the shooter side of the robot.
+     */
+    public Optional<Double> getFusedTargetOffset() {
+
+        // Uses shooter perspective
+        final var lopt = getTarget(SHTR_L);
+        final var ropt = getTarget(SHTR_R);
+
+        final double lx = lopt.isPresent() ? lopt.get().xOffset : HALF_W;
+        final double rx = ropt.isPresent() ? ropt.get().xOffset : -HALF_W;
+        
+        // This is a primative algorithm that might work w/ a PID controller
+        if (lopt.isPresent() || ropt.isPresent()) {
+            return Optional.of(lx + rx);
+        }
+        return Optional.empty();
+    }
+
+    /** 
+     * Compute an accurate estimate of the normal distance to the target tag
+     * in the XY plane.
+     * */
+    public Optional<Double> getFusedTargetDistance() {
+
+        // Uses shooter perspective
+        final var lOpt = getTarget(SHTR_L);
+        final var rOpt = getTarget(SHTR_R);
+
+        final boolean lPresent = lOpt.isPresent();
+        final boolean rPresent = rOpt.isPresent();
+
+        final Translation2d tl = lPresent ? lOpt.get().transform.getTranslation().toTranslation2d() : new Translation2d();
+        final Translation2d tr = rPresent ? rOpt.get().transform.getTranslation().toTranslation2d() : new Translation2d();
+
+        if (lPresent && rPresent) {
+            final double xAvg = (tl.getX() + tr.getX()) / 2.0;
+            final double yAvg = (tl.getX() + tr.getX()) / 2.0;
+            return Optional.of(Math.sqrt(xAvg * xAvg + yAvg * yAvg));
+        } 
+        if (lPresent && !rPresent) {
+            return Optional.of(tl.getNorm());
+        }
+        if (!lPresent && rPresent) {
+            return Optional.of(tr.getNorm());
+        }
+        return Optional.empty();
     }
 
     private static volatile Perception instance;
