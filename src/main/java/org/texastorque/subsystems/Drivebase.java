@@ -247,7 +247,7 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
             }
         }
 
-        // Make climb slow 
+        // Make drivebase slow during climb mode
         if (shooter.wantsState(Shooter.State.CLIMB)) {
             runSpeedSequence();
         }
@@ -272,11 +272,16 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
             inputSpeeds = inputSpeeds.toFieldRelativeSpeeds(perception.getHeading());
         }
 
+        // We calculate fusedTargetOffset outside of the scope we need it for so
+        // we can log it nicely.
+        final Optional<Double> fusedTargetOffset = perception.getFusedTargetOffset();
+        Debug.log("Target Offset Present", fusedTargetOffset.isPresent());
+        Debug.log("Fused Target Offset", fusedTargetOffset.orElseGet(() -> 0.0));
+
         // If we are in the align state then we want to set our rotational velocity to
         // the output of the align to angle PID controller.
         if (wantsState(State.ALIGN_TO_ANGLE)) {
             double requestedAngularVelocity = 0;
-            final Optional<Double> fusedTargetOffset = perception.getFusedTargetOffset();
 
             if (fusedTargetOffset.isPresent()) { 
                 // We see the correct targets, we can lock our shooter to that target.

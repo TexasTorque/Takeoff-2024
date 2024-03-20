@@ -100,8 +100,7 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
 
     // Used to filter some noise directly out of the pose measurements.
     private final TorqueRollingMedian filteredX, filteredY;
-    private double filteredPoseX = 0;
-    private double filteredPoseY = 0;
+    private Pose2d filteredPose = new Pose2d();
 
     // a position that we could be at in the future that we want to
     // run computations for.
@@ -156,10 +155,8 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
         updateObjectDetection();
 
         // *** SMARTDASH BOARD LOGS ***
-        Debug.log("Is X Past", field.isXPast(getPose(), 4));
-        Debug.log("gyro yaw", gyro.getFusedHeading());
-        Debug.log("gyro pitch", gyro.getPitch());
-        Debug.log("gyro roll", gyro.getRoll());
+        Debug.log("Robot pitch (°)", gyro.getPitch());
+        Debug.log("Robot roll (°)", gyro.getRoll());
 
         Debug.log("Pose", Util.pose2d2str(poseEstimator.getEstimatedPosition()));
         Debug.log("Filtered Pose", Util.pose2d2str(getFilteredPose()));
@@ -179,8 +176,10 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
                 field.speakerPose });
 
         // Run rolling median filter aggregation
-        filteredPoseX = filteredX.calculate(getPose().getX());
-        filteredPoseY = filteredY.calculate(getPose().getY());
+        filteredPose = new Pose2d(
+            filteredX.calculate(getPose().getX()),
+            filteredY.calculate(getPose().getY()),
+            getHeading());
     }
 
     /** Updates the pose estimator with swerve encoder feedback */
@@ -204,10 +203,10 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
         Debug.log("Using Vision", !drivebase.wantsState(Drivebase.State.PATHING));
 
         if (drivebase.wantsState(Drivebase.State.PATHING)) {
-            return;
+            return; // do not update vision if we are pathing
         }
 
-        seesTags = false;
+        seesTags = false; // reset the seesTags field
 
         toast.iterCams((cam) -> {
             final var pipeOpt = cam.getPipeline(AprilTags.class);
@@ -302,7 +301,7 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
 
     /** Construct and return a pose estimation using our rolling median filter */
     public Pose2d getFilteredPose() {
-        return new Pose2d(filteredPoseX, filteredPoseY, getHeading());
+        return filteredPose;
     }
 
     private Rotation2d lastFilteredAngle; // The last filtered angle we have used

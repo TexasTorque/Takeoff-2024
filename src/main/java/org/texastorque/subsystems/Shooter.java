@@ -47,6 +47,14 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         }
 
         private static final Shot empty = new Shot(0, 0, new Rotation2d(0));
+
+        @Override
+        public String toString() {
+            if (topVelocity == bottomVelocity) {
+                return String.format("%.0frpm @ %.2f°", topVelocity, angle.getDegrees());
+            }
+            return String.format("%.0frpm @ %.0frpm %.2f°", topVelocity, bottomVelocity, angle.getDegrees());
+        }
     }
 
     private static final Rotation2d ROTARY_OFF_POSITION = Rotation2d.fromDegrees(111);
@@ -400,11 +408,9 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
     public boolean wantsToShoot() {
         return desiredState.isAShot;
     }
-
     public boolean inDebugMode() {
         return debugMode;
     }
-
     public boolean hasConsent() {
         return consent;
     }
@@ -471,15 +477,13 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         // *** SMARTDASHBOARD ENTRIES FOR DEBUG PURPOSES ***
         Debug.log("Shooter State", desiredState.toString());
         Debug.log("Shooter Rotary Positon", getRotaryEncoderDegrees());
-        Debug.log("Shooter Top Velocity", getTopFlywheelVelocity());
-        Debug.log("Shooter Bottom Velocity", -getBottomFlywheelVelocity());
-        Debug.log("Shooter is Ready", isReadyToShoot());
+        Debug.log("Shooter Velocity Top", getTopFlywheelVelocity());
+        Debug.log("Shooter Velocity Bottom", -getBottomFlywheelVelocity());
+        Debug.log("Shooter Ready", isReadyToShoot());
         Debug.log("Distance (Pose)", perception.getDistanceToSpeaker());
-
         Debug.log("Distance (Direct)", perception.getFusedTargetDistance().orElseGet(() -> -1.0));
-
-        Debug.log("Top Flywheel Ready", isTopFlywheelReady());
-        Debug.log("Bottom Flywheel Ready", isBottomFlywheelReady());
+        Debug.log("Flywheel Ready Top", isTopFlywheelReady());
+        Debug.log("Flywheel Ready Bottom", isBottomFlywheelReady());
         Debug.log("Rotary Ready", isRotaryAtState());
         Debug.log("Has Note", hasNote());
         Debug.log("Debug Mode", debugMode);
@@ -659,7 +663,6 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
      */
     public static int loopsOK() {
         return DriverStation.isAutonomous() ? 5 : 10;
-        // return 5;
     }
 
     /** Compute the maximum allowed voltage for the rotary motor. */
