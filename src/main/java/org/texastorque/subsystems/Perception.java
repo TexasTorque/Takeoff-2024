@@ -17,6 +17,7 @@ import org.texastorque.Subsystems;
 import org.texastorque.toast.lib.Camera;
 import org.texastorque.toast.lib.Toast;
 import org.texastorque.toast.lib.Util;
+import org.texastorque.toast.lib.Pipeline.Status;
 import org.texastorque.toast.lib.pipelines.AprilTags;
 import org.texastorque.toast.lib.pipelines.ObjDetector;
 import org.texastorque.toast.lib.pipelines.AprilTags.AprilTagDetection;
@@ -106,8 +107,12 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
     // run computations for.
     private Pose2d futureShootingPose = new Pose2d();
 
-    public static final String SHTR_R = "SHTR_R", SHTR_L = "SHTR_L", INTK_R = "INTK_R";
+    public static final String SHTR_R = "sim", SHTR_L = "SHTR_L", INTK_R = "INTK_R";
 
+    private final AprilTags tagCameraLeft, tagCameraRight;
+    private final ObjDetector<Note> intakeCamera;
+
+    @SuppressWarnings("unchecked")
     public Perception() {
         super(State.VISION);
 
@@ -125,12 +130,13 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
                 Camera.transformInchDeg(-5.0, -12.54, 14.181, 0, 35, 180)));
         toast.addCamera(new Camera(INTK_R, new Transform3d()));
 
-        // Register the apriltags pipeline on all cameras
-        toast.iterCams(cam -> cam.addPipeline(new AprilTags(cam.id)));
+        // Register the apriltags pipeline on shooter cameras 
+        tagCameraLeft = (AprilTags)toast.getCamera(SHTR_L).get().addPipeline(new AprilTags());
+        tagCameraRight = (AprilTags)toast.getCamera(SHTR_R).get().addPipeline(new AprilTags());
 
         // Register the object detection pipelines on intake cameras and configure them
         // to detect notes
-        toast.getCamera(INTK_R).get().addPipeline(new ObjDetector<Note>(Note::fromJSONRight));
+        intakeCamera = (ObjDetector<Note>)toast.getCamera(INTK_R).get().addPipeline(new ObjDetector<Note>(Note::fromJSONRight));
 
         // Log the field map to the dashboard
         Debug.field("Field", field2d);
@@ -163,6 +169,10 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
         Debug.log("Heading (°)", getHeading().getDegrees());
         Debug.log("Desired Heading Lock (°)", getHeadingLock().getDegrees());
 
+        Debug.log("SHTR_L Status", tagCameraLeft.getStatus().toString());
+        Debug.log("SHTR_R Status", tagCameraRight.getStatus().toString());
+        Debug.log("INTK_R Status", intakeCamera.getStatus().toString());
+
         SmartDashboard.putNumber("match_time", DriverStation.getMatchTime());
 
         // Update the field map
@@ -180,6 +190,25 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
             filteredX.calculate(getPose().getX()),
             filteredY.calculate(getPose().getY()),
             getHeading());
+    }
+
+    /** 
+     * Returns an "summary" of the total vision status by fusing
+     * the status of both tag cameras.
+     * 
+     * The strategy is returning the status of the camera with 
+     * the most fatal status.
+     */
+    public Status getMostFatalVisionStatus() {
+        final Status lStatus = tagCameraLeft.getStatus();
+        final Status rStatus = tagCameraRight.getStatus();
+        if (lStatus == Status.DOWN || rStatus == Status.DOWN) {
+            return Status.DOWN;
+        }
+        if (lStatus == Status.STALE || rStatus == Status.STALE) {
+            return Status.STALE;
+        }
+        return Status.OK;
     }
 
     /** Updates the pose estimator with swerve encoder feedback */
@@ -212,6 +241,12 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
             final var pipeOpt = cam.getPipeline(AprilTags.class);
             if (pipeOpt.isEmpty())
                 return;
+
+            // If the pipeline is down or stale then we want to ignore it.
+            if (pipeOpt.get().getStatus() != Status.OK) {
+                return;
+            }
+
             final AprilTags pipe = pipeOpt.get();
 
             final List<AprilTagDetection> detections = pipe.getDetections();
@@ -418,18 +453,8 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
      * 
      * ex. X ~= W/4
      */
-    public Optional<AprilTagDetection> getTarget(final String cameraName) {
-
-        final var camOpt = toast.getCamera(cameraName);
-        if (camOpt.isEmpty()) {
-            return Optional.empty();
-        }
-        final var pipeOpt = camOpt.get().getPipeline(AprilTags.class);
-        if (pipeOpt.isEmpty()) {
-            return Optional.empty();
-        }
-
-        final List<AprilTagDetection> detections = pipeOpt.get().getDetections();
+    public Optional<AprilTagDetection> getTarget(final AprilTags pipeline) {
+        final List<AprilTagDetection> detections = pipeline.getDetections();
 
         final int targetID = field.getSpeakerTargetID();
         
@@ -454,8 +479,8 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
     public Optional<Double> getFusedTargetOffset() {
 
         // Uses shooter perspective
-        final var lopt = getTarget(SHTR_L);
-        final var ropt = getTarget(SHTR_R);
+        final var lopt = getTarget(tagCameraLeft);
+        final var ropt = getTarget(tagCameraRight);
 
         final double lx = lopt.isPresent() ? lopt.get().xOffset : HALF_W;
         final double rx = ropt.isPresent() ? ropt.get().xOffset : -HALF_W;
@@ -474,8 +499,8 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
     public Optional<Double> getFusedTargetDistance() {
 
         // Uses shooter perspective
-        final var lOpt = getTarget(SHTR_L);
-        final var rOpt = getTarget(SHTR_R);
+        final var lOpt = getTarget(tagCameraLeft);
+        final var rOpt = getTarget(tagCameraRight);
 
         final boolean lPresent = lOpt.isPresent();
         final boolean rPresent = rOpt.isPresent();
@@ -504,11 +529,8 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
     }
 
     /** Grab note detections from the TOAST pipeline */
-    @SuppressWarnings("unchecked") // there is an unchecked cast.
     public List<Note> getNoteDetections() {
-        final List<Note> detRight = toast.getCamera("INTK_R").get().getPipeline(ObjDetector.class).get()
-                .getDetections();
-        return detRight;
+        return intakeCamera.getDetections();
     }
 
     /** Get the best detection of the notes. */
