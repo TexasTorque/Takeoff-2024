@@ -24,11 +24,11 @@ public final class Field {
 
     public static final double LENGTH = 16.541;
     public static final double WIDTH = Units.inchesToMeters(315.5);
-    public static final double REAL_SPEAKER_Y_POSE = 5.55, FIELD_Y_BOUNDRY = 3.0;
+    public static final double SPEAKER_Y = 5.55;
+    public static final double SPEAKER_X = 0;
 
-    public Pose2d speakerPoseDistance = new Pose2d();
-    public Pose2d speakerPoseAngle = new Pose2d();
-    public Pose2d speakerPoseAngleLeft = new Pose2d();
+    public Pose2d speakerPose = new Pose2d();
+    public Pose2d passingZone = new Pose2d();
 
     public boolean isRedAlliance;
 
@@ -43,18 +43,8 @@ public final class Field {
         isRedAlliance = DriverStation.getAlliance().isPresent()
                 && DriverStation.getAlliance().get() == DriverStation.Alliance.Red;
 
-
-        final double speakerXPosition = isRedAlliance ? LENGTH : 0;
-
-        speakerPoseDistance = new Pose2d(-.04 * (isRedAlliance ? -1 : 1) + speakerXPosition,
-                5.55, Rotation2d.fromDegrees(0));
-
-        double speakerXPositionForAngle = .1;
-
-        if (isRedAlliance)
-            speakerXPositionForAngle = LENGTH - .1;
-
-        speakerPoseAngle = new Pose2d(speakerXPositionForAngle, 5.55, Rotation2d.fromDegrees(0));
+        speakerPose = new Pose2d(isRedAlliance ? SPEAKER_X : LENGTH - SPEAKER_X, 
+                SPEAKER_Y, Rotation2d.fromDegrees(0));
     }
 
     public boolean isPoseOnField(final Pose2d pose) {
@@ -67,15 +57,42 @@ public final class Field {
         return 3 <= id && id <= 8;
     }
 
+    /** Compute the distance between two poses */
+    public final double distanceBetween(final Pose2d pose1, final Pose2d pose2) {
+        return Math.sqrt(
+                Math.pow(pose1.getY() - pose2.getY(), 2)
+                        + Math.pow(pose1.getX() - pose2.getX(), 2));
+    }
+
+    /** Calculates the distance from some pose to the speaker */
+    public final double distanceToSpeaker(final Pose2d pose) {
+        return distanceBetween(speakerPose, pose);
+    }
+
+    /** Compute angle between two poses */
+    public Rotation2d angleBetween(final Pose2d constant, final Pose2d bot) {
+        return Rotation2d.fromRadians(
+                Math.atan2(constant.getY() - bot.getY(), constant.getX() - bot.getX()));
+    }
+
+    /** Make a rotation intake relative -- varies based on alliance */
+    public Rotation2d intakeRelative(final Rotation2d angle) {
+        return angle.plus(Rotation2d.fromRadians(isRedAlliance ? Math.PI : 0));
+    }
+
+    /** Make a rotation shooter relative -- varies based on alliance */
+    public Rotation2d shooterRelative(final Rotation2d angle) {
+        return angle.plus(Rotation2d.fromRadians(isRedAlliance ? 0 : Math.PI));
+    }
+
+    /** Calculates the angle from some pose to the passing zone */
+    public Rotation2d getAngleToPassingZone(final Pose2d pose) {
+        return shooterRelative(angleBetween(pose, passingZone));
+    }
+
     /** Calculate the angle from some pose to the speaker */
     public Rotation2d getAngleToSpeaker(final Pose2d pose) {
-        // final double speakerYPosition = SmartDashboard.getNumber("Speaker Y Position", 0);
-        // final double speakerXPosition = SmartDashboard.getNumber("Speaker X Position", 0);
-        // speakerPoseAngle = new Pose2d(speakerXPosition, speakerYPosition, Rotation2d.fromDegrees(0));
-
-        return Rotation2d.fromRadians(
-                Math.atan2(speakerPoseAngle.getY() - pose.getY(), speakerPoseAngle.getX() - pose.getX()))
-                .plus(Rotation2d.fromRadians(isRedAlliance ? 0 : Math.PI));
+        return shooterRelative(angleBetween(pose, speakerPose));
     }
 
     /** Is some pose's X coord > xPosition away from the current alliance wall */
@@ -83,20 +100,6 @@ public final class Field {
         return !isRedAlliance ? pose.getX() > xPosition : pose.getX() < LENGTH - xPosition;
     }
 
-    /**
-     * Get the end position handling x-offseting correctly using the alliances color
-     * 
-     * @deprecated use calculateXOffset instead
-     */
-    @Deprecated
-    public Pose2d getEndPosition(final Pose2d pathEndPosition, final boolean isCenterLine) {
-        if (!isCenterLine)
-            return pathEndPosition;
-        return new Pose2d(pathEndPosition.getX() + .5 * (isRedAlliance ? 1 : -1), pathEndPosition.getY(),
-                pathEndPosition.getRotation());
-        // This method needs to be changed back to having a configurable X-offset
-        // Edit: that is the overload below
-    }
 
     /** Handling x-offseting correctly using the alliances color */
     public Pose2d calculateXOffset(final Pose2d pathEndPosition, final double xOffset) {
@@ -117,6 +120,10 @@ public final class Field {
     /** Reflect some pose based on our current alliance position */
     public Pose2d getAllianceReflectedPose(Pose2d pose) {
         return new Pose2d(isRedAlliance ? LENGTH - pose.getX() : pose.getX(), pose.getY(), pose.getRotation());
+    }
+
+    public int getSpeakerTargetID() {
+        return isRedAlliance ? 4 : 7;
     }
 
     public static synchronized final Field getInstance() {

@@ -6,6 +6,7 @@
  */
 package org.texastorque.subsystems;
 
+import java.util.Optional;
 import java.util.function.Supplier;
 
 import org.texastorque.Ports;
@@ -133,7 +134,7 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
     // Alginment PID controller used for aligning the drivebase to a target angle.
     // The loopsThatDB is aligned field is used to count the number of consecutive
     // update iterations that the drivebase has been aligned to the target angle.
-    private final PIDController alignPID;
+    private final PIDController headingLockPID, offsetTargetingPID;
     private double loopsThatDBIsAligned = 0;
 
     private Drivebase() {
@@ -153,23 +154,18 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
         for (int i = 0; i < swerveStates.length; i++)
             swerveStates[i] = new SwerveModuleState();
 
-        alignPID = new PIDController(.085, 0, 0);
-        alignPID.enableContinuousInput(0, 360);
+        headingLockPID = new PIDController(.085, 0, 0);
+        headingLockPID.enableContinuousInput(0, 360);
+
+        offsetTargetingPID = new PIDController(1, 0, 0);
+        // maybe make continuous input to something idk?
     }
 
     @Override
     public final void initialize(final TorqueMode mode) {
         // Set the angle target for ALIGN_TO_ANGLE state, basically makes that state
         // an "align to goal" state.
-        mode.onAuto(() -> {
-            desiredState = State.FIELD_RELATIVE;
-            setAlignTarget(perception::getFutureAngleToSpeaker);
-
-        });
-        mode.onTeleop(() -> {
-            desiredState = State.FIELD_RELATIVE;
-            setAlignTarget(perception::getFilteredAngleToSpeaker);
-        });
+        setAlignTarget(perception::getHeadingLock);
     }
 
     public SwerveModulePosition invertSwerveModuleDistance(SwerveModulePosition position) {
@@ -235,18 +231,23 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
         Debug.log("Drivebase State", desiredState.toString());
         Debug.log("Speed Setting at Start", speedSetting.toString());
 
-        if ((shooter.wantsState(Shooter.State.SMART) || shooter.wantsState(Shooter.State.FUTURE_SMART_ALIGN))
-                && !shooter.isShift()
-                && !shooter.inDebugMode()) {
+        if ( (shooter.wantsState(Shooter.State.SMART) || shooter.wantsState(Shooter.State.FUTURE_SMART_ALIGN))
+            // ^ these are the 2 states we want to align in
+                && !shooter.isShift() && !shooter.inDebugMode()) { 
+            // ^ if we are in shift or debug mode then we dont want to align
             runSpeedSequence();
             desiredState = State.ALIGN_TO_ANGLE;
         } else if (wantsState(State.DASH)) {
-            inputSpeeds = new TorqueSwerveSpeeds(4.6, 0, alignPID.calculate(perception.getHeading().getDegrees(), 15));
+            // dash forward at max velocity
+            inputSpeeds = new TorqueSwerveSpeeds(MAX_VELOCITY, 0, 
+                    headingLockPID.calculate(perception.getHeading().getDegrees(), 15));
         } else {
-            if (mode.isTeleop())
+            if (mode.isTeleop()) {
                 desiredState = State.FIELD_RELATIVE;
+            }
         }
 
+        // Make climb slow 
         if (shooter.wantsState(Shooter.State.CLIMB)) {
             runSpeedSequence();
         }
@@ -261,20 +262,31 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
             loopsThatDBIsAligned = 0;
         }
 
-        // If we are in FIELD_RELATIVE or ALIGN_TO_ANGLE then we want to convert our
-        // field
+        // If we are in FIELD_RELATIVE or ALIGN_TO_ANGLE then we want to convert our field
         // relative chassis speeds into robot relative chassis speeds. We also want to
         // multiply by speed setting stuff.
         if (wantsState(State.FIELD_RELATIVE) || wantsState(State.ALIGN_TO_ANGLE) || wantsState(State.DASH)) {
-            inputSpeeds = inputSpeeds.times(speedSetting == SpeedSetting.SEQ ? speedSequence.get()
-                    : speedSetting.speed).toFieldRelativeSpeeds(perception.getHeading());
+            if (!wantsState(State.DASH)) { // If not dash then we apply speed settings.
+                inputSpeeds = inputSpeeds.times(speedSetting == SpeedSetting.SEQ ? speedSequence.get() : speedSetting.speed);
+            }
+            inputSpeeds = inputSpeeds.toFieldRelativeSpeeds(perception.getHeading());
         }
 
         // If we are in the align state then we want to set our rotational velocity to
         // the output of the align to angle PID controller.
         if (wantsState(State.ALIGN_TO_ANGLE)) {
-            inputSpeeds.omegaRadiansPerSecond = -TorqueMath.constrain(
-                    alignPID.calculate(perception.getHeading().getDegrees(), getAlignTarget()), 2*Math.PI);
+            double requestedAngularVelocity = 0;
+            final Optional<Double> fusedTargetOffset = perception.getFusedTargetOffset();
+
+            if (fusedTargetOffset.isPresent()) { 
+                // We see the correct targets, we can lock our shooter to that target.
+                requestedAngularVelocity = offsetTargetingPID.calculate(fusedTargetOffset.get(), 0);
+            } else {
+                // We do not see the correct targets, we need to lock to our estimated angle.
+                requestedAngularVelocity = headingLockPID.calculate(perception.getHeading().getDegrees(), getAlignTarget());
+            }
+
+            inputSpeeds.omegaRadiansPerSecond = -TorqueMath.constrain(requestedAngularVelocity, 2 * Math.PI);
         }
 
         // Use kinematics to convert robot vector to swerve vectors, then desaturate

@@ -474,7 +474,10 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         Debug.log("Shooter Top Velocity", getTopFlywheelVelocity());
         Debug.log("Shooter Bottom Velocity", -getBottomFlywheelVelocity());
         Debug.log("Shooter is Ready", isReadyToShoot());
-        Debug.log("Distance to Tag", perception.getDistanceToSpeaker());
+        Debug.log("Distance (Pose)", perception.getDistanceToSpeaker());
+
+        Debug.log("Distance (Direct)", perception.getFusedTargetDistance().orElseGet(() -> -1.0));
+
         Debug.log("Top Flywheel Ready", isTopFlywheelReady());
         Debug.log("Bottom Flywheel Ready", isBottomFlywheelReady());
         Debug.log("Rotary Ready", isRotaryAtState());
@@ -530,7 +533,9 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
 
         // Set shot parameter and handle shot overridding.
         if (wantsState(State.SMART)) {
-            shot = getRegressionShot(perception.getDistanceToSpeaker());
+            final double distance = perception.getFusedTargetDistance().orElseGet(() -> 
+                    perception.getDistanceToSpeaker());
+            shot = getRegressionShot(distance);
         } else if (wantsState(State.FUTURE_SMART) || wantsState(State.FUTURE_SMART_ALIGN)) {
             shot = getRegressionShot(perception.getFutureDistanceToSpeaker());
         } else {
