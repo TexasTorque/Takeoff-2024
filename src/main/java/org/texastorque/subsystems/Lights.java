@@ -155,13 +155,13 @@ public final class Lights extends TorqueStatelessSubsystem implements Subsystems
 
         // We must check the vision status of vision and return the 
         // failure conditions if necessary
-        final Status visionStatus = perception.getMostFatalVisionStatus();
-        if (visionStatus == Status.STALE) {
-            return blinkYellow;
-        } 
-        if (visionStatus == Status.DOWN) {
-            return blinkRed;
-        }
+        // final Status visionStatus = perception.getMostFatalVisionStatus();
+        // if (visionStatus == Status.STALE) {
+        //     return blinkYellow;
+        // } 
+        // if (visionStatus == Status.DOWN) {
+        //     return blinkRed;
+        // }
 
 
         // We go rainbow if we are in climb mode

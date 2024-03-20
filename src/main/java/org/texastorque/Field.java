@@ -43,7 +43,7 @@ public final class Field {
         isRedAlliance = DriverStation.getAlliance().isPresent()
                 && DriverStation.getAlliance().get() == DriverStation.Alliance.Red;
 
-        speakerPose = new Pose2d(isRedAlliance ? SPEAKER_X : LENGTH - SPEAKER_X, 
+        speakerPose = new Pose2d(isRedAlliance ? LENGTH - SPEAKER_X : SPEAKER_X, 
                 SPEAKER_Y, Rotation2d.fromDegrees(0));
     }
 

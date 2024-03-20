@@ -107,7 +107,7 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
     // run computations for.
     private Pose2d futureShootingPose = new Pose2d();
 
-    public static final String SHTR_R = "sim", SHTR_L = "SHTR_L", INTK_R = "INTK_R";
+    public static final String SHTR_R = "SHTR_R", SHTR_L = "SHTR_L", INTK_R = "INTK_R";
 
     private final AprilTags tagCameraLeft, tagCameraRight;
     private final ObjDetector<Note> intakeCamera;
@@ -130,13 +130,14 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
                 Camera.transformInchDeg(-5.0, -12.54, 14.181, 0, 35, 180)));
         toast.addCamera(new Camera(INTK_R, new Transform3d()));
 
-        // Register the apriltags pipeline on shooter cameras 
-        tagCameraLeft = (AprilTags)toast.getCamera(SHTR_L).get().addPipeline(new AprilTags());
-        tagCameraRight = (AprilTags)toast.getCamera(SHTR_R).get().addPipeline(new AprilTags());
+        // Register the apriltags pipeline on shooter cameras
+        tagCameraLeft = (AprilTags) toast.getCamera(SHTR_L).get().addPipeline(new AprilTags());
+        tagCameraRight = (AprilTags) toast.getCamera(SHTR_R).get().addPipeline(new AprilTags());
 
         // Register the object detection pipelines on intake cameras and configure them
         // to detect notes
-        intakeCamera = (ObjDetector<Note>)toast.getCamera(INTK_R).get().addPipeline(new ObjDetector<Note>(Note::fromJSONRight));
+        intakeCamera = (ObjDetector<Note>) toast.getCamera(INTK_R).get()
+                .addPipeline(new ObjDetector<Note>(Note::fromJSONRight));
 
         // Log the field map to the dashboard
         Debug.field("Field", field2d);
@@ -187,16 +188,16 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
 
         // Run rolling median filter aggregation
         filteredPose = new Pose2d(
-            filteredX.calculate(getPose().getX()),
-            filteredY.calculate(getPose().getY()),
-            getHeading());
+                filteredX.calculate(getPose().getX()),
+                filteredY.calculate(getPose().getY()),
+                getHeading());
     }
 
-    /** 
+    /**
      * Returns an "summary" of the total vision status by fusing
      * the status of both tag cameras.
      * 
-     * The strategy is returning the status of the camera with 
+     * The strategy is returning the status of the camera with
      * the most fatal status.
      */
     public Status getMostFatalVisionStatus() {
@@ -341,14 +342,16 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
 
     private Rotation2d lastFilteredAngle; // The last filtered angle we have used
 
-    /** Calculate the desired heading lock for the drivebase auto-align during teleop */
+    /**
+     * Calculate the desired heading lock for the drivebase auto-align during teleop
+     */
     public Rotation2d getHeadingLock() {
         // If we are in auto we want to return the angle from our set
         // future shooting pose to the speaker.
         if (DriverStation.isAutonomous()) {
             return field.getAngleToSpeaker(futureShootingPose);
         }
-        // If shooter is trying to laser then we want to get the angle 
+        // If shooter is trying to laser then we want to get the angle
         // to the passing zone.
         if (shooter.wantsState(Shooter.State.LASER)) {
             return field.getAngleToPassingZone(getFilteredPose());
@@ -443,13 +446,13 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
      * where W is the width of the frame in pixels.
      * 
      * +--------------------------+
-     * |            .             |
-     * |            .             |
-     * |            .      X      |
-     * |            .             |
-     * |            .             |
+     * | . |
+     * | . |
+     * | . X |
+     * | . |
+     * | . |
      * +--------------------------+
-     * -W/2         0             W/2
+     * -W/2 0 W/2
      * 
      * ex. X ~= W/4
      */
@@ -457,14 +460,16 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
         final List<AprilTagDetection> detections = pipeline.getDetections();
 
         final int targetID = field.getSpeakerTargetID();
-        
+
         for (final AprilTagDetection detection : detections) {
 
-            if (!detection.isValidDetection()) continue;
+            if (!detection.isValidDetection())
+                continue;
 
             final int id = detection.id;
 
-            if (id != targetID) continue;
+            if (id != targetID)
+                continue;
 
             return Optional.of(detection);
         }
@@ -484,18 +489,18 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
 
         final double lx = lopt.isPresent() ? lopt.get().xOffset : HALF_W;
         final double rx = ropt.isPresent() ? ropt.get().xOffset : -HALF_W;
-        
+
         // This is a primative algorithm that might work w/ a PID controller
-        if (lopt.isPresent() || ropt.isPresent()) {
+        if (lopt.isPresent() && ropt.isPresent()) { // returns if in view on both
             return Optional.of(lx + rx);
         }
         return Optional.empty();
     }
 
-    /** 
+    /**
      * Compute an accurate estimate of the normal distance to the target tag
      * in the XY plane.
-     * */
+     */
     public Optional<Double> getFusedTargetDistance() {
 
         // Uses shooter perspective
@@ -505,14 +510,16 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
         final boolean lPresent = lOpt.isPresent();
         final boolean rPresent = rOpt.isPresent();
 
-        final Translation2d tl = lPresent ? lOpt.get().transform.getTranslation().toTranslation2d() : new Translation2d();
-        final Translation2d tr = rPresent ? rOpt.get().transform.getTranslation().toTranslation2d() : new Translation2d();
+        final Translation2d tl = lPresent ? lOpt.get().transform.getTranslation().toTranslation2d()
+                : new Translation2d();
+        final Translation2d tr = rPresent ? rOpt.get().transform.getTranslation().toTranslation2d()
+                : new Translation2d();
 
         if (lPresent && rPresent) {
             final double xAvg = (tl.getX() + tr.getX()) / 2.0;
             final double yAvg = (tl.getX() + tr.getX()) / 2.0;
             return Optional.of(Math.sqrt(xAvg * xAvg + yAvg * yAvg));
-        } 
+        }
         if (lPresent && !rPresent) {
             return Optional.of(tl.getNorm());
         }

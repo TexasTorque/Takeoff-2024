@@ -30,6 +30,7 @@ import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.Timer;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 /**
  * Swerve drivebase subsystem.
@@ -157,7 +158,9 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
         headingLockPID = new PIDController(.085, 0, 0);
         headingLockPID.enableContinuousInput(0, 360);
 
-        offsetTargetingPID = new PIDController(1, 0, 0);
+        offsetTargetingPID = new PIDController(.0335 / 36, 0, 0);
+
+        SmartDashboard.putNumber("Align PID P", 0);
         // maybe make continuous input to something idk?
     }
 
@@ -211,7 +214,10 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
 
     public static final double ALIGN_TOLERANCE = 2, TARGET_TOLERANCE = 75;
 
-    /** Is the drivebase aligned to the requested angle within an acceptable tolerance */
+    /**
+     * Is the drivebase aligned to the requested angle within an acceptable
+     * tolerance
+     */
     public boolean isAligned() {
         return TorqueMath.toleranced(perception.getHeading().getDegrees(), getAlignTarget(), ALIGN_TOLERANCE);
     }
@@ -238,15 +244,17 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
         Debug.log("Drivebase State", desiredState.toString());
         Debug.log("Speed Setting at Start", speedSetting.toString());
 
-        if ( (shooter.wantsState(Shooter.State.SMART) || shooter.wantsState(Shooter.State.FUTURE_SMART_ALIGN))
-            // ^ these are the 2 states we want to align in
-                && !shooter.isShift() && !shooter.inDebugMode()) { 
+        // offsetTargetingPID.setP(SmartDashboard.getNumber("Align PID P", 0));
+
+        if ((shooter.wantsState(Shooter.State.SMART) || shooter.wantsState(Shooter.State.FUTURE_SMART_ALIGN))
+                // ^ these are the 2 states we want to align in
+                && !shooter.isShift() && !shooter.inDebugMode()) {
             // ^ if we are in shift or debug mode then we dont want to align
             runSpeedSequence();
             desiredState = State.ALIGN_TO_ANGLE;
         } else if (wantsState(State.DASH)) {
             // dash forward at max velocity
-            inputSpeeds = new TorqueSwerveSpeeds(MAX_VELOCITY, 0, 
+            inputSpeeds = new TorqueSwerveSpeeds(MAX_VELOCITY, 0,
                     headingLockPID.calculate(perception.getHeading().getDegrees(), 15));
         } else {
             if (mode.isTeleop()) {
@@ -259,12 +267,14 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
             runSpeedSequence();
         }
 
-        // If we are in FIELD_RELATIVE or ALIGN_TO_ANGLE then we want to convert our field
+        // If we are in FIELD_RELATIVE or ALIGN_TO_ANGLE then we want to convert our
+        // field
         // relative chassis speeds into robot relative chassis speeds. We also want to
         // multiply by speed setting stuff.
         if (wantsState(State.FIELD_RELATIVE) || wantsState(State.ALIGN_TO_ANGLE) || wantsState(State.DASH)) {
             if (!wantsState(State.DASH)) { // If not dash then we apply speed settings.
-                inputSpeeds = inputSpeeds.times(speedSetting == SpeedSetting.SEQ ? speedSequence.get() : speedSetting.speed);
+                inputSpeeds = inputSpeeds
+                        .times(speedSetting == SpeedSetting.SEQ ? speedSequence.get() : speedSetting.speed);
             }
             inputSpeeds = inputSpeeds.toFieldRelativeSpeeds(perception.getHeading());
         }
@@ -280,12 +290,13 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
         if (wantsState(State.ALIGN_TO_ANGLE)) {
             double requestedAngularVelocity = 0;
 
-            if (fusedTargetOffset.isPresent()) { 
+            if (fusedTargetOffset.isPresent()) {
                 // We see the correct targets, we can lock our shooter to that target.
                 requestedAngularVelocity = offsetTargetingPID.calculate(fusedTargetOffset.get(), 0);
             } else {
                 // We do not see the correct targets, we need to lock to our estimated angle.
-                requestedAngularVelocity = headingLockPID.calculate(perception.getHeading().getDegrees(), getAlignTarget());
+                requestedAngularVelocity = headingLockPID.calculate(perception.getHeading().getDegrees(),
+                        getAlignTarget());
             }
 
             inputSpeeds.omegaRadiansPerSecond = -TorqueMath.constrain(requestedAngularVelocity, 2 * Math.PI);
@@ -295,11 +306,13 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
         // aligned properly. Set back to zero if the drivebase is not aligned properly.
         // This makes the variable hold the ammount of consecutive iterations that
         // the drivebase has been properly alligned.
-        // 
-        // We check if the drivebase is aligned properly by first checking which alignment
-        // mode we are in, wether its alignment mode or angle mode. Then we use that mode
-        // to check if we are aligned properly. 
-        if (fusedTargetOffset.isPresent() ? isTargetLocked(fusedTargetOffset.get()) : isAligned() ) { 
+        //
+        // We check if the drivebase is aligned properly by first checking which
+        // alignment
+        // mode we are in, wether its alignment mode or angle mode. Then we use that
+        // mode
+        // to check if we are aligned properly.
+        if (fusedTargetOffset.isPresent() ? isTargetLocked(fusedTargetOffset.get()) : isAligned()) {
             loopsThatDBIsAligned++;
         } else {
             loopsThatDBIsAligned = 0;

@@ -158,7 +158,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
     }
 
     private static final double FLYWHEEL_TOLERANCE = 200, ROTARY_TOLERANCE = 1.5, MAX_SHOT_VELO_RPM = 5500,
-        CHUTE_TOLERANCE = 20, CHUTE_OFFSET = 346, FLYWHEEL_INTAKE_CURRENT_SPIKE = 35;
+            CHUTE_TOLERANCE = 20, CHUTE_OFFSET = 346, FLYWHEEL_INTAKE_CURRENT_SPIKE = 35;
 
     // Subsystem hardware...
     private final TorqueNEO rotary, flywheelTop, flywheelBottom, gate, chute;
@@ -313,7 +313,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
 
         shotTable.put(1.19, new Shot(4200, Rotation2d.fromDegrees(64))); // fix this jump
         shotTable.put(1.61, new Shot(4400, Rotation2d.fromDegrees(56)));
-        shotTable.put(1.85, new Shot(4500, Rotation2d.fromDegrees(52))); 
+        shotTable.put(1.85, new Shot(4500, Rotation2d.fromDegrees(52)));
         shotTable.put(2.2, new Shot(4600, Rotation2d.fromDegrees(47)));
         shotTable.put(2.63, new Shot(4800, Rotation2d.fromDegrees(41)));
         shotTable.put(3.08, new Shot(5000, Rotation2d.fromDegrees(36)));
@@ -408,9 +408,11 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
     public boolean wantsToShoot() {
         return desiredState.isAShot;
     }
+
     public boolean inDebugMode() {
         return debugMode;
     }
+
     public boolean hasConsent() {
         return consent;
     }
@@ -523,7 +525,6 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         if (wantsState(State.AMP) && !isChuteReadyForAmp())
             desiredState = State.AMP_INIITAL;
 
-
         // Current limit handling.
         if (emergencyCurrentLimit || wantsState(State.AMP)) {
             setFlywheelCurrentLimits(90);
@@ -537,8 +538,9 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
 
         // Set shot parameter and handle shot overridding.
         if (wantsState(State.SMART)) {
-            final double distance = perception.getFusedTargetDistance().orElseGet(() -> 
-                    perception.getDistanceToSpeaker());
+            // final double distance = perception.getFusedTargetDistance().orElseGet(() ->
+            // perception.getDistanceToSpeaker());
+            double distance = perception.getDistanceToSpeaker();
             shot = getRegressionShot(distance);
         } else if (wantsState(State.FUTURE_SMART) || wantsState(State.FUTURE_SMART_ALIGN)) {
             shot = getRegressionShot(perception.getFutureDistanceToSpeaker());
