@@ -209,9 +209,16 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
         return TorqueMath.constrain0to360(alignTarget.get().getDegrees());
     }
 
-    /** Is the drivebase aligned within an acceptable tolerance */
+    public static final double ALIGN_TOLERANCE = 2, TARGET_TOLERANCE = 75;
+
+    /** Is the drivebase aligned to the requested angle within an acceptable tolerance */
     public boolean isAligned() {
-        return TorqueMath.toleranced(perception.getHeading().getDegrees(), getAlignTarget(), 2);
+        return TorqueMath.toleranced(perception.getHeading().getDegrees(), getAlignTarget(), ALIGN_TOLERANCE);
+    }
+
+    /** Is the target error low enough */
+    public boolean isTargetLocked(final double fusedPos) {
+        return Math.abs(fusedPos) <= TARGET_TOLERANCE;
     }
 
     /**
@@ -252,16 +259,6 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
             runSpeedSequence();
         }
 
-        // Handle alignment readiness counter. Increment every loop the drivebase is
-        // aligned properly. Set back to zero if the drivebase is not aligned properly.
-        // This makes the variable hold the ammount of consecutive iterations that
-        // the drivebase has been properly alligned.
-        if (isAligned()) {
-            loopsThatDBIsAligned++;
-        } else {
-            loopsThatDBIsAligned = 0;
-        }
-
         // If we are in FIELD_RELATIVE or ALIGN_TO_ANGLE then we want to convert our field
         // relative chassis speeds into robot relative chassis speeds. We also want to
         // multiply by speed setting stuff.
@@ -292,6 +289,20 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
             }
 
             inputSpeeds.omegaRadiansPerSecond = -TorqueMath.constrain(requestedAngularVelocity, 2 * Math.PI);
+        }
+
+        // Handle alignment readiness counter. Increment every loop the drivebase is
+        // aligned properly. Set back to zero if the drivebase is not aligned properly.
+        // This makes the variable hold the ammount of consecutive iterations that
+        // the drivebase has been properly alligned.
+        // 
+        // We check if the drivebase is aligned properly by first checking which alignment
+        // mode we are in, wether its alignment mode or angle mode. Then we use that mode
+        // to check if we are aligned properly. 
+        if (fusedTargetOffset.isPresent() ? isTargetLocked(fusedTargetOffset.get()) : isAligned() ) { 
+            loopsThatDBIsAligned++;
+        } else {
+            loopsThatDBIsAligned = 0;
         }
 
         // Use kinematics to convert robot vector to swerve vectors, then desaturate
