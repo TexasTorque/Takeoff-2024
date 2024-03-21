@@ -86,6 +86,8 @@ public final class AutoManager extends TorqueAutoManager implements Subsystems {
         // addSequence("50 to 40 to 30", new BaseAuto(50, 40, 30));
 
         // addSequence("DASH to 10 to 20", new Dash(10, 20));
+
+        addSequence("10 to 20", new BaseAuto(new Pose2d(), 10, 20));
     }
 
     public static final synchronized AutoManager getInstance() {

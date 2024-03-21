@@ -82,7 +82,7 @@ public final class Field {
 
     /** Make a rotation shooter relative -- varies based on alliance */
     public Rotation2d shooterRelative(final Rotation2d angle) {
-        return angle.plus(Rotation2d.fromRadians(isRedAlliance ? 0 : Math.PI));
+        return angle.plus(Rotation2d.fromRadians(isRedAlliance ? Math.PI : 0));
     }
 
     /** Calculates the angle from some pose to the passing zone */

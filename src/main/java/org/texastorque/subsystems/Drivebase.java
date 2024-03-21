@@ -158,7 +158,7 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
         headingLockPID = new PIDController(.085, 0, 0);
         headingLockPID.enableContinuousInput(0, 360);
 
-        offsetTargetingPID = new PIDController(.0335 / 36, 0, 0);
+        offsetTargetingPID = new PIDController(.032 / 36, 0, 0);
 
         SmartDashboard.putNumber("Align PID P", 0);
         // maybe make continuous input to something idk?
@@ -212,7 +212,7 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
         return TorqueMath.constrain0to360(alignTarget.get().getDegrees());
     }
 
-    public static final double ALIGN_TOLERANCE = 2, TARGET_TOLERANCE = 75;
+    public static final double ALIGN_TOLERANCE = 2, TARGET_TOLERANCE = 150;
 
     /**
      * Is the drivebase aligned to the requested angle within an acceptable

@@ -491,7 +491,7 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
         final double rx = ropt.isPresent() ? ropt.get().xOffset : -HALF_W;
 
         // This is a primative algorithm that might work w/ a PID controller
-        if (lopt.isPresent() && ropt.isPresent()) { // returns if in view on both
+        if (lopt.isPresent() || ropt.isPresent()) { // returns if in view on both
             return Optional.of(lx + rx);
         }
         return Optional.empty();
