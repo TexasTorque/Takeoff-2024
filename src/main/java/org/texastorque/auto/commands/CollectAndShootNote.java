@@ -33,7 +33,7 @@ public class CollectAndShootNote extends TorqueSequence implements Subsystems {
         log("Auto State", () -> "BEGIN PATH");
 
         addBlock(followPath(() -> noteSequence.getNextPath()),
-                new DeployIntakeWhen(() -> field.isXPast(perception.getPose(), 5) || deployIntakeRightAway)
+                new DeployIntakeWhen(() -> field.isXPast(perception.getPose(), 4.5) || deployIntakeRightAway)
                         .command());
 
         addBlock(new TorqueRunSequence(new Shoot(deployIntakeRightAway ? Shooter.State.FUTURE_SMART_ALIGN : Shooter.State.FUTURE_SMART)));
