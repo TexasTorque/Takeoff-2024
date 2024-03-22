@@ -6,47 +6,132 @@
  */
 package org.texastorque.auto.sequences;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.texastorque.Subsystems;
-import org.texastorque.auto.commands.CollectAndShootNote;
-import org.texastorque.auto.commands.NoteSequence;
-import org.texastorque.auto.commands.Shoot;
+import org.texastorque.auto.AutoManager;
+import org.texastorque.auto.routines.CollectAndShootNote;
+import org.texastorque.auto.routines.Shoot;
 import org.texastorque.subsystems.*;
 import org.texastorque.torquelib.auto.TorqueSequence;
 import org.texastorque.torquelib.auto.commands.TorqueRun;
 import org.texastorque.torquelib.auto.commands.TorqueRunSequence;
 import org.texastorque.torquelib.auto.commands.TorqueWhile;
+
+import com.pathplanner.lib.path.PathPlannerPath;
+
 import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.wpilibj.Timer;
 
 /** Trivial "Base" autos (going from one note to another while shooting) */
 public class BaseAuto extends TorqueSequence implements Subsystems {
 
-    private Timer totalAutoTimer = new Timer();
-
     private final NoteSequence noteSequence;
 
-    /** Non-auto */
-    public BaseAuto(final Pose2d initPose) {
-        noteSequence = null;
-        addBlock(new TorqueRun(() -> perception.resetPose(field.getAllianceReflectedPose(initPose))));
-
-        addBlock(new TorqueRunSequence(new Shoot(Shooter.State.LAYUP)));
-    }
-
     /** Pass in the order of notes */
-    public BaseAuto(final Pose2d initPose, final int... notes) {
-        noteSequence = new NoteSequence(false, notes);
+    public BaseAuto(final StartPoint startPoint, final int... notes) {
+        noteSequence = new NoteSequence(startPoint, notes);
 
-        addBlock(new TorqueRun(() -> perception.resetPose(field.getAllianceReflectedPose(initPose))));
+        // Reset the pose to the initial position for this sequence
+        addBlock(new TorqueRun(() -> perception.resetPose(field.getAllianceReflectedPose(noteSequence.getStartingPose()))));
 
-        addBlock(new TorqueRun(() -> totalAutoTimer.restart()));
-
+        // I think this is redundent -- double check pls!
         addBlock(new TorqueRun(() -> perception.setFutureShootingPose(perception.getPose())));
 
-
+        // Take the first shot as a layup -- this will change if starting point isnt on subwoofer
         addBlock(new TorqueRunSequence(new Shoot(Shooter.State.LAYUP)));
 
         addBlock(new TorqueWhile(noteSequence::hasNext, new CollectAndShootNote(noteSequence)));
     }
 
+    /** 
+     * Enum contains the starting point of the path.
+     * 
+     * WARNING: YOU CANNOT CHANGE THE NAMES OF THESE ENUM ENTRIES!!!
+     * 
+     * The toString method is used to index paths. The robot will
+     * crash if one of these names is not changed and the path
+     * names are not adjusted accordingly.
+     */
+    public static enum StartPoint {
+        AMP,    // DO NOT CHANGE SYMBOL NAME
+        CTR,    // DO NOT CHANGE SYMBOL NAME
+        SRC,    // DO NOT CHANGE SYMBOL NAME
+        FAR,    // DO NOT CHANGE SYMBOL NAME
+        DASH;   // DO NOT CHANGE SYMBOL NAME
+    }
+
+    /**
+     * A NoteSequence is a list of notes *indexes* (not actual Note objects) that is
+     * encapsulated
+     * so that we can calculate paths.
+     * 
+     * Note indexes work as so. The first three notes that are placed inside the
+     * alliance wing
+     * are indexed from top down 1, 2, and 3. The notes on the center line are
+     * indexed from top
+     * down 10, 20, 30, 40, 50. Close notes are indexed < 10, center line notes are
+     * indexed >= 10.
+     */
+    public static class NoteSequence {
+
+        private final List<Integer> notes = new ArrayList<Integer>();
+        private int lastNote = 0, nextNote = 0;
+        private final String start;
+
+        /**
+         * Creates a note sequence from a variatic list of arguments which provide
+         * indexes.
+         */
+        public NoteSequence(final StartPoint start, final int... notes) {
+            this.start = start.toString();
+            for (int note : notes) {
+                this.notes.add(note);
+            }
+        }
+
+        /**
+         * Calculates the name of and loads the path that will take the robot from the
+         * current note we are at to the next note in the sequence.
+         * 
+         * @return Some PathPlannerPath object that we should follow.
+         */
+        public PathPlannerPath getNextPath() {
+            lastNote = nextNote;
+            nextNote = notes.remove(0);
+            final String pathName = "go_" + (lastNote == 0 ? start : lastNote) 
+                    + "_to_" + nextNote;
+            return AutoManager.getInstance().getPath(pathName);
+        }
+        
+        /** Look at the first path and check the robots starting position. */
+        public Pose2d getStartingPose() {
+            final String pathName = "go_" + start + "_to_" + notes.get(0);
+            return AutoManager.getInstance().getPath(pathName).getPreviewStartingHolonomicPose();
+        }
+
+        /**
+         * Take a peek at the index of the next note in the sequence, but do not remove
+         * it.
+         * 
+         * @return The next note's index.
+         */
+        public int peekNext() {
+            return notes.isEmpty() ? 0 : notes.get(0);
+        }
+
+        /**
+         * Is the next note index a center line note (the index is >= 10)?
+         */
+        public boolean isNextOnCenterLine() {
+            return peekNext() >= 10;
+        }
+
+        /**
+         * Do we have another note in our sequence?
+         */
+        public boolean hasNext() {
+            return notes.size() > 0;
+        }
+    }
 }

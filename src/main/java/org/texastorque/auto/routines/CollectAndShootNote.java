@@ -1,8 +1,9 @@
-package org.texastorque.auto.commands;
+package org.texastorque.auto.routines;
 
 import java.util.function.Supplier;
 
 import org.texastorque.Subsystems;
+import org.texastorque.auto.sequences.BaseAuto.NoteSequence;
 import org.texastorque.torquelib.auto.TorqueSequence;
 import org.texastorque.torquelib.auto.commands.TorqueFollowPath;
 import org.texastorque.torquelib.auto.commands.TorqueRun;

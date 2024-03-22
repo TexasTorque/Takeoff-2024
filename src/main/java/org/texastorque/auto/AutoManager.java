@@ -7,8 +7,10 @@
 package org.texastorque.auto;
 
 import org.texastorque.Subsystems;
+import org.texastorque.auto.routines.Shoot;
 import org.texastorque.auto.sequences.BaseAuto;
-import org.texastorque.auto.sequences.Dash;
+import org.texastorque.auto.sequences.BaseAuto.StartPoint;
+import org.texastorque.subsystems.Shooter;
 import org.texastorque.torquelib.auto.*;
 import com.pathplanner.lib.path.PathPlannerPath;
 import edu.wpi.first.math.geometry.Pose2d;
@@ -23,29 +25,26 @@ public final class AutoManager extends TorqueAutoManager implements Subsystems {
      */
     @Override
     public final void loadPaths() {
-        pathLoader.preloadPath("go_0_to_2");
-        pathLoader.preloadPath("go_0_to_10");
-        pathLoader.preloadPath("go_10_to_20");
-        pathLoader.preloadPath("go_20_to_30");
 
-        pathLoader.preloadPath("go_0_to_1");
-        pathLoader.preloadPath("go_1_to_2");
-        pathLoader.preloadPath("go_2_to_3");
-
-        pathLoader.preloadPath("go_0_to_3");
+        // Generate the following code using
+        // > python3 listpaths.py 
         pathLoader.preloadPath("go_3_to_2");
-        pathLoader.preloadPath("go_2_to_1");
-
-        pathLoader.preloadPath("go_3_to_50");
-
-        pathLoader.preloadPath("go_0_to_50");
-        pathLoader.preloadPath("go_50_to_40");
-        pathLoader.preloadPath("go_40_to_30");
-
-        pathLoader.preloadPath("go_1_to_10");
-        pathLoader.preloadPath("go_1_to_15");
         pathLoader.preloadPath("go_10_to_20");
+        pathLoader.preloadPath("go_1_to_15");
+        pathLoader.preloadPath("go_20_to_30");
+        pathLoader.preloadPath("go_SRC_to_50");
+        pathLoader.preloadPath("go_AMP_to_1");
+        pathLoader.preloadPath("go_2_to_3");
+        pathLoader.preloadPath("go_40_to_30");
+        pathLoader.preloadPath("go_1_to_10");
+        pathLoader.preloadPath("go_1_to_2");
+        pathLoader.preloadPath("go_CTR_to_3");
+        pathLoader.preloadPath("go_CTR_to_2");
+        pathLoader.preloadPath("go_50_to_40");
+        pathLoader.preloadPath("go_2_to_1");
         pathLoader.preloadPath("line");
+        pathLoader.preloadPath("go_3_to_50");
+        pathLoader.preloadPath("go_10_to_shoot");
     }
 
     /** 
@@ -61,34 +60,32 @@ public final class AutoManager extends TorqueAutoManager implements Subsystems {
     /** Load all the permutations of auto sequences we want to run */
     @Override
     public final void loadSequences() {
-        addSequence("0", new BaseAuto(new Pose2d(1.42, 6.35, perception.getHeading())));
 
-        addSequence("1 to 2", new BaseAuto(new Pose2d(1.42, 6.35, perception.getHeading()), 1, 2));
-        addSequence("1 to 2 to 3", new BaseAuto(new Pose2d(1.42, 6.35, perception.getHeading()), 1, 2, 3));
+        // Just shoot auto
+        addSequence(new Shoot(Shooter.State.LAYUP));
 
-        addSequence("1 to 10", new BaseAuto(new Pose2d(0.77, 6.58, perception.getHeading()), 1, 10));
+        // Amp side only
+        addBaseAuto(StartPoint.AMP, 1, 10, 20);
 
-        addSequence("1 to 10 to 20", new BaseAuto(new Pose2d(0.77, 6.58, perception.getHeading()), 1, 10, 20));
+        // Clear center area
+        addBaseAuto(StartPoint.CTR, 2, 1);
+        addBaseAuto(StartPoint.CTR, 3, 2);
+        addBaseAuto(StartPoint.CTR, 3, 2, 1);
+        addBaseAuto(StartPoint.CTR, 3, 2, 1, 10);
 
-        addSequence("2 to 1", new BaseAuto(new Pose2d(1.33, 5.55, perception.getHeading()), 2, 1));
-        addSequence("2 to 3", new BaseAuto(new Pose2d(1.33, 5.55, perception.getHeading()), 2, 3));
-        addSequence("2 to 3 to 50", new BaseAuto(new Pose2d(1.33, 5.55, perception.getHeading()), 2, 3, 50));
-        // addSequence("2 to 1 to 10 to 20", new BaseAuto(2, 1, 10, 20));
+        // Far side capable
+        addBaseAuto(StartPoint.CTR, 2, 3, 50);
+        addBaseAuto(StartPoint.SRC, 3, 50);
+        addBaseAuto(StartPoint.SRC, 50, 40);
+    }
 
-        addSequence("3 to 2", new BaseAuto(new Pose2d(1.28, 4.7, perception.getHeading()), 3, 2));
-        addSequence("3 to 2 to 1", new BaseAuto(new Pose2d(1.28, 4.7, perception.getHeading()), 3, 2, 1));
-        addSequence("3 to 2 to 1 to 10", new BaseAuto(new Pose2d(1.28, 4.7, perception.getHeading()), 3, 2, 1, 10));
-        addSequence("3 to 50", new BaseAuto(new Pose2d(1.25, 5.37, perception.getHeading()), 3, 50));
-        // addSequence("3 to 2 to 1 to 15", new BaseAuto(new Pose2d(1.28, 4.7, perception.getHeading()), 3, 2, 1, 15));
-
-        // addSequence("10 to 20 to 30", new BaseAuto(10, 20, 30));
-
-        // addSequence("50 to 40 to 30", new BaseAuto(50, 40, 30));
-
-        // addSequence("DASH to 10 to 20", new Dash(10, 20));
-
-        addSequence("10 to 20", new BaseAuto(new Pose2d(), 10, 20));
-        addSequence("50 to 40", new BaseAuto(new Pose2d(), 50, 40));
+    /** Create a base auto and come up with a name for it */
+    private void addBaseAuto(final StartPoint start, final int... notes) {
+        String name = start.toString();
+        for (int note : notes) {
+            name += " to " + note;
+        }
+        addSequence(name, new BaseAuto(start, notes));
     }
 
     public static final synchronized AutoManager getInstance() {
