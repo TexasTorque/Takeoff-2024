@@ -246,8 +246,9 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
 
         // offsetTargetingPID.setP(SmartDashboard.getNumber("Align PID P", 0));
 
-        if ((shooter.wantsState(Shooter.State.SMART) || shooter.wantsState(Shooter.State.FUTURE_SMART_ALIGN))
-                // ^ these are the 2 states we want to align in
+        if ((shooter.wantsState(Shooter.State.SMART) || shooter.wantsState(Shooter.State.FUTURE_SMART_ALIGN)
+                || shooter.wantsState(Shooter.State.LASER))
+                // ^ these are the 3 states we want to align in
                 && !shooter.isShift() && !shooter.inDebugMode()) {
             // ^ if we are in shift or debug mode then we dont want to align
             runSpeedSequence();
@@ -290,7 +291,10 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
         if (wantsState(State.ALIGN_TO_ANGLE)) {
             double requestedAngularVelocity = 0;
 
-            if (fusedTargetOffset.isPresent()) {
+            if (shooter.wantsState(Shooter.State.LASER) && !shooter.isShift()) {
+                requestedAngularVelocity = headingLockPID.calculate(perception.getHeading().getDegrees(),
+                        field.getAngleToLaser(perception.getPose()).getDegrees());
+            } else if (fusedTargetOffset.isPresent()) {
                 // We see the correct targets, we can lock our shooter to that target.
                 requestedAngularVelocity = offsetTargetingPID.calculate(fusedTargetOffset.get(), 0);
             } else {
@@ -423,5 +427,9 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
         if (mode.isTeleop()) {
             desiredState = desiredState.parent;
         }
+    }
+
+    public ChassisSpeeds getActualChassisSpeeds() {
+        return kinematics.toChassisSpeeds(swerveStates);
     }
 }

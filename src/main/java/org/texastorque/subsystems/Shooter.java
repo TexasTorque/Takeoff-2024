@@ -91,7 +91,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         LAYUP(new Shot(4200, Rotation2d.fromDegrees(64)), new Shot(4200, Rotation2d.fromDegrees(124)), true),
 
         // Used for tossing a note across the field
-        LASER(new Shot(3400, Rotation2d.fromDegrees(54)), true),
+        LASER(new Shot(4000, Rotation2d.fromDegrees(54)), new Shot(3000, Rotation2d.fromDegrees(54)), false),
 
         MID(new Shot(4400, Rotation2d.fromDegrees(41)), new Shot(4400, Rotation2d.fromDegrees(143)), true),
         SAFEZONE(new Shot(4600, Rotation2d.fromDegrees(37)), new Shot(4300, Rotation2d.fromDegrees(148)), true),
@@ -489,16 +489,10 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         Debug.log("Rotary Ready", isRotaryAtState());
         Debug.log("Has Note", hasNote());
         Debug.log("Debug Mode", debugMode);
-        Debug.log("Shooter Shot Velocity", shot.topVelocity);
-        Debug.log("Shooter Shot Angle", shot.angle.getDegrees());
-        Debug.log("Shooter Consent", consent);
-        Debug.log("Shooter Shift", shift);
         Debug.log("Regression Shot", getRegressionShot(perception.getDistanceToSpeaker()).toString());
         Debug.log("Shooter Rotary Positon", getRotaryEncoderDegrees());
-        Debug.log("Chute Position Degrees (NO OFFSET)", getChuteEncoderDegrees());
-        Debug.log("Chute Encoder Actual Degrees (OFFSET AND ROTARY)", getChuteEncoderActualDegrees());
-        Debug.log("Chute Position Actual Radians", getChuteSetpointActualRadians(chuteState.position.getDegrees()));
         Debug.log("Has Been Ready", hasBeenReadyToShoot());
+        Debug.log("Is Aligned", getIsAligned());
 
         // Handle intaking. If we are in teleop and the intake says that we are
         // intaking, then
@@ -519,8 +513,6 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         } else {
             timeSinceStartedIntaking.restart();
         }
-
-        Debug.log("is Chute Ready", isChuteReadyForAmp());
 
         if (wantsState(State.AMP) && !isChuteReadyForAmp())
             desiredState = State.AMP_INIITAL;
@@ -573,17 +565,12 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
                 // smart
                 // shot AND we are in shift mode, then we should not check for drivebase being
                 // aligned.
-                final boolean aligned = (wantsState(State.SMART) && !shift) ? drivebase.hasBeenAligned() : true;
+                final boolean aligned = getIsAligned();
                 if (consent && aligned) {
                     gateState = GateState.OUT;
                 }
             } else if (mode.isAuto()) {
                 // If we are in auto then we just need to check that we are not in pathing mode.
-
-                // This is for FUTURE_SHOT:
-                // if (!drivebase.wantsState(Drivebase.State.PATHING)) {
-                // gateState = GateState.OUT;
-                // }
 
                 final boolean aligned = drivebase.hasBeenAligned()
                         || !drivebase.wantsState(Drivebase.State.ALIGN_TO_ANGLE);
@@ -592,9 +579,6 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
                 }
             }
         }
-
-        Debug.log("Shot", shot.toString());
-        Debug.log("Gate State", gateState.toString());
 
         // Handling setting shooter flywheel voltage. Handles idle condition
         // by checking if we are in teleop and we are off and we are good to idle.
@@ -644,11 +628,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
 
         rotaryVolts = TorqueMath.constrain(rotaryVolts, getRotaryMaxVolts());
 
-        Debug.log("Rotary Volts", rotaryVolts);
-
         rotary.setVolts(rotaryVolts);
-
-        Debug.log("Shooter Gate State", gateState.toString());
 
         // Output the gate state voltage.
         gate.setVolts(gateState.voltage);
@@ -657,6 +637,16 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
             desiredState = State.OFF;
             gateState = GateState.OFF;
         }
+    }
+
+    public boolean getIsAligned() {
+        if (wantsState(State.SMART) && !shift)
+            return drivebase.hasBeenAligned();
+        else if (wantsState(State.LASER)) {
+            return field.isReadyToLaser(perception.getPose());
+        } else
+            return true;
+
     }
 
     /**

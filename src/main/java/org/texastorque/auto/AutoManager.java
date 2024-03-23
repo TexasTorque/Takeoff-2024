@@ -13,21 +13,21 @@ import org.texastorque.auto.sequences.BaseAuto.StartPoint;
 import org.texastorque.subsystems.Shooter;
 import org.texastorque.torquelib.auto.*;
 import com.pathplanner.lib.path.PathPlannerPath;
-import edu.wpi.first.math.geometry.Pose2d;
 
 /** Manage the auto loader and selections */
 public final class AutoManager extends TorqueAutoManager implements Subsystems {
     private static volatile AutoManager instance;
 
     /**
-     * Preload all the paths so that we dont make expensive reasource loader calls when
+     * Preload all the paths so that we dont make expensive reasource loader calls
+     * when
      * the auto is suposed to be going fast!
      */
     @Override
     public final void loadPaths() {
 
         // Generate the following code using
-        // > python3 listpaths.py 
+        // > python3 listpaths.py
         pathLoader.preloadPath("go_3_to_2");
         pathLoader.preloadPath("go_10_to_20");
         pathLoader.preloadPath("go_1_to_15");
@@ -45,9 +45,10 @@ public final class AutoManager extends TorqueAutoManager implements Subsystems {
         pathLoader.preloadPath("line");
         pathLoader.preloadPath("go_3_to_50");
         pathLoader.preloadPath("go_10_to_shoot");
+        pathLoader.preloadPath("go_40_to_3");
     }
 
-    /** 
+    /**
      * Get a preloaded path... the current path strategy is EXPLICITLY UNSAFE...
      * ...if a path is called that is not loaded above then the program WILL FAIL!
      * 
@@ -77,6 +78,7 @@ public final class AutoManager extends TorqueAutoManager implements Subsystems {
         addBaseAuto(StartPoint.CTR, 2, 3, 50);
         addBaseAuto(StartPoint.SRC, 3, 50);
         addBaseAuto(StartPoint.SRC, 50, 40);
+        addBaseAuto(StartPoint.SRC, 50, 40, 3);
     }
 
     /** Create a base auto and come up with a name for it */

@@ -9,11 +9,9 @@ package org.texastorque.subsystems;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Supplier;
-
 import org.texastorque.Input;
 import org.texastorque.Ports;
 import org.texastorque.Subsystems;
-import org.texastorque.toast.lib.Pipeline.Status;
 import org.texastorque.torquelib.base.TorqueMode;
 import org.texastorque.torquelib.base.TorqueStatelessSubsystem;
 import org.texastorque.torquelib.util.TorqueUtil;
@@ -99,16 +97,9 @@ public final class Lights extends TorqueStatelessSubsystem implements Subsystems
     private LightAction rainbow = new Rainbow(), 
 
         red = new Solid(() -> Color.kRed), 
-        blinkRed = new Blink(() -> Color.kRed, 6),
-        
-        yellow = new Solid(() -> Color.kYellow),
-        blinkYellow = new Blink(() -> Color.kYellow, 6),
-
+      
         green = new Solid(() -> Color.kGreen),
         blinkGreen = new Blink(() -> Color.kGreen, 6),
-
-        blue = new Solid(() -> Color.kBlue),
-        blinkBlue = new Blink(() -> Color.kBlue, 6),
 
         purple = new Solid(() -> Color.kPurple),
         blinkPurple = new Blink(() -> Color.kPurple, 6);

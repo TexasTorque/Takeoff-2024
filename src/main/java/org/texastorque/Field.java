@@ -14,7 +14,6 @@ import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.DriverStation;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 /**
  * Holding information about the field.
@@ -22,10 +21,8 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 public final class Field {
     private static volatile Field instance;
 
-    public static final double LENGTH = 16.541;
-    public static final double WIDTH = Units.inchesToMeters(315.5);
-    public static final double SPEAKER_Y = 5.55;
-    public static final double SPEAKER_X = 0;
+    public static final double FIELD_LENGTH = 16.541, FIELD_WIDTH = Units.inchesToMeters(315.5), SPEAKER_Y = 5.55,
+            SPEAKER_X = 0, ANGLE_TO_LASER = 60, ALLIANCE_WING_LENGTH = 6;
 
     public Pose2d speakerPose = new Pose2d();
     public Pose2d passingZone = new Pose2d();
@@ -33,9 +30,8 @@ public final class Field {
     public boolean isRedAlliance;
 
     public Field() {
-        SmartDashboard.putNumber("Speaker Y Position", 5.55);
-        SmartDashboard.putNumber("Speaker X Position", 0);
     }
+
     /**
      * Update the alliance information information.
      */
@@ -43,13 +39,13 @@ public final class Field {
         isRedAlliance = DriverStation.getAlliance().isPresent()
                 && DriverStation.getAlliance().get() == DriverStation.Alliance.Red;
 
-        speakerPose = new Pose2d(isRedAlliance ? LENGTH - SPEAKER_X : SPEAKER_X, 
+        speakerPose = new Pose2d(isRedAlliance ? FIELD_LENGTH - SPEAKER_X : SPEAKER_X,
                 SPEAKER_Y, Rotation2d.fromDegrees(0));
     }
 
     public boolean isPoseOnField(final Pose2d pose) {
-        return TorqueMath.constrained(pose.getX(), 0, LENGTH)
-                && TorqueMath.constrained(pose.getY(), 0, WIDTH);
+        return TorqueMath.constrained(pose.getX(), 0, FIELD_LENGTH)
+                && TorqueMath.constrained(pose.getY(), 0, FIELD_WIDTH);
     }
 
     /** Check if an apriltag id is valid, id elementof [1, 16] */
@@ -97,9 +93,16 @@ public final class Field {
 
     /** Is some pose's X coord > xPosition away from the current alliance wall */
     public boolean isXPast(final Pose2d pose, final double xPosition) {
-        return !isRedAlliance ? pose.getX() > xPosition : pose.getX() < LENGTH - xPosition;
+        return !isRedAlliance ? pose.getX() > xPosition : pose.getX() < FIELD_LENGTH - xPosition;
     }
 
+    public Rotation2d getAngleToLaser(final Pose2d curentPose) {
+        return Rotation2d.fromDegrees(360).plus(Rotation2d.fromDegrees(isRedAlliance ? 42 : -42));
+    }
+
+    public boolean isReadyToLaser(final Pose2d currentPose) {
+        return false;
+    }
 
     /** Handling x-offseting correctly using the alliances color */
     public Pose2d calculateXOffset(final Pose2d pathEndPosition, final double xOffset) {
@@ -119,7 +122,7 @@ public final class Field {
 
     /** Reflect some pose based on our current alliance position */
     public Pose2d getAllianceReflectedPose(Pose2d pose) {
-        return new Pose2d(isRedAlliance ? LENGTH - pose.getX() : pose.getX(), pose.getY(), pose.getRotation());
+        return new Pose2d(isRedAlliance ? FIELD_LENGTH - pose.getX() : pose.getX(), pose.getY(), pose.getRotation());
     }
 
     public int getSpeakerTargetID() {

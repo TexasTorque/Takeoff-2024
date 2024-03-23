@@ -127,6 +127,10 @@ public class BaseAuto extends TorqueSequence implements Subsystems {
             return peekNext() >= 10;
         }
 
+        public boolean isNextFarSide() {
+            return peekNext() == 50 || peekNext() == 40;
+        }
+
         /**
          * Do we have another note in our sequence?
          */
