@@ -17,8 +17,10 @@ import org.texastorque.torquelib.base.TorqueMode;
 import org.texastorque.torquelib.base.TorqueState;
 import org.texastorque.torquelib.base.TorqueStatorSubsystem;
 import org.texastorque.torquelib.swerve.TorqueSwerveSpeeds;
-import org.texastorque.torquelib.swerve.TorqueSwerveModule2022;
-import org.texastorque.torquelib.swerve.TorqueSwerveModule2022.SwerveConfig;
+import org.texastorque.torquelib.swerve.base.TorqueSwerveModule;
+import org.texastorque.torquelib.swerve.base.TorqueSwerveModule.SwerveConfig;
+import org.texastorque.torquelib.swerve.TorqueSwerveModuleKraken;
+import org.texastorque.torquelib.swerve.TorqueSwerveModuleNEO;
 import org.texastorque.torquelib.util.TorqueMath;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.geometry.Pose2d;
@@ -103,8 +105,29 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
 
     private static volatile Drivebase instance;
 
+    /**
+     * Returns the normal distance between the rotational axis of the outermost
+     * wheel and the center of the robot, used to satisfy the TorquePathingDrivebase
+     * interface.
+     */
+    public double getRadius() {
+        return WIDTH * Math.sqrt(2);
+    }
+
+    /** Return the maximum translational speed to satisfy TorquePathingDrivebase. */
+    public double getMaxSpeed() {
+        return MAX_VELOCITY;
+    }
+
     public static final double WIDTH = Units.inchesToMeters(21.25), // distance between swerve axis
-            MAX_VELOCITY = SwerveConfig.WHEEL_FREE_SPEED, // maximum translational velocity of the swerve (m/s)
+
+            // WARNING: make sure you have the correct one for the modules
+
+            // MAX_VELOCITY = SwerveConfig.swervexNeo.maxVelocity, // maximum translational velocity of the swerve (m/s)
+            MAX_VELOCITY = SwerveConfig.swervexKraken.maxVelocity, // maximum translational velocity of the swerve (m/s)
+
+            // WARNING: the above is very important!
+
             MAX_ACCELERATION = 5, // maximum translation acceleration of the swerver (m/s^2)
             MAX_ANGULAR_VELOCITY = 2 * Math.PI; // maximum rotation velocity of the swerve (rad/s)
 
@@ -121,7 +144,7 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
             LOC_BL = new Translation2d(-WIDTH / 2, WIDTH / 2),
             LOC_BR = new Translation2d(-WIDTH / 2, -WIDTH / 2);
 
-    private final TorqueSwerveModule2022 fl, fr, bl, br;
+    private final TorqueSwerveModule fl, fr, bl, br;
 
     public TorqueSwerveSpeeds inputSpeeds; // swerve velocity vector
     public final SwerveDriveKinematics kinematics; // used to transform swerve velo vector to module vectors
@@ -141,13 +164,17 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
     private Drivebase() {
         super(State.FIELD_RELATIVE);
 
-        // These are using the swerve-x config.
-        final SwerveConfig swerveConfig = SwerveConfig.swervex;
+        // For Bravo -- using the swerve-x Neo config.
+        // fl = new TorqueSwerveModuleNEO("Front Left", Ports.FL_MOD, SwerveConfig.swervexNeo);
+        // fr = new TorqueSwerveModuleNEO("Front Right", Ports.FR_MOD, SwerveConfig.swervexNeo);
+        // bl = new TorqueSwerveModuleNEO("Back Left", Ports.BL_MOD, SwerveConfig.swervexNeo);
+        // br = new TorqueSwerveModuleNEO("Back Right", Ports.BR_MOD, SwerveConfig.swervexNeo);
 
-        fl = new TorqueSwerveModule2022("Front Left", Ports.FL_MOD, swerveConfig, .2);
-        fr = new TorqueSwerveModule2022("Front Right", Ports.FR_MOD, swerveConfig, .2);
-        bl = new TorqueSwerveModule2022("Back Left", Ports.BL_MOD, swerveConfig, .2);
-        br = new TorqueSwerveModule2022("Back Right", Ports.BR_MOD, swerveConfig, .2);
+        // For Charlie -- using the swerve-x Kraken config.
+        fl = new TorqueSwerveModuleKraken("Front Left", Ports.FL_MOD, SwerveConfig.swervexKraken);
+        fr = new TorqueSwerveModuleKraken("Front Right", Ports.FR_MOD, SwerveConfig.swervexKraken);
+        bl = new TorqueSwerveModuleKraken("Back Left", Ports.BL_MOD, SwerveConfig.swervexKraken);
+        br = new TorqueSwerveModuleKraken("Back Right", Ports.BR_MOD, SwerveConfig.swervexKraken);
 
         inputSpeeds = new TorqueSwerveSpeeds(0, 0, 0);
         kinematics = new SwerveDriveKinematics(LOC_FL, LOC_FR, LOC_BL, LOC_BR);
@@ -413,14 +440,7 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
         setState(State.FIELD_RELATIVE);
     }
 
-    /**
-     * Returns the normal distance between the rotational axis of the outermost
-     * wheel and the center of the robot, used to satisfy the TorquePathingDrivebase
-     * interface.
-     */
-    public double getRadius() {
-        return WIDTH * Math.sqrt(2);
-    }
+   
 
     @Override
     public void clean(TorqueMode mode) {
