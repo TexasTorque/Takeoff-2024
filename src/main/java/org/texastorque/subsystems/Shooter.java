@@ -81,7 +81,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         // 1500 still high on soft
         // 1400 decent on soft
         // 1300 too low on hard
-        AMP(new Shot(1400, Rotation2d.fromDegrees(84)), false), // 80.7 <-- real angle
+        AMP(new Shot(1400, Rotation2d.fromDegrees(87)), false), // 80.7 <-- real angle
         AMP_INIITAL(new Shot(0, Rotation2d.fromDegrees(125)), false),
         CLIMB(new Shot(0, Rotation2d.fromDegrees(96)), false),
         TRAP(new Shot(2000, Rotation2d.fromDegrees(81)), false),
@@ -148,7 +148,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
      * Chute state is a specialty state used for the flap motor.
      */
     public static enum ChuteState implements TorqueState {
-        IN(Rotation2d.fromDegrees(170)), OUT(Rotation2d.fromDegrees(331.2));
+        IN(Rotation2d.fromDegrees(170)), OUT(Rotation2d.fromDegrees(334));
 
         private Rotation2d position;
 
