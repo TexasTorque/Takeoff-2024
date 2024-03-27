@@ -9,6 +9,7 @@ package org.texastorque.auto;
 import org.texastorque.Subsystems;
 import org.texastorque.auto.routines.Shoot;
 import org.texastorque.auto.sequences.BaseAuto;
+import org.texastorque.auto.sequences.Line;
 import org.texastorque.auto.sequences.BaseAuto.StartPoint;
 import org.texastorque.subsystems.Shooter;
 import org.texastorque.torquelib.auto.*;
@@ -64,6 +65,7 @@ public final class AutoManager extends TorqueAutoManager implements Subsystems {
 
         // Just shoot auto
         addSequence(new Shoot(Shooter.State.LAYUP));
+        addSequence(new Line());
 
         // Amp side only
         addBaseAuto(StartPoint.AMP, 1, 10, 20);

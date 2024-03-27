@@ -83,8 +83,8 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         // 1300 too low on hard
         AMP(new Shot(1400, Rotation2d.fromDegrees(84)), false), // 80.7 <-- real angle
         AMP_INIITAL(new Shot(0, Rotation2d.fromDegrees(125)), false),
-        CLIMB(new Shot(0, Rotation2d.fromDegrees(84)), false),
-        TRAP(new Shot(2000, Rotation2d.fromDegrees(81)), true),
+        CLIMB(new Shot(0, Rotation2d.fromDegrees(96)), false),
+        TRAP(new Shot(2000, Rotation2d.fromDegrees(81)), false),
 
         // Layup, black line, and safe zone backup shots. These have reversable "shift
         // shots"
@@ -621,8 +621,12 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
             chuteState = ChuteState.IN;
 
         chute.setVolts(
-                -TorqueMath.constrain(chutePID.calculate(getChuteEncoderDegrees(), chuteState.position.getDegrees())
-                        + chuteFF.calculate(getChuteSetpointActualRadians(chuteState.position.getDegrees()), 0), 6));
+                -TorqueMath.constrain(chutePID.calculate(getChuteEncoderDegrees(),
+                        chuteState.position.getDegrees())
+                        +
+                        chuteFF.calculate(getChuteSetpointActualRadians(chuteState.position.getDegrees()),
+                                0),
+                        6));
         double rotaryVolts = rotaryPID.calculate(getRotaryEncoderDegrees(), shot.angle.getDegrees())
                 + rotaryFF.calculate(shot.angle.getRadians(), 0);
 
