@@ -40,6 +40,9 @@ import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.math.util.Units;
+import edu.wpi.first.networktables.NetworkTable;
+import edu.wpi.first.networktables.NetworkTableInstance;
+import edu.wpi.first.networktables.NetworkTableValue;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
@@ -157,6 +160,10 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
         updateOdometryLocalization();
         updateVisionLocalization();
         updateObjectDetection();
+
+        NetworkTableInstance instance = NetworkTableInstance.getDefault();
+        NetworkTable table = instance.getTable("toast");
+        table.putValue("do_ai", NetworkTableValue.makeBoolean(false));
 
         // *** SMARTDASH BOARD LOGS ***
         Debug.log("Robot pitch (°)", gyro.getPitch());

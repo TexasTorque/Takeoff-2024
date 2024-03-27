@@ -187,8 +187,7 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
 
         offsetTargetingPID = new PIDController(.032 / 36, 0, 0);
 
-        SmartDashboard.putNumber("Align PID P", 0);
-        // maybe make continuous input to something idk?
+        SmartDashboard.putNumber("Align PID P", .032 / 36);
     }
 
     @Override
@@ -271,7 +270,7 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
         Debug.log("Drivebase State", desiredState.toString());
         Debug.log("Speed Setting at Start", speedSetting.toString());
 
-        // offsetTargetingPID.setP(SmartDashboard.getNumber("Align PID P", 0));
+        offsetTargetingPID.setP(SmartDashboard.getNumber("Align PID P", 0));
 
         if ((shooter.wantsState(Shooter.State.SMART) || shooter.wantsState(Shooter.State.FUTURE_SMART_ALIGN)
                 || shooter.wantsState(Shooter.State.LASER))
