@@ -20,8 +20,8 @@
         "y": 6.92530632238178
       },
       "prevControl": {
-        "x": 1.1492382336616527,
-        "y": 6.402961333247358
+        "x": 1.514565583557873,
+        "y": 6.379164695920104
       },
       "nextControl": null,
       "isLocked": false,
@@ -33,13 +33,13 @@
   "eventMarkers": [],
   "globalConstraints": {
     "maxVelocity": 4.6,
-    "maxAcceleration": 5.0,
+    "maxAcceleration": 4.0,
     "maxAngularVelocity": 540.0,
     "maxAngularAcceleration": 720.0
   },
   "goalEndState": {
     "velocity": 0,
-    "rotation": 28.0,
+    "rotation": 25.0,
     "rotateFast": false
   },
   "reversed": false,

@@ -32,7 +32,7 @@ public class CollectAndShootNote extends TorqueSequence implements Subsystems {
 
     public CollectAndShootNote(final NoteSequence noteSequence) {
         // Peek the next note pair and collect some data on it
-        addBlock(new TorqueRun(() -> deployIntakeRightAway = !noteSequence.peekNext().end().isFarSide()));
+        addBlock(new TorqueRun(() -> deployIntakeRightAway = !noteSequence.peekNext().end().isMidline()));
         addBlock(new TorqueRun(() -> isFarSide = noteSequence.peekNext().end().isFarSide()));
 
         log("Can Deploy Intake", () -> deployIntakeRightAway);

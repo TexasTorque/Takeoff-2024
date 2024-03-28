@@ -81,7 +81,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         // 1500 still high on soft
         // 1400 decent on soft
         // 1300 too low on hard
-        AMP(new Shot(1400, Rotation2d.fromDegrees(84)), false), // 80.7 <-- real angle
+        AMP(new Shot(1400, Rotation2d.fromDegrees(87)), false), // 80.7 <-- real angle
         AMP_INIITAL(new Shot(0, Rotation2d.fromDegrees(125)), false),
         CLIMB(new Shot(0, Rotation2d.fromDegrees(96)), false),
         TRAP(new Shot(2000, Rotation2d.fromDegrees(81)), false),
@@ -148,7 +148,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
      * Chute state is a specialty state used for the flap motor.
      */
     public static enum ChuteState implements TorqueState {
-        IN(Rotation2d.fromDegrees(170)), OUT(Rotation2d.fromDegrees(331.2));
+        IN(Rotation2d.fromDegrees(170)), OUT(Rotation2d.fromDegrees(334));
 
         private Rotation2d position;
 
@@ -321,6 +321,8 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         shotTable.put(4., new Shot(5400, Rotation2d.fromDegrees(31)));
         shotTable.put(4.5, new Shot(5600, Rotation2d.fromDegrees(29.5)));
         shotTable.put(4.9, new Shot(5800, Rotation2d.fromDegrees(29)));
+        shotTable.put(5., new Shot(5900, Rotation2d.fromDegrees(27)));
+        shotTable.put(5.2, new Shot(6000, Rotation2d.fromDegrees(25)));
 
         Set<Entry<Double, Shot>> entries = shotTable.entrySet();
         double[] distances = new double[entries.size()];

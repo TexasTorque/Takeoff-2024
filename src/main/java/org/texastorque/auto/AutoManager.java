@@ -38,7 +38,6 @@ public final class AutoManager extends TorqueAutoManager implements Subsystems {
         pathLoader.preloadPath("go_3_to_2");
         pathLoader.preloadPath("go_10_to_20");
         pathLoader.preloadPath("go_NONE_to_NONE");
-        pathLoader.preloadPath("go_20_to_10");
         pathLoader.preloadPath("go_SRC_to_50");
         pathLoader.preloadPath("go_AMP_to_1");
         pathLoader.preloadPath("go_2_to_3");
@@ -55,18 +54,18 @@ public final class AutoManager extends TorqueAutoManager implements Subsystems {
     }
 
     // /**
-    //  * Get a preloaded path... the current path strategy is EXPLICITLY UNSAFE...
-    //  * ...if a path is called that is not loaded above then the program WILL FAIL!
-    //  * 
-    //  * Helpful for debugging, but not for production!!!!
-    //  */
+    // * Get a preloaded path... the current path strategy is EXPLICITLY UNSAFE...
+    // * ...if a path is called that is not loaded above then the program WILL FAIL!
+    // *
+    // * Helpful for debugging, but not for production!!!!
+    // */
     // public final PathPlannerPath getPath(final String pathName) {
-    //     System.out.println("Loading path " + pathName);
-    //     return pathLoader.getPathUnsafe(pathName);
+    // System.out.println("Loading path " + pathName);
+    // return pathLoader.getPathUnsafe(pathName);
     // }
 
     /**
-     * Get a preloaded path. If the paths is not loaded then we return 
+     * Get a preloaded path. If the paths is not loaded then we return
      * the none path.
      */
     public final PathPlannerPath getPath(final String pathName) {
@@ -88,7 +87,7 @@ public final class AutoManager extends TorqueAutoManager implements Subsystems {
 
         // Amp side only
         addBaseAuto(StartPoint.AMP, NotePoint.N_1, NotePoint.N_10, NotePoint.N_20);
-        addBaseAuto(StartPoint.AMP, NotePoint.N_1, Adapative.N_10_OR_20, Adapative.N_20_OR_10);
+        addBaseAuto(StartPoint.AMP, NotePoint.N_1, NotePoint.N_20);
 
         // Clear center area
         addBaseAuto(StartPoint.CTR, NotePoint.N_2, NotePoint.N_1);

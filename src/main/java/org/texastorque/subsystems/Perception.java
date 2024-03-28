@@ -84,7 +84,7 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
      * the camera to the april tag (in meters) where we trust the vision
      * measurements.
      */
-    private static final double MAX_ANGULAR_VELOCITY_RADS = Math.PI * 2, MAX_DISTANCE = 6;
+    private static final double MAX_ANGULAR_VELOCITY_RADS = Math.PI * 1, MAX_DISTANCE = 6;
 
     // Toast handles camera interfacing, poseEstimator is used to aggregate
     // pose estimations and find a true pose estimate
@@ -163,7 +163,8 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
         Debug.log("Robot roll (°)", gyro.getRoll());
 
         Debug.log("Pose", Util.pose2d2str(poseEstimator.getEstimatedPosition()));
-        Debug.log("Filtered Pose", Util.pose2d2str(getFilteredPose()));
+        // Debug.log("Filtered Pose", Util.pose2d2str(getFilteredPose()));
+        Debug.log("Filtered Pose", Util.pose2d2str(getPose()));
         Debug.log("Heading (°)", getHeading().getDegrees());
         Debug.log("Desired Heading Lock (°)", getHeadingLock().getDegrees());
 
@@ -174,7 +175,7 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
         SmartDashboard.putNumber("match_time", DriverStation.getMatchTime());
 
         // Update the field map
-        field2d.setRobotPose(getFilteredPose());
+        field2d.setRobotPose(getPose());
         if (!Robot.isReal() && shooter.wantsState(Shooter.State.SMART) && mode.isAuto()) {
             field2d.setRobotPose(new Pose2d(getPose().getTranslation(), getAngleToSpeaker()));
         }
@@ -294,6 +295,9 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
                 // continue;
 
                 // add the processed vision messurement to the pose estimator
+
+                // final Pose2d gyroOverridenPose = new Pose2d(estPose.getX(), estPose.getY(),
+                // getHeading());
                 poseEstimator.addVisionMeasurement(estPose, Timer.getFPGATimestamp());
             }
         });
