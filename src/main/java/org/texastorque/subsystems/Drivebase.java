@@ -18,7 +18,6 @@ import org.texastorque.torquelib.base.TorqueState;
 import org.texastorque.torquelib.base.TorqueStatorSubsystem;
 import org.texastorque.torquelib.swerve.TorqueSwerveSpeeds;
 import org.texastorque.torquelib.swerve.base.TorqueSwerveModule;
-import org.texastorque.torquelib.swerve.base.TorqueSwerveModule.SwerveConfig;
 import org.texastorque.torquelib.swerve.TorqueSwerveModuleKraken;
 import org.texastorque.torquelib.swerve.TorqueSwerveModuleNEO;
 import org.texastorque.torquelib.util.TorqueMath;
@@ -163,13 +162,13 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
     private Drivebase() {
         super(State.FIELD_RELATIVE);
 
-        // For Bravo -- using the swerve-x Neo config.
-        // fl = new TorqueSwerveModuleNEO("Front Left", Ports.FL_MOD, SwerveConfig.swervexNeo);
-        // fr = new TorqueSwerveModuleNEO("Front Right", Ports.FR_MOD, SwerveConfig.swervexNeo);
-        // bl = new TorqueSwerveModuleNEO("Back Left", Ports.BL_MOD, SwerveConfig.swervexNeo);
-        // br = new TorqueSwerveModuleNEO("Back Right", Ports.BR_MOD, SwerveConfig.swervexNeo);
+        // For Bravo -- using the swerve-x Neo.
+        // fl = new TorqueSwerveModuleNEO("Front Left", Ports.FL_MOD);
+        // fr = new TorqueSwerveModuleNEO("Front Right", Ports.FR_MOD);
+        // bl = new TorqueSwerveModuleNEO("Back Left", Ports.BL_MOD);
+        // br = new TorqueSwerveModuleNEO("Back Right", Ports.BR_MOD);
 
-        // For Charlie -- using the swerve-x Kraken config.
+        // For Charlie -- using the swerve-x Kraken.
         fl = new TorqueSwerveModuleKraken("Front Left", Ports.FL_MOD);
         fr = new TorqueSwerveModuleKraken("Front Right", Ports.FR_MOD);
         bl = new TorqueSwerveModuleKraken("Back Left", Ports.BL_MOD);
