@@ -115,7 +115,7 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
     }
 
     /** Return the maximum translational speed to satisfy TorquePathingDrivebase. */
-    public double getMaxSpeed() {
+    public double getMaxPathingVelocity() {
         return MAX_VELOCITY;
     }
 
@@ -128,7 +128,6 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
 
             // WARNING: the above is very important!
 
-            MAX_ACCELERATION = 5, // maximum translation acceleration of the swerver (m/s^2)
             MAX_ANGULAR_VELOCITY = 2 * Math.PI; // maximum rotation velocity of the swerve (rad/s)
 
     public static synchronized final Drivebase getInstance() {
@@ -198,15 +197,11 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
         setAlignTarget(perception::getHeadingLock);
     }
 
-    public SwerveModulePosition invertSwerveModuleDistance(SwerveModulePosition position) {
-        return new SwerveModulePosition(position.distanceMeters, position.angle);
-    }
-
     /** Get aggregate module positions for feedback. */
     public SwerveModulePosition[] getModulePositions() {
         return new SwerveModulePosition[] {
-                invertSwerveModuleDistance(fl.getPosition()), invertSwerveModuleDistance(fr.getPosition()),
-                invertSwerveModuleDistance(bl.getPosition()), invertSwerveModuleDistance(br.getPosition())
+                fl.getPosition(), fr.getPosition(),
+                bl.getPosition(), br.getPosition()
         };
     }
 
@@ -331,7 +326,8 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
                         getAlignTarget());
             }
 
-            inputSpeeds.omegaRadiansPerSecond = -TorqueMath.constrain(requestedAngularVelocity, 2 * Math.PI);
+            // WARNING: make sure this is going the correct direction.
+            inputSpeeds.omegaRadiansPerSecond = TorqueMath.constrain(requestedAngularVelocity, 2 * Math.PI);
         }
 
         // Handle alignment readiness counter. Increment every loop the drivebase is
