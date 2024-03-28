@@ -124,7 +124,7 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
             // WARNING: make sure you have the correct one for the modules
 
             // MAX_VELOCITY = SwerveConfig.swervexNeo.maxVelocity, // maximum translational velocity of the swerve (m/s)
-            MAX_VELOCITY = SwerveConfig.swervexKraken.maxVelocity, // maximum translational velocity of the swerve (m/s)
+            MAX_VELOCITY = TorqueSwerveModuleKraken.maxVelocity, // maximum translational velocity of the swerve (m/s)
 
             // WARNING: the above is very important!
 
@@ -171,10 +171,10 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
         // br = new TorqueSwerveModuleNEO("Back Right", Ports.BR_MOD, SwerveConfig.swervexNeo);
 
         // For Charlie -- using the swerve-x Kraken config.
-        fl = new TorqueSwerveModuleKraken("Front Left", Ports.FL_MOD, SwerveConfig.swervexKraken);
-        fr = new TorqueSwerveModuleKraken("Front Right", Ports.FR_MOD, SwerveConfig.swervexKraken);
-        bl = new TorqueSwerveModuleKraken("Back Left", Ports.BL_MOD, SwerveConfig.swervexKraken);
-        br = new TorqueSwerveModuleKraken("Back Right", Ports.BR_MOD, SwerveConfig.swervexKraken);
+        fl = new TorqueSwerveModuleKraken("Front Left", Ports.FL_MOD);
+        fr = new TorqueSwerveModuleKraken("Front Right", Ports.FR_MOD);
+        bl = new TorqueSwerveModuleKraken("Back Left", Ports.BL_MOD);
+        br = new TorqueSwerveModuleKraken("Back Right", Ports.BR_MOD);
 
         inputSpeeds = new TorqueSwerveSpeeds(0, 0, 0);
         kinematics = new SwerveDriveKinematics(LOC_FL, LOC_FR, LOC_BL, LOC_BR);
@@ -199,7 +199,7 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
     }
 
     public SwerveModulePosition invertSwerveModuleDistance(SwerveModulePosition position) {
-        return new SwerveModulePosition(-position.distanceMeters, position.angle);
+        return new SwerveModulePosition(position.distanceMeters, position.angle);
     }
 
     /** Get aggregate module positions for feedback. */
@@ -270,6 +270,7 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
         Debug.log("Align Target", getAlignTarget());
         Debug.log("Drivebase State", desiredState.toString());
         Debug.log("Speed Setting at Start", speedSetting.toString());
+        Debug.log("Input Speeds", inputSpeeds.toString());
 
         // offsetTargetingPID.setP(SmartDashboard.getNumber("Align PID P", 0));
 

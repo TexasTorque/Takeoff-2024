@@ -45,7 +45,6 @@ public final class AutoManager extends TorqueAutoManager implements Subsystems {
         pathLoader.preloadPath("go_2_to_1");
         pathLoader.preloadPath("line");
         pathLoader.preloadPath("go_3_to_50");
-        pathLoader.preloadPath("go_10_to_shoot");
         pathLoader.preloadPath("go_40_to_3");
     }
 

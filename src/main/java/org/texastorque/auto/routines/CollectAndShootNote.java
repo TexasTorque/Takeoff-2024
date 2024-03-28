@@ -44,6 +44,6 @@ public class CollectAndShootNote extends TorqueSequence implements Subsystems {
 
         // addBlock(new TorqueWaitTime(() -> isFarSide ? 1 : 0));
 
-        addBlock(new TorqueRunSequence(new Shoot(deployIntakeRightAway ? Shooter.State.FUTURE_SMART_ALIGN : Shooter.State.FUTURE_SMART)));
+        addBlock(new TorqueRunSequence(new Shoot(deployIntakeRightAway ? Shooter.State.FUTURE_SMART : Shooter.State.FUTURE_SMART)));
     }
 }
