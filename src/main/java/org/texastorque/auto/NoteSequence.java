@@ -72,6 +72,9 @@ public class NoteSequence {
         }
     }
 
+    // Amp side shooting position = (3.00, 5.55)
+    // Far side shooting position = (2.10, 3.33)
+
     /** TOP SECRET */
     public static enum Adapative implements Location {
         N_10_OR_20(10, 20),

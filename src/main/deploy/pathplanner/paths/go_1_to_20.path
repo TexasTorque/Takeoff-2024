@@ -3,64 +3,54 @@
   "waypoints": [
     {
       "anchor": {
-        "x": 3.03,
-        "y": 7.25
+        "x": 2.55,
+        "y": 6.95
       },
       "prevControl": null,
       "nextControl": {
-        "x": 4.081715680517694,
-        "y": 7.25
+        "x": 7.453752849538321,
+        "y": 6.882163220662702
       },
       "isLocked": false,
       "linkedName": null
     },
     {
       "anchor": {
-        "x": 4.933092032850732,
-        "y": 7.442703482629187
+        "x": 8.288764795848287,
+        "y": 5.761901533213356
       },
       "prevControl": {
-        "x": 4.074453267644955,
-        "y": 7.31162405411107
+        "x": 8.3899144690649,
+        "y": 5.522668644995401
       },
       "nextControl": {
-        "x": 5.937875709084752,
-        "y": 7.596093331075552
+        "x": 8.222007041514935,
+        "y": 5.919792803370122
       },
       "isLocked": false,
       "linkedName": null
     },
     {
       "anchor": {
-        "x": 8.286230938202618,
-        "y": 7.596865327989915
+        "x": 3.0,
+        "y": 5.553039895289326
       },
       "prevControl": {
-        "x": 7.3459980808850505,
-        "y": 7.66765150659931
-      },
-      "nextControl": {
-        "x": 9.089671093422318,
-        "y": 7.5363776967752445
-      },
-      "isLocked": false,
-      "linkedName": null
-    },
-    {
-      "anchor": {
-        "x": 6.723709183529478,
-        "y": 6.4956414218384
-      },
-      "prevControl": {
-        "x": 7.922428174300793,
-        "y": 7.6276065861391
+        "x": 4.3286419195172146,
+        "y": 7.905519619069351
       },
       "nextControl": null,
       "isLocked": false,
       "linkedName": null
     }
   ],
-  "rotationTargets": [],
+  "rotationTargets": [
+    {
+      "waypointRelativePos": 0.95,
+      "rotationDegrees": -20.0,
+      "rotateFast": false
+    }
+  ],
   "constraintZones": [],
   "eventMarkers": [],
   "globalConstraints": {
@@ -76,9 +66,6 @@
   },
   "reversed": false,
   "folder": null,
-  "previewStartingState": {
-    "rotation": 0,
-    "velocity": 0
-  },
+  "previewStartingState": null,
   "useDefaultConstraints": true
 }
