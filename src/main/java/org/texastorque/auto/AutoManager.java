@@ -10,7 +10,10 @@ import org.texastorque.Subsystems;
 import org.texastorque.auto.routines.Shoot;
 import org.texastorque.auto.sequences.BaseAuto;
 import org.texastorque.auto.sequences.Line;
-import org.texastorque.auto.sequences.BaseAuto.StartPoint;
+import org.texastorque.auto.NoteSequence.Adapative;
+import org.texastorque.auto.NoteSequence.Location;
+import org.texastorque.auto.NoteSequence.NotePoint;
+import org.texastorque.auto.NoteSequence.StartPoint;
 import org.texastorque.subsystems.Shooter;
 import org.texastorque.torquelib.auto.*;
 import com.pathplanner.lib.path.PathPlannerPath;
@@ -55,6 +58,7 @@ public final class AutoManager extends TorqueAutoManager implements Subsystems {
      * Helpful for debugging, but not for production!!!!
      */
     public final PathPlannerPath getPath(final String pathName) {
+        System.out.println("Loading path " + pathName);
         return pathLoader.getPathUnsafe(pathName);
     }
 
@@ -67,28 +71,26 @@ public final class AutoManager extends TorqueAutoManager implements Subsystems {
         addSequence(new Line());
 
         // Amp side only
-        addBaseAuto(StartPoint.AMP, 1, 10, 20);
+        addBaseAuto(StartPoint.AMP, NotePoint.N_1, NotePoint.N_10, NotePoint.N_20);
+        addBaseAuto(StartPoint.AMP, NotePoint.N_1, Adapative.N_10_OR_20, Adapative.N_20_OR_10);
 
         // Clear center area
-        addBaseAuto(StartPoint.CTR, 2, 1);
-        addBaseAuto(StartPoint.CTR, 3, 2);
-        addBaseAuto(StartPoint.CTR, 3, 2, 1);
-        addBaseAuto(StartPoint.CTR, 3, 2, 1, 10);
+        addBaseAuto(StartPoint.CTR, NotePoint.N_2, NotePoint.N_1);
+        addBaseAuto(StartPoint.CTR, NotePoint.N_3, NotePoint.N_2);
+        addBaseAuto(StartPoint.CTR, NotePoint.N_3, NotePoint.N_2, NotePoint.N_1);
+        addBaseAuto(StartPoint.CTR, NotePoint.N_3, NotePoint.N_2, NotePoint.N_1, NotePoint.N_10);
 
         // Far side capable
-        addBaseAuto(StartPoint.CTR, 2, 3, 50);
-        addBaseAuto(StartPoint.SRC, 3, 50);
-        addBaseAuto(StartPoint.SRC, 50, 40);
-        addBaseAuto(StartPoint.SRC, 50, 40, 3);
+        addBaseAuto(StartPoint.CTR, NotePoint.N_2, NotePoint.N_3, NotePoint.N_50);
+        addBaseAuto(StartPoint.SRC, NotePoint.N_3, NotePoint.N_50);
+        addBaseAuto(StartPoint.SRC, NotePoint.N_50, NotePoint.N_40);
+        addBaseAuto(StartPoint.SRC, NotePoint.N_50, NotePoint.N_40, NotePoint.N_3);
     }
 
     /** Create a base auto and come up with a name for it */
-    private void addBaseAuto(final StartPoint start, final int... notes) {
-        String name = start.toString();
-        for (int note : notes) {
-            name += " to " + note;
-        }
-        addSequence(name, new BaseAuto(start, notes));
+    private void addBaseAuto(final Location... notes) {
+        final NoteSequence ns = new NoteSequence(notes);
+        addSequence(ns.toString(), new BaseAuto(ns));
     }
 
     public static final synchronized AutoManager getInstance() {
