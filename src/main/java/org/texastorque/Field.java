@@ -22,10 +22,11 @@ public final class Field {
     private static volatile Field instance;
 
     public static final double FIELD_LENGTH = 16.541, FIELD_WIDTH = Units.inchesToMeters(315.5), SPEAKER_Y = 5.55,
-            SPEAKER_X = 0, ANGLE_TO_LASER = 60, ALLIANCE_WING_LENGTH = 6;
+            SPEAKER_X = 0, ANGLE_TO_LASER = 60, ALLIANCE_WING_LENGTH = 6, FAR_SIDE_SPEAKER_Y = 2;
 
     public Pose2d speakerPose = new Pose2d();
     public Pose2d passingZone = new Pose2d();
+    public Pose2d farSideSpeakerPose = new Pose2d();
 
     public boolean isRedAlliance;
 
@@ -41,6 +42,8 @@ public final class Field {
 
         speakerPose = new Pose2d(isRedAlliance ? FIELD_LENGTH - SPEAKER_X : SPEAKER_X,
                 SPEAKER_Y, Rotation2d.fromDegrees(0));
+
+        farSideSpeakerPose = new Pose2d(isRedAlliance ? FIELD_LENGTH - SPEAKER_X : SPEAKER_X, FAR_SIDE_SPEAKER_Y, Rotation2d.fromDegrees(0));
     }
 
     public boolean isPoseOnField(final Pose2d pose) {
@@ -51,6 +54,10 @@ public final class Field {
     /** Check if an apriltag id is valid, id elementof [1, 16] */
     public boolean isIDValid(final int id) {
         return 3 <= id && id <= 8;
+    }
+
+    public void setSpeakerPose(final Pose2d speakerPose) {
+        this.speakerPose = speakerPose;
     }
 
     /** Compute the distance between two poses */

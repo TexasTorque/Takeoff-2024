@@ -4,6 +4,7 @@ import java.util.function.Supplier;
 
 import org.texastorque.Subsystems;
 import org.texastorque.auto.NoteSequence;
+import org.texastorque.torquelib.Debug;
 import org.texastorque.torquelib.auto.TorqueBlock;
 import org.texastorque.torquelib.auto.TorqueSequence;
 import org.texastorque.torquelib.auto.commands.TorqueFollowPath;
@@ -12,6 +13,8 @@ import org.texastorque.torquelib.auto.commands.TorqueRunSequence;
 import org.texastorque.torquelib.auto.commands.TorqueWaitTime;
 import org.texastorque.subsystems.*;
 import com.pathplanner.lib.path.PathPlannerPath;
+import org.texastorque.Field;
+import edu.wpi.first.math.geometry.Pose2d;
 
 /**
  * This sequence runs a path from one note to another.
@@ -31,6 +34,7 @@ public class CollectAndShootNote extends TorqueSequence implements Subsystems {
     private boolean isFarSide = false;
 
     public CollectAndShootNote(final NoteSequence noteSequence) {
+
         // Peek the next note pair and collect some data on it
         addBlock(new TorqueRun(() -> deployIntakeRightAway = !noteSequence.peekNext().end().isMidline()));
         addBlock(new TorqueRun(() -> isFarSide = noteSequence.peekNext().end().isFarSide()));
@@ -39,12 +43,15 @@ public class CollectAndShootNote extends TorqueSequence implements Subsystems {
 
         log("Auto State", () -> "BEGIN PATH");
 
-        // WARNING: THIS IS THE POP!!! -- any subsequent peeks will be for the next note!
+        // WARNING: THIS IS THE POP!!! -- any subsequent peeks will be for the next
+        // note!
         addBlock(followPath(() -> noteSequence.popNext().getPath()),
                 new DeployIntakeWhen(() -> field.isXPast(perception.getPose(), 4.5) || deployIntakeRightAway)
                         .command());
 
-        // addBlock(new TorqueRun(() -> drivebase.setUsePoseAlign(!isFarSide)));
-        addBlock(new TorqueRunSequence(new Shoot(isFarSide ? Shooter.State.FUTURE_SMART : Shooter.State.FUTURE_SMART_ALIGN)));
+        log("isFarSide", () -> isFarSide);
+
+        addBlock(new TorqueRun(() -> field.setSpeakerPose(isFarSide ? field.farSideSpeakerPose : field.speakerPose)));
+        addBlock(new TorqueRunSequence(new Shoot(Shooter.State.FUTURE_SMART_ALIGN)));
     }
 }

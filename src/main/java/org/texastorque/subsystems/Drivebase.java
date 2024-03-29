@@ -159,8 +159,6 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
     private final PIDController headingLockPID, offsetTargetingPID;
     private double loopsThatDBIsAligned = 0;
 
-    private boolean usePoseAlign = true;
-
     private Drivebase() {
         super(State.FIELD_RELATIVE);
 
@@ -257,10 +255,7 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
     public boolean hasBeenAligned() {
         return loopsThatDBIsAligned > 3;
     }
-
-    public void setUsePoseAlign(boolean usePoseAlign) {
-        this.usePoseAlign = usePoseAlign;
-    }
+ 
 
     @Override
     public final void update(final TorqueMode mode) {
@@ -322,7 +317,7 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
             if (shooter.wantsState(Shooter.State.LASER) && !shooter.isShift()) {
                 requestedAngularVelocity = headingLockPID.calculate(perception.getHeading().getDegrees(),
                         field.getAngleToLaser(perception.getPose()).getDegrees());
-            } else if (fusedTargetOffset.isPresent() && (!usePoseAlign || mode.isTeleop()) ) {
+            } else if (fusedTargetOffset.isPresent() && mode.isTeleop()) {
                 // We see the correct targets, we can lock our shooter to that target.
                 requestedAngularVelocity = offsetTargetingPID.calculate(fusedTargetOffset.get(), 0);
             } else {
@@ -345,7 +340,7 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
         // mode we are in, wether its alignment mode or angle mode. Then we use that
         // mode
         // to check if we are aligned properly.
-        if (mode.isTeleop() || !usePoseAlign) {
+        if (mode.isTeleop()) {
             if (fusedTargetOffset.isPresent() ? isTargetLocked(fusedTargetOffset.get()) : isAligned()) {
                 loopsThatDBIsAligned++;
             } else {
