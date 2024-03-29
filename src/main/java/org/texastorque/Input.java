@@ -65,7 +65,7 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
         climbDown = new TorqueBoolSupplier(
                 () -> driver.isDPADDownDown() || (driver.isRightTriggerDown() && driver.isLeftTriggerDown()));
 
-        operatorClimbUp = new TorqueBoolSupplier(operator::isDPADUpDown);
+        operatorClimbUp = new TorqueBoolSupplier(operator::isDPADRightDown);
 
         climbLeftUp = new TorqueBoolSupplier(driver::isLeftBumperDown);
         climbLeftDown = new TorqueBoolSupplier(driver::isLeftTriggerDown);
@@ -105,8 +105,7 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
         amp.onTrue(() -> shooter.setState(Shooter.State.AMP));
         trap.onTrue(() -> shooter.setState(Shooter.State.TRAP));
 
-        if (!shooterClimbMode.get())
-            manualGateOut.onTrue(() -> shooter.setGateState(Shooter.GateState.OUT));
+        manualGateOut.onTrue(() -> shooter.setGateState(Shooter.GateState.OUT));
 
         manualGateIn.onTrue(() -> shooter.setGateState(Shooter.GateState.IN));
 
@@ -174,7 +173,8 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
         boolean rumbleLeft = rumbleTimeout.get();
         boolean rumbleRight = rumbleTimeout.get();
 
-        if ((TorqueMath.toleranced(DriverStation.getMatchTime(), 30, 1) || TorqueMath.toleranced(DriverStation.getMatchTime(), 10, 1)) && DriverStation.isTeleop()) {
+        if ((TorqueMath.toleranced(DriverStation.getMatchTime(), 30, 1)
+                || TorqueMath.toleranced(DriverStation.getMatchTime(), 10, 1)) && DriverStation.isTeleop()) {
             if (Timer.getFPGATimestamp() * 100 % 2 == 0) {
                 rumbleLeft = true;
                 rumbleRight = false;

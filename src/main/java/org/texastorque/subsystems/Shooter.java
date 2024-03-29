@@ -93,7 +93,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         // Used for tossing a note across the field
         LASER(new Shot(4000, Rotation2d.fromDegrees(54)), new Shot(3000, Rotation2d.fromDegrees(54)), false),
 
-        MID(new Shot(4400, Rotation2d.fromDegrees(41)), new Shot(4400, Rotation2d.fromDegrees(143)), true),
+        MID(new Shot(5400, Rotation2d.fromDegrees(32)), true), 
         SAFEZONE(new Shot(4600, Rotation2d.fromDegrees(37)), new Shot(4300, Rotation2d.fromDegrees(148)), true),
 
         // Future and Smart shots are special.
@@ -157,7 +157,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         }
     }
 
-    private static final double FLYWHEEL_TOLERANCE = 200, ROTARY_TOLERANCE = 1.5, MAX_SHOT_VELO_RPM = 5500,
+    private static final double FLYWHEEL_TOLERANCE = 200, ROTARY_TOLERANCE_TELEOP = 1.5, ROTARY_TOLERANCE_AUTO = 2, MAX_SHOT_VELO_RPM = 5500,
             CHUTE_TOLERANCE = 20, CHUTE_OFFSET = 346, FLYWHEEL_INTAKE_CURRENT_SPIKE = 35;
 
     // Subsystem hardware...
@@ -311,7 +311,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
 
         final TreeMap<Double, Shot> shotTable = new TreeMap<Double, Shot>();
 
-        shotTable.put(1.19, new Shot(4200, Rotation2d.fromDegrees(64))); // fix this jump
+        shotTable.put(1.19, new Shot(4200, Rotation2d.fromDegrees(64)));
         shotTable.put(1.61, new Shot(4400, Rotation2d.fromDegrees(56)));
         shotTable.put(1.85, new Shot(4500, Rotation2d.fromDegrees(52)));
         shotTable.put(2.2, new Shot(4600, Rotation2d.fromDegrees(47)));
@@ -321,8 +321,22 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         shotTable.put(4., new Shot(5400, Rotation2d.fromDegrees(31)));
         shotTable.put(4.5, new Shot(5600, Rotation2d.fromDegrees(29.5)));
         shotTable.put(4.9, new Shot(5800, Rotation2d.fromDegrees(29)));
-        shotTable.put(5., new Shot(5900, Rotation2d.fromDegrees(27)));
+        shotTable.put(5., new Shot(5850, Rotation2d.fromDegrees(26)));
         shotTable.put(5.2, new Shot(6000, Rotation2d.fromDegrees(25)));
+        shotTable.put(5.4, new Shot(6100, Rotation2d.fromDegrees(24)));
+
+        // shotTable.put(1.19, new Shot(4200, Rotation2d.fromDegrees(64))); 
+        // shotTable.put(1.61, new Shot(4400, Rotation2d.fromDegrees(56)));
+        // shotTable.put(1.85, new Shot(4500, Rotation2d.fromDegrees(52)));
+        // shotTable.put(2.2, new Shot(4600, Rotation2d.fromDegrees(47)));
+        // shotTable.put(2.63, new Shot(4800, Rotation2d.fromDegrees(41)));
+        // shotTable.put(3.08, new Shot(5000, Rotation2d.fromDegrees(36)));
+        // shotTable.put(3.58, new Shot(5200, Rotation2d.fromDegrees(33)));
+        // shotTable.put(4., new Shot(5400, Rotation2d.fromDegrees(31)));
+        // shotTable.put(4.5, new Shot(5600, Rotation2d.fromDegrees(29.5)));
+        // shotTable.put(4.9, new Shot(5800, Rotation2d.fromDegrees(29)));
+        // shotTable.put(5., new Shot(5900, Rotation2d.fromDegrees(27)));
+        // shotTable.put(5.2, new Shot(6000, Rotation2d.fromDegrees(25)));
 
         Set<Entry<Double, Shot>> entries = shotTable.entrySet();
         double[] distances = new double[entries.size()];
@@ -401,7 +415,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
 
     /** Is the rotary at the current shot angle? */
     public boolean isRotaryAtState() {
-        return Math.abs(getRotaryEncoderDegrees() - shot.angle.getDegrees()) <= ROTARY_TOLERANCE;
+        return Math.abs(getRotaryEncoderDegrees() - shot.angle.getDegrees()) <= (DriverStation.isAutonomous() ? ROTARY_TOLERANCE_AUTO : ROTARY_TOLERANCE_TELEOP);
     }
 
     /**
@@ -495,6 +509,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         Debug.log("Shooter Rotary Positon", getRotaryEncoderDegrees());
         Debug.log("Has Been Ready", hasBeenReadyToShoot());
         Debug.log("Is Aligned", getIsAligned());
+        Debug.log("Drivebase has been aligned", drivebase.hasBeenAligned());
 
         // Handle intaking. If we are in teleop and the intake says that we are
         // intaking, then

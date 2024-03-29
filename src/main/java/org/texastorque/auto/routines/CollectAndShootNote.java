@@ -44,6 +44,7 @@ public class CollectAndShootNote extends TorqueSequence implements Subsystems {
                 new DeployIntakeWhen(() -> field.isXPast(perception.getPose(), 4.5) || deployIntakeRightAway)
                         .command());
 
-        addBlock(new TorqueRunSequence(new Shoot(deployIntakeRightAway ? Shooter.State.FUTURE_SMART : Shooter.State.FUTURE_SMART)));
+        // addBlock(new TorqueRun(() -> drivebase.setUsePoseAlign(!isFarSide)));
+        addBlock(new TorqueRunSequence(new Shoot(isFarSide ? Shooter.State.FUTURE_SMART : Shooter.State.FUTURE_SMART_ALIGN)));
     }
 }

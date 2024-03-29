@@ -97,7 +97,7 @@ public final class Field {
     }
 
     public Rotation2d getAngleToLaser(final Pose2d curentPose) {
-        return Rotation2d.fromDegrees(360).plus(Rotation2d.fromDegrees(isRedAlliance ? 42 : -42));
+        return Rotation2d.fromDegrees(isRedAlliance ? 46 : -46);
     }
 
     public boolean isReadyToLaser(final Pose2d currentPose) {

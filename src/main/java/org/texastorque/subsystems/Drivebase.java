@@ -19,7 +19,6 @@ import org.texastorque.torquelib.base.TorqueStatorSubsystem;
 import org.texastorque.torquelib.swerve.TorqueSwerveSpeeds;
 import org.texastorque.torquelib.swerve.base.TorqueSwerveModule;
 import org.texastorque.torquelib.swerve.TorqueSwerveModuleKraken;
-import org.texastorque.torquelib.swerve.TorqueSwerveModuleNEO;
 import org.texastorque.torquelib.util.TorqueMath;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.geometry.Pose2d;
@@ -122,7 +121,8 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
 
             // WARNING: make sure you have the correct one for the modules
 
-            // MAX_VELOCITY = SwerveConfig.swervexNeo.maxVelocity, // maximum translational velocity of the swerve (m/s)
+            // MAX_VELOCITY = SwerveConfig.swervexNeo.maxVelocity, // maximum translational
+            // velocity of the swerve (m/s)
             MAX_VELOCITY = TorqueSwerveModuleKraken.maxVelocity, // maximum translational velocity of the swerve (m/s)
 
             // WARNING: the above is very important!
@@ -159,6 +159,8 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
     private final PIDController headingLockPID, offsetTargetingPID;
     private double loopsThatDBIsAligned = 0;
 
+    private boolean usePoseAlign = true;
+
     private Drivebase() {
         super(State.FIELD_RELATIVE);
 
@@ -180,10 +182,10 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
         for (int i = 0; i < swerveStates.length; i++)
             swerveStates[i] = new SwerveModuleState();
 
-        headingLockPID = new PIDController(.085, 0, 0);
+        headingLockPID = new PIDController(.08, 0, 0);
         headingLockPID.enableContinuousInput(0, 360);
 
-        offsetTargetingPID = new PIDController(.032 / 36, 0, 0);
+        offsetTargetingPID = new PIDController(.00088, 0, 0);
 
         SmartDashboard.putNumber("Align PID P", 0);
         // maybe make continuous input to something idk?
@@ -256,6 +258,10 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
         return loopsThatDBIsAligned > 3;
     }
 
+    public void setUsePoseAlign(boolean usePoseAlign) {
+        this.usePoseAlign = usePoseAlign;
+    }
+
     @Override
     public final void update(final TorqueMode mode) {
         // *** LOG SOME STUFF TO SMART DASHBOARD ***
@@ -316,7 +322,7 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
             if (shooter.wantsState(Shooter.State.LASER) && !shooter.isShift()) {
                 requestedAngularVelocity = headingLockPID.calculate(perception.getHeading().getDegrees(),
                         field.getAngleToLaser(perception.getPose()).getDegrees());
-            } else if (fusedTargetOffset.isPresent()) {
+            } else if (fusedTargetOffset.isPresent() && (!usePoseAlign || mode.isTeleop()) ) {
                 // We see the correct targets, we can lock our shooter to that target.
                 requestedAngularVelocity = offsetTargetingPID.calculate(fusedTargetOffset.get(), 0);
             } else {
@@ -339,10 +345,18 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
         // mode we are in, wether its alignment mode or angle mode. Then we use that
         // mode
         // to check if we are aligned properly.
-        if (fusedTargetOffset.isPresent() ? isTargetLocked(fusedTargetOffset.get()) : isAligned()) {
-            loopsThatDBIsAligned++;
+        if (mode.isTeleop() || !usePoseAlign) {
+            if (fusedTargetOffset.isPresent() ? isTargetLocked(fusedTargetOffset.get()) : isAligned()) {
+                loopsThatDBIsAligned++;
+            } else {
+                loopsThatDBIsAligned = 0;
+            }
         } else {
-            loopsThatDBIsAligned = 0;
+            if (isAligned()) {
+                loopsThatDBIsAligned++;
+            } else {
+                loopsThatDBIsAligned = 0;
+            }
         }
 
         // Use kinematics to convert robot vector to swerve vectors, then desaturate
@@ -435,8 +449,6 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
     public void onEndPathing() {
         setState(State.FIELD_RELATIVE);
     }
-
-   
 
     @Override
     public void clean(TorqueMode mode) {
