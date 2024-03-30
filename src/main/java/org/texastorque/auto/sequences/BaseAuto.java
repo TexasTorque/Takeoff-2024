@@ -6,47 +6,42 @@
  */
 package org.texastorque.auto.sequences;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.texastorque.Subsystems;
-import org.texastorque.auto.commands.CollectAndShootNote;
-import org.texastorque.auto.commands.NoteSequence;
-import org.texastorque.auto.commands.Shoot;
+import org.texastorque.auto.AutoManager;
+import org.texastorque.auto.NoteSequence;
+import org.texastorque.auto.NoteSequence.Location;
+import org.texastorque.auto.routines.CollectAndShootNote;
+import org.texastorque.auto.routines.Shoot;
 import org.texastorque.subsystems.*;
 import org.texastorque.torquelib.auto.TorqueSequence;
 import org.texastorque.torquelib.auto.commands.TorqueRun;
 import org.texastorque.torquelib.auto.commands.TorqueRunSequence;
 import org.texastorque.torquelib.auto.commands.TorqueWhile;
-import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.wpilibj.Timer;
 
 /** Trivial "Base" autos (going from one note to another while shooting) */
 public class BaseAuto extends TorqueSequence implements Subsystems {
 
-    private Timer totalAutoTimer = new Timer();
-
     private final NoteSequence noteSequence;
 
-    /** Non-auto */
-    public BaseAuto(final Pose2d initPose) {
-        noteSequence = null;
-        addBlock(new TorqueRun(() -> perception.resetPose(field.getAllianceReflectedPose(initPose))));
+    /** Pass in the sequence of notes */
+    public BaseAuto(final NoteSequence ns) {
+        this.noteSequence = ns;
 
-        addBlock(new TorqueRunSequence(new Shoot(Shooter.State.LAYUP)));
-    }
+        // Reset the pose to the initial position for this sequence
+        addBlock(new TorqueRun(() -> perception.resetPose(
+            field.getAllianceReflectedPose(noteSequence.peekNext().getStartingPose()))));
 
-    /** Pass in the order of notes */
-    public BaseAuto(final Pose2d initPose, final int... notes) {
-        noteSequence = new NoteSequence(false, notes);
-
-        addBlock(new TorqueRun(() -> perception.resetPose(field.getAllianceReflectedPose(initPose))));
-
-        addBlock(new TorqueRun(() -> totalAutoTimer.restart()));
-
+        // I think this is redundent -- double check pls!
         addBlock(new TorqueRun(() -> perception.setFutureShootingPose(perception.getPose())));
 
-
+        // Take the first shot as a layup -- this will change if starting point isnt on subwoofer
         addBlock(new TorqueRunSequence(new Shoot(Shooter.State.LAYUP)));
 
         addBlock(new TorqueWhile(noteSequence::hasNext, new CollectAndShootNote(noteSequence)));
     }
 
+   
 }

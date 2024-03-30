@@ -6,86 +6,120 @@
  */
 package org.texastorque.auto;
 
+import java.util.Optional;
+
 import org.texastorque.Subsystems;
+import org.texastorque.auto.routines.Shoot;
 import org.texastorque.auto.sequences.BaseAuto;
-import org.texastorque.auto.sequences.Dash;
+import org.texastorque.auto.sequences.Line;
+import org.texastorque.auto.NoteSequence.Adapative;
+import org.texastorque.auto.NoteSequence.Location;
+import org.texastorque.auto.NoteSequence.LocationPair;
+import org.texastorque.auto.NoteSequence.NotePoint;
+import org.texastorque.auto.NoteSequence.StartPoint;
+import org.texastorque.subsystems.Shooter;
 import org.texastorque.torquelib.auto.*;
 import com.pathplanner.lib.path.PathPlannerPath;
-import edu.wpi.first.math.geometry.Pose2d;
 
 /** Manage the auto loader and selections */
 public final class AutoManager extends TorqueAutoManager implements Subsystems {
     private static volatile AutoManager instance;
 
     /**
-     * Preload all the paths so that we dont make expensive reasource loader calls when
+     * Preload all the paths so that we dont make expensive reasource loader calls
+     * when
      * the auto is suposed to be going fast!
      */
     @Override
     public final void loadPaths() {
-        pathLoader.preloadPath("go_0_to_2");
-        pathLoader.preloadPath("go_0_to_10");
-        pathLoader.preloadPath("go_10_to_20");
-        pathLoader.preloadPath("go_20_to_30");
 
-        pathLoader.preloadPath("go_0_to_1");
-        pathLoader.preloadPath("go_1_to_2");
-        pathLoader.preloadPath("go_2_to_3");
-
-        pathLoader.preloadPath("go_0_to_3");
+        // Generate the following code using
+        // > python3 listpaths.py
         pathLoader.preloadPath("go_3_to_2");
-        pathLoader.preloadPath("go_2_to_1");
-
-        pathLoader.preloadPath("go_3_to_50");
-
-        pathLoader.preloadPath("go_0_to_50");
-        pathLoader.preloadPath("go_50_to_40");
-        pathLoader.preloadPath("go_40_to_30");
-
-        pathLoader.preloadPath("go_1_to_10");
-        pathLoader.preloadPath("go_1_to_15");
         pathLoader.preloadPath("go_10_to_20");
+        pathLoader.preloadPath("go_NONE_to_NONE");
+        pathLoader.preloadPath("go_SRC_to_50");
+        pathLoader.preloadPath("go_SRC_to_40");
+        pathLoader.preloadPath("go_AMP_to_1");
+        pathLoader.preloadPath("go_2_to_3");
+        pathLoader.preloadPath("go_1_to_10");
+        pathLoader.preloadPath("go_20_to_30");
+        pathLoader.preloadPath("go_1_to_2");
+        pathLoader.preloadPath("go_CTR_to_3");
+        pathLoader.preloadPath("go_CTR_to_2");
+        pathLoader.preloadPath("go_50_to_40");
+        pathLoader.preloadPath("go_40_to_3");
+        pathLoader.preloadPath("go_40_to_30");
+        pathLoader.preloadPath("go_2_to_1");
         pathLoader.preloadPath("line");
+        pathLoader.preloadPath("go_1_to_20");
+        pathLoader.preloadPath("go_3_to_50");
+        pathLoader.preloadPath("go_2_to_30");
+        pathLoader.preloadPath("go_30_to_40");
+        pathLoader.preloadPath("go_30_to_30");
     }
 
-    /** 
-     * Get a preloaded path... the current path strategy is EXPLICITLY UNSAFE...
-     * ...if a path is called that is not loaded above then the program WILL FAIL!
-     * 
-     * Helpful for debugging, but not for production!!!!
+    // /**
+    // * Get a preloaded path... the current path strategy is EXPLICITLY UNSAFE...
+    // * ...if a path is called that is not loaded above then the program WILL FAIL!
+    // *
+    // * Helpful for debugging, but not for production!!!!
+    // */
+    // public final PathPlannerPath getPath(final String pathName) {
+    // System.out.println("Loading path " + pathName);
+    // return pathLoader.getPathUnsafe(pathName);
+    // }
+
+    /**
+     * Get a preloaded path. If the paths is not loaded then we return
+     * the none path.
      */
     public final PathPlannerPath getPath(final String pathName) {
-        return pathLoader.getPathUnsafe(pathName);
+        final Optional<PathPlannerPath> pathOpt = pathLoader.getPathSafe(pathName);
+        if (pathOpt.isPresent()) {
+            return pathOpt.get();
+        }
+        System.out.println("Failed to load path " + pathName);
+        return pathLoader.getPathUnsafe("go_NONE_to_NONE");
     }
 
     /** Load all the permutations of auto sequences we want to run */
     @Override
     public final void loadSequences() {
-        addSequence("0", new BaseAuto(new Pose2d(1.42, 6.35, perception.getHeading())));
 
-        addSequence("1 to 2", new BaseAuto(new Pose2d(1.42, 6.35, perception.getHeading()), 1, 2));
-        addSequence("1 to 2 to 3", new BaseAuto(new Pose2d(1.42, 6.35, perception.getHeading()), 1, 2, 3));
+        // Just shoot auto
+        addSequence(new Shoot(Shooter.State.LAYUP));
+        addSequence(new Line());
 
-        addSequence("1 to 10", new BaseAuto(new Pose2d(0.77, 6.58, perception.getHeading()), 1, 10));
+        // Amp side only -- 4 notes
+        addBaseAuto(StartPoint.AMP, NotePoint.N_1, NotePoint.N_10, NotePoint.N_20);
+        addBaseAuto(StartPoint.AMP, NotePoint.N_1, NotePoint.N_20, NotePoint.N_30);
 
-        addSequence("1 to 10 to 20", new BaseAuto(new Pose2d(0.77, 6.58, perception.getHeading()), 1, 10, 20));
+        // Clear center area -- 5 notes
+        addBaseAuto(StartPoint.CTR, NotePoint.N_3, NotePoint.N_2, NotePoint.N_1, NotePoint.N_10); 
+        addBaseAuto(StartPoint.CTR, NotePoint.N_3, NotePoint.N_2, NotePoint.N_1, NotePoint.N_20);  
+        addBaseAuto(StartPoint.CTR, NotePoint.N_3, NotePoint.N_2, NotePoint.N_30, NotePoint.N_40); 
 
-        addSequence("2 to 1", new BaseAuto(new Pose2d(1.33, 5.55, perception.getHeading()), 2, 1));
-        addSequence("2 to 3", new BaseAuto(new Pose2d(1.33, 5.55, perception.getHeading()), 2, 3));
-        addSequence("2 to 3 to 50", new BaseAuto(new Pose2d(1.33, 5.55, perception.getHeading()), 2, 3, 50));
-        // addSequence("2 to 1 to 10 to 20", new BaseAuto(2, 1, 10, 20));
+        // Far side capable -- 3 notes
+        addBaseAuto(StartPoint.SRC, NotePoint.N_50, NotePoint.N_40);
+        addBaseAuto(StartPoint.SRC, NotePoint.N_40, NotePoint.N_30);
+    }
 
-        addSequence("3 to 2", new BaseAuto(new Pose2d(1.28, 4.7, perception.getHeading()), 3, 2));
-        addSequence("3 to 2 to 1", new BaseAuto(new Pose2d(1.28, 4.7, perception.getHeading()), 3, 2, 1));
-        addSequence("3 to 2 to 1 to 10", new BaseAuto(new Pose2d(1.28, 4.7, perception.getHeading()), 3, 2, 1, 10));
-        addSequence("3 to 50", new BaseAuto(new Pose2d(1.25, 5.37, perception.getHeading()), 3, 50));
-        // addSequence("3 to 2 to 1 to 15", new BaseAuto(new Pose2d(1.28, 4.7, perception.getHeading()), 3, 2, 1, 15));
+    /** Create a base auto and come up with a name for it */
+    private void addBaseAuto(final Location... notes) {
+        // Make a new list of notes w/ 30 at the end 
+        final Location[] locations = new Location[notes.length + 1];
+        for (int i = 0; i < notes.length; i++) {
+            locations[i] = notes[i];
+        }
+        locations[locations.length - 1] = NotePoint.N_30;
 
-        // addSequence("10 to 20 to 30", new BaseAuto(10, 20, 30));
-
-        // addSequence("50 to 40 to 30", new BaseAuto(50, 40, 30));
-
-        // addSequence("DASH to 10 to 20", new Dash(10, 20));
+        // Get the name, but we cut off the last 4 characters (->30)
+        final NoteSequence ns = new NoteSequence(locations);
+        final String title = ns.toString();
+        
+        // Hack complete (:
+        addSequence(title.substring(0, title.length() - 4), new BaseAuto(ns));
     }
 
     public static final synchronized AutoManager getInstance() {

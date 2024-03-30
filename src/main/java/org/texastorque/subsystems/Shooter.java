@@ -81,19 +81,19 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         // 1500 still high on soft
         // 1400 decent on soft
         // 1300 too low on hard
-        AMP(new Shot(1400, Rotation2d.fromDegrees(84)), false), // 80.7 <-- real angle
+        AMP(new Shot(1400, Rotation2d.fromDegrees(87)), false), // 80.7 <-- real angle
         AMP_INIITAL(new Shot(0, Rotation2d.fromDegrees(125)), false),
-        CLIMB(new Shot(0, Rotation2d.fromDegrees(84)), false),
-        TRAP(new Shot(2000, Rotation2d.fromDegrees(81)), true),
+        CLIMB(new Shot(0, Rotation2d.fromDegrees(96)), false),
+        TRAP(new Shot(2000, Rotation2d.fromDegrees(81)), false),
 
         // Layup, black line, and safe zone backup shots. These have reversable "shift
         // shots"
         LAYUP(new Shot(4200, Rotation2d.fromDegrees(64)), new Shot(4200, Rotation2d.fromDegrees(124)), true),
 
         // Used for tossing a note across the field
-        LASER(new Shot(3400, Rotation2d.fromDegrees(54)), true),
+        LASER(new Shot(4000, Rotation2d.fromDegrees(54)), new Shot(3000, Rotation2d.fromDegrees(54)), false),
 
-        MID(new Shot(4400, Rotation2d.fromDegrees(41)), new Shot(4400, Rotation2d.fromDegrees(143)), true),
+        MID(new Shot(5400, Rotation2d.fromDegrees(32)), true), 
         SAFEZONE(new Shot(4600, Rotation2d.fromDegrees(37)), new Shot(4300, Rotation2d.fromDegrees(148)), true),
 
         // Future and Smart shots are special.
@@ -148,7 +148,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
      * Chute state is a specialty state used for the flap motor.
      */
     public static enum ChuteState implements TorqueState {
-        IN(Rotation2d.fromDegrees(170)), OUT(Rotation2d.fromDegrees(331.2));
+        IN(Rotation2d.fromDegrees(170)), OUT(Rotation2d.fromDegrees(334));
 
         private Rotation2d position;
 
@@ -157,8 +157,8 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         }
     }
 
-    private static final double FLYWHEEL_TOLERANCE = 200, ROTARY_TOLERANCE = 1.5, MAX_SHOT_VELO_RPM = 5500,
-        CHUTE_TOLERANCE = 20, CHUTE_OFFSET = 346, FLYWHEEL_INTAKE_CURRENT_SPIKE = 35;
+    private static final double FLYWHEEL_TOLERANCE = 200, ROTARY_TOLERANCE_TELEOP = 1.5, ROTARY_TOLERANCE_AUTO = 2, MAX_SHOT_VELO_RPM = 5500,
+            CHUTE_TOLERANCE = 20, CHUTE_OFFSET = 346, FLYWHEEL_INTAKE_CURRENT_SPIKE = 35;
 
     // Subsystem hardware...
     private final TorqueNEO rotary, flywheelTop, flywheelBottom, gate, chute;
@@ -311,9 +311,9 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
 
         final TreeMap<Double, Shot> shotTable = new TreeMap<Double, Shot>();
 
-        shotTable.put(1.19, new Shot(4200, Rotation2d.fromDegrees(64))); // fix this jump
+        shotTable.put(1.19, new Shot(4200, Rotation2d.fromDegrees(64)));
         shotTable.put(1.61, new Shot(4400, Rotation2d.fromDegrees(56)));
-        shotTable.put(1.85, new Shot(4500, Rotation2d.fromDegrees(52))); 
+        shotTable.put(1.85, new Shot(4500, Rotation2d.fromDegrees(52)));
         shotTable.put(2.2, new Shot(4600, Rotation2d.fromDegrees(47)));
         shotTable.put(2.63, new Shot(4800, Rotation2d.fromDegrees(41)));
         shotTable.put(3.08, new Shot(5000, Rotation2d.fromDegrees(36)));
@@ -321,6 +321,22 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         shotTable.put(4., new Shot(5400, Rotation2d.fromDegrees(31)));
         shotTable.put(4.5, new Shot(5600, Rotation2d.fromDegrees(29.5)));
         shotTable.put(4.9, new Shot(5800, Rotation2d.fromDegrees(29)));
+        shotTable.put(5., new Shot(5850, Rotation2d.fromDegrees(26)));
+        shotTable.put(5.2, new Shot(6000, Rotation2d.fromDegrees(25)));
+        shotTable.put(5.4, new Shot(6100, Rotation2d.fromDegrees(24)));
+
+        // shotTable.put(1.19, new Shot(4200, Rotation2d.fromDegrees(64))); 
+        // shotTable.put(1.61, new Shot(4400, Rotation2d.fromDegrees(56)));
+        // shotTable.put(1.85, new Shot(4500, Rotation2d.fromDegrees(52)));
+        // shotTable.put(2.2, new Shot(4600, Rotation2d.fromDegrees(47)));
+        // shotTable.put(2.63, new Shot(4800, Rotation2d.fromDegrees(41)));
+        // shotTable.put(3.08, new Shot(5000, Rotation2d.fromDegrees(36)));
+        // shotTable.put(3.58, new Shot(5200, Rotation2d.fromDegrees(33)));
+        // shotTable.put(4., new Shot(5400, Rotation2d.fromDegrees(31)));
+        // shotTable.put(4.5, new Shot(5600, Rotation2d.fromDegrees(29.5)));
+        // shotTable.put(4.9, new Shot(5800, Rotation2d.fromDegrees(29)));
+        // shotTable.put(5., new Shot(5900, Rotation2d.fromDegrees(27)));
+        // shotTable.put(5.2, new Shot(6000, Rotation2d.fromDegrees(25)));
 
         Set<Entry<Double, Shot>> entries = shotTable.entrySet();
         double[] distances = new double[entries.size()];
@@ -399,7 +415,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
 
     /** Is the rotary at the current shot angle? */
     public boolean isRotaryAtState() {
-        return Math.abs(getRotaryEncoderDegrees() - shot.angle.getDegrees()) <= ROTARY_TOLERANCE;
+        return Math.abs(getRotaryEncoderDegrees() - shot.angle.getDegrees()) <= (DriverStation.isAutonomous() ? ROTARY_TOLERANCE_AUTO : ROTARY_TOLERANCE_TELEOP);
     }
 
     /**
@@ -408,9 +424,11 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
     public boolean wantsToShoot() {
         return desiredState.isAShot;
     }
+
     public boolean inDebugMode() {
         return debugMode;
     }
+
     public boolean hasConsent() {
         return consent;
     }
@@ -487,16 +505,11 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         Debug.log("Rotary Ready", isRotaryAtState());
         Debug.log("Has Note", hasNote());
         Debug.log("Debug Mode", debugMode);
-        Debug.log("Shooter Shot Velocity", shot.topVelocity);
-        Debug.log("Shooter Shot Angle", shot.angle.getDegrees());
-        Debug.log("Shooter Consent", consent);
-        Debug.log("Shooter Shift", shift);
         Debug.log("Regression Shot", getRegressionShot(perception.getDistanceToSpeaker()).toString());
         Debug.log("Shooter Rotary Positon", getRotaryEncoderDegrees());
-        Debug.log("Chute Position Degrees (NO OFFSET)", getChuteEncoderDegrees());
-        Debug.log("Chute Encoder Actual Degrees (OFFSET AND ROTARY)", getChuteEncoderActualDegrees());
-        Debug.log("Chute Position Actual Radians", getChuteSetpointActualRadians(chuteState.position.getDegrees()));
         Debug.log("Has Been Ready", hasBeenReadyToShoot());
+        Debug.log("Is Aligned", getIsAligned());
+        Debug.log("Drivebase has been aligned", drivebase.hasBeenAligned());
 
         // Handle intaking. If we are in teleop and the intake says that we are
         // intaking, then
@@ -518,11 +531,8 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
             timeSinceStartedIntaking.restart();
         }
 
-        Debug.log("is Chute Ready", isChuteReadyForAmp());
-
         if (wantsState(State.AMP) && !isChuteReadyForAmp())
             desiredState = State.AMP_INIITAL;
-
 
         // Current limit handling.
         if (emergencyCurrentLimit || wantsState(State.AMP)) {
@@ -537,8 +547,9 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
 
         // Set shot parameter and handle shot overridding.
         if (wantsState(State.SMART)) {
-            final double distance = perception.getFusedTargetDistance().orElseGet(() -> 
-                    perception.getDistanceToSpeaker());
+            // final double distance = perception.getFusedTargetDistance().orElseGet(() ->
+            // perception.getDistanceToSpeaker());
+            double distance = perception.getDistanceToSpeaker();
             shot = getRegressionShot(distance);
         } else if (wantsState(State.FUTURE_SMART) || wantsState(State.FUTURE_SMART_ALIGN)) {
             shot = getRegressionShot(perception.getFutureDistanceToSpeaker());
@@ -571,17 +582,12 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
                 // smart
                 // shot AND we are in shift mode, then we should not check for drivebase being
                 // aligned.
-                final boolean aligned = (wantsState(State.SMART) && !shift) ? drivebase.hasBeenAligned() : true;
+                final boolean aligned = getIsAligned();
                 if (consent && aligned) {
                     gateState = GateState.OUT;
                 }
             } else if (mode.isAuto()) {
                 // If we are in auto then we just need to check that we are not in pathing mode.
-
-                // This is for FUTURE_SHOT:
-                // if (!drivebase.wantsState(Drivebase.State.PATHING)) {
-                // gateState = GateState.OUT;
-                // }
 
                 final boolean aligned = drivebase.hasBeenAligned()
                         || !drivebase.wantsState(Drivebase.State.ALIGN_TO_ANGLE);
@@ -590,9 +596,6 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
                 }
             }
         }
-
-        Debug.log("Shot", shot.toString());
-        Debug.log("Gate State", gateState.toString());
 
         // Handling setting shooter flywheel voltage. Handles idle condition
         // by checking if we are in teleop and we are off and we are good to idle.
@@ -635,18 +638,18 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
             chuteState = ChuteState.IN;
 
         chute.setVolts(
-                -TorqueMath.constrain(chutePID.calculate(getChuteEncoderDegrees(), chuteState.position.getDegrees())
-                        + chuteFF.calculate(getChuteSetpointActualRadians(chuteState.position.getDegrees()), 0), 6));
+                -TorqueMath.constrain(chutePID.calculate(getChuteEncoderDegrees(),
+                        chuteState.position.getDegrees())
+                        +
+                        chuteFF.calculate(getChuteSetpointActualRadians(chuteState.position.getDegrees()),
+                                0),
+                        6));
         double rotaryVolts = rotaryPID.calculate(getRotaryEncoderDegrees(), shot.angle.getDegrees())
                 + rotaryFF.calculate(shot.angle.getRadians(), 0);
 
         rotaryVolts = TorqueMath.constrain(rotaryVolts, getRotaryMaxVolts());
 
-        Debug.log("Rotary Volts", rotaryVolts);
-
         rotary.setVolts(rotaryVolts);
-
-        Debug.log("Shooter Gate State", gateState.toString());
 
         // Output the gate state voltage.
         gate.setVolts(gateState.voltage);
@@ -655,6 +658,16 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
             desiredState = State.OFF;
             gateState = GateState.OFF;
         }
+    }
+
+    public boolean getIsAligned() {
+        if (wantsState(State.SMART) && !shift)
+            return drivebase.hasBeenAligned();
+        else if (wantsState(State.LASER)) {
+            return field.isReadyToLaser(perception.getPose());
+        } else
+            return true;
+
     }
 
     /**

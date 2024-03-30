@@ -10,13 +10,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.function.Supplier;
 import org.littletonrobotics.junction.Logger;
 import org.texastorque.Robot;
 import org.texastorque.Subsystems;
 import org.texastorque.toast.lib.Camera;
 import org.texastorque.toast.lib.Toast;
 import org.texastorque.toast.lib.Util;
+import org.texastorque.toast.lib.Pipeline.Status;
 import org.texastorque.toast.lib.pipelines.AprilTags;
 import org.texastorque.toast.lib.pipelines.ObjDetector;
 import org.texastorque.toast.lib.pipelines.AprilTags.AprilTagDetection;
@@ -27,7 +27,6 @@ import org.texastorque.torquelib.base.TorqueState;
 import org.texastorque.torquelib.base.TorqueStatorSubsystem;
 import org.texastorque.torquelib.control.TorqueRollingMedian;
 import org.texastorque.torquelib.sensors.TorqueNavXGyro;
-import org.texastorque.torquelib.swerve.TorqueSwerveSpeeds;
 import com.fasterxml.jackson.databind.JsonNode;
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.math.VecBuilder;
@@ -36,7 +35,6 @@ import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.math.geometry.Transform2d;
 import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.geometry.Translation3d;
@@ -86,7 +84,7 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
      * the camera to the april tag (in meters) where we trust the vision
      * measurements.
      */
-    private static final double MAX_ANGULAR_VELOCITY_RADS = Math.PI * 2, MAX_DISTANCE = 6;
+    private static final double MAX_ANGULAR_VELOCITY_RADS = Math.PI * 1, MAX_DISTANCE = 6;
 
     // Toast handles camera interfacing, poseEstimator is used to aggregate
     // pose estimations and find a true pose estimate
@@ -108,6 +106,10 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
 
     public static final String SHTR_R = "SHTR_R", SHTR_L = "SHTR_L", INTK_R = "INTK_R";
 
+    private final AprilTags tagCameraLeft, tagCameraRight;
+    private final ObjDetector<Note> intakeCamera;
+
+    @SuppressWarnings("unchecked")
     public Perception() {
         super(State.VISION);
 
@@ -125,12 +127,14 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
                 Camera.transformInchDeg(-5.0, -12.54, 14.181, 0, 35, 180)));
         toast.addCamera(new Camera(INTK_R, new Transform3d()));
 
-        // Register the apriltags pipeline on all cameras
-        toast.iterCams(cam -> cam.addPipeline(new AprilTags(cam.id)));
+        // Register the apriltags pipeline on shooter cameras
+        tagCameraLeft = (AprilTags) toast.getCamera(SHTR_L).get().addPipeline(new AprilTags());
+        tagCameraRight = (AprilTags) toast.getCamera(SHTR_R).get().addPipeline(new AprilTags());
 
         // Register the object detection pipelines on intake cameras and configure them
         // to detect notes
-        toast.getCamera(INTK_R).get().addPipeline(new ObjDetector<Note>(Note::fromJSONRight));
+        intakeCamera = (ObjDetector<Note>) toast.getCamera(INTK_R).get()
+                .addPipeline(new ObjDetector<Note>(Note::fromJSONRight));
 
         // Log the field map to the dashboard
         Debug.field("Field", field2d);
@@ -143,6 +147,8 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
 
     @Override
     public void initialize(final TorqueMode mode) {
+        if (mode.isTeleop())
+            field.useFarSideSpeaker(false);
     }
 
     @Override
@@ -159,14 +165,19 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
         Debug.log("Robot roll (°)", gyro.getRoll());
 
         Debug.log("Pose", Util.pose2d2str(poseEstimator.getEstimatedPosition()));
-        Debug.log("Filtered Pose", Util.pose2d2str(getFilteredPose()));
+        // Debug.log("Filtered Pose", Util.pose2d2str(getFilteredPose()));
+        Debug.log("Filtered Pose", Util.pose2d2str(getPose()));
         Debug.log("Heading (°)", getHeading().getDegrees());
         Debug.log("Desired Heading Lock (°)", getHeadingLock().getDegrees());
+
+        Debug.log("SHTR_L Status", tagCameraLeft.getStatus().toString());
+        Debug.log("SHTR_R Status", tagCameraRight.getStatus().toString());
+        Debug.log("INTK_R Status", intakeCamera.getStatus().toString());
 
         SmartDashboard.putNumber("match_time", DriverStation.getMatchTime());
 
         // Update the field map
-        field2d.setRobotPose(getFilteredPose());
+        field2d.setRobotPose(getPose());
         if (!Robot.isReal() && shooter.wantsState(Shooter.State.SMART) && mode.isAuto()) {
             field2d.setRobotPose(new Pose2d(getPose().getTranslation(), getAngleToSpeaker()));
         }
@@ -177,9 +188,28 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
 
         // Run rolling median filter aggregation
         filteredPose = new Pose2d(
-            filteredX.calculate(getPose().getX()),
-            filteredY.calculate(getPose().getY()),
-            getHeading());
+                filteredX.calculate(getPose().getX()),
+                filteredY.calculate(getPose().getY()),
+                getHeading());
+    }
+
+    /**
+     * Returns an "summary" of the total vision status by fusing
+     * the status of both tag cameras.
+     * 
+     * The strategy is returning the status of the camera with
+     * the most fatal status.
+     */
+    public Status getMostFatalVisionStatus() {
+        final Status lStatus = tagCameraLeft.getStatus();
+        final Status rStatus = tagCameraRight.getStatus();
+        if (lStatus == Status.DOWN || rStatus == Status.DOWN) {
+            return Status.DOWN;
+        }
+        if (lStatus == Status.STALE || rStatus == Status.STALE) {
+            return Status.STALE;
+        }
+        return Status.OK;
     }
 
     /** Updates the pose estimator with swerve encoder feedback */
@@ -212,6 +242,12 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
             final var pipeOpt = cam.getPipeline(AprilTags.class);
             if (pipeOpt.isEmpty())
                 return;
+
+            // If the pipeline is down or stale then we want to ignore it.
+            if (pipeOpt.get().getStatus() != Status.OK) {
+                return;
+            }
+
             final AprilTags pipe = pipeOpt.get();
 
             final List<AprilTagDetection> detections = pipe.getDetections();
@@ -261,6 +297,9 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
                 // continue;
 
                 // add the processed vision messurement to the pose estimator
+
+                // final Pose2d gyroOverridenPose = new Pose2d(estPose.getX(), estPose.getY(),
+                // getHeading());
                 poseEstimator.addVisionMeasurement(estPose, Timer.getFPGATimestamp());
             }
         });
@@ -306,14 +345,16 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
 
     private Rotation2d lastFilteredAngle; // The last filtered angle we have used
 
-    /** Calculate the desired heading lock for the drivebase auto-align during teleop */
+    /**
+     * Calculate the desired heading lock for the drivebase auto-align during teleop
+     */
     public Rotation2d getHeadingLock() {
         // If we are in auto we want to return the angle from our set
         // future shooting pose to the speaker.
         if (DriverStation.isAutonomous()) {
             return field.getAngleToSpeaker(futureShootingPose);
         }
-        // If shooter is trying to laser then we want to get the angle 
+        // If shooter is trying to laser then we want to get the angle
         // to the passing zone.
         if (shooter.wantsState(Shooter.State.LASER)) {
             return field.getAngleToPassingZone(getFilteredPose());
@@ -408,38 +449,30 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
      * where W is the width of the frame in pixels.
      * 
      * +--------------------------+
-     * |            .             |
-     * |            .             |
-     * |            .      X      |
-     * |            .             |
-     * |            .             |
+     * | . |
+     * | . |
+     * | . X |
+     * | . |
+     * | . |
      * +--------------------------+
-     * -W/2         0             W/2
+     * -W/2 0 W/2
      * 
      * ex. X ~= W/4
      */
-    public Optional<AprilTagDetection> getTarget(final String cameraName) {
-
-        final var camOpt = toast.getCamera(cameraName);
-        if (camOpt.isEmpty()) {
-            return Optional.empty();
-        }
-        final var pipeOpt = camOpt.get().getPipeline(AprilTags.class);
-        if (pipeOpt.isEmpty()) {
-            return Optional.empty();
-        }
-
-        final List<AprilTagDetection> detections = pipeOpt.get().getDetections();
+    public Optional<AprilTagDetection> getTarget(final AprilTags pipeline) {
+        final List<AprilTagDetection> detections = pipeline.getDetections();
 
         final int targetID = field.getSpeakerTargetID();
-        
+
         for (final AprilTagDetection detection : detections) {
 
-            if (!detection.isValidDetection()) continue;
+            if (!detection.isValidDetection())
+                continue;
 
             final int id = detection.id;
 
-            if (id != targetID) continue;
+            if (id != targetID)
+                continue;
 
             return Optional.of(detection);
         }
@@ -454,40 +487,42 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
     public Optional<Double> getFusedTargetOffset() {
 
         // Uses shooter perspective
-        final var lopt = getTarget(SHTR_L);
-        final var ropt = getTarget(SHTR_R);
+        final var lopt = getTarget(tagCameraLeft);
+        final var ropt = getTarget(tagCameraRight);
 
         final double lx = lopt.isPresent() ? lopt.get().xOffset : HALF_W;
         final double rx = ropt.isPresent() ? ropt.get().xOffset : -HALF_W;
-        
+
         // This is a primative algorithm that might work w/ a PID controller
-        if (lopt.isPresent() || ropt.isPresent()) {
+        if (lopt.isPresent() || ropt.isPresent()) { // returns if in view on both
             return Optional.of(lx + rx);
         }
         return Optional.empty();
     }
 
-    /** 
+    /**
      * Compute an accurate estimate of the normal distance to the target tag
      * in the XY plane.
-     * */
+     */
     public Optional<Double> getFusedTargetDistance() {
 
         // Uses shooter perspective
-        final var lOpt = getTarget(SHTR_L);
-        final var rOpt = getTarget(SHTR_R);
+        final var lOpt = getTarget(tagCameraLeft);
+        final var rOpt = getTarget(tagCameraRight);
 
         final boolean lPresent = lOpt.isPresent();
         final boolean rPresent = rOpt.isPresent();
 
-        final Translation2d tl = lPresent ? lOpt.get().transform.getTranslation().toTranslation2d() : new Translation2d();
-        final Translation2d tr = rPresent ? rOpt.get().transform.getTranslation().toTranslation2d() : new Translation2d();
+        final Translation2d tl = lPresent ? lOpt.get().transform.getTranslation().toTranslation2d()
+                : new Translation2d();
+        final Translation2d tr = rPresent ? rOpt.get().transform.getTranslation().toTranslation2d()
+                : new Translation2d();
 
         if (lPresent && rPresent) {
             final double xAvg = (tl.getX() + tr.getX()) / 2.0;
             final double yAvg = (tl.getX() + tr.getX()) / 2.0;
             return Optional.of(Math.sqrt(xAvg * xAvg + yAvg * yAvg));
-        } 
+        }
         if (lPresent && !rPresent) {
             return Optional.of(tl.getNorm());
         }
@@ -504,11 +539,8 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
     }
 
     /** Grab note detections from the TOAST pipeline */
-    @SuppressWarnings("unchecked") // there is an unchecked cast.
     public List<Note> getNoteDetections() {
-        final List<Note> detRight = toast.getCamera("INTK_R").get().getPipeline(ObjDetector.class).get()
-                .getDetections();
-        return detRight;
+        return intakeCamera.getDetections();
     }
 
     /** Get the best detection of the notes. */

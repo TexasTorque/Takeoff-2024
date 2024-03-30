@@ -9,7 +9,6 @@ package org.texastorque.subsystems;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Supplier;
-
 import org.texastorque.Input;
 import org.texastorque.Ports;
 import org.texastorque.Subsystems;
@@ -94,14 +93,16 @@ public final class Lights extends TorqueStatelessSubsystem implements Subsystems
     private final List<AddressableLED> lights;
     private final AddressableLEDBuffer buff;
 
-    private LightAction red = new Solid(() -> Color.kRed),
-            rainbow = new Rainbow(),
-            
-            green = new Solid(() -> Color.kGreen),
-            blinkGreen = new Blink(() -> Color.kGreen, 6),
+    // Leave all these combinations
+    private LightAction rainbow = new Rainbow(), 
 
-            purple = new Solid(() -> Color.kPurple),
-            blinkPurple = new Blink(() -> Color.kPurple, 6);
+        red = new Solid(() -> Color.kRed), 
+      
+        green = new Solid(() -> Color.kGreen),
+        blinkGreen = new Blink(() -> Color.kGreen, 6),
+
+        purple = new Solid(() -> Color.kPurple),
+        blinkPurple = new Blink(() -> Color.kPurple, 6);
 
     private Lights() {
         lights = new ArrayList<>();
@@ -141,10 +142,23 @@ public final class Lights extends TorqueStatelessSubsystem implements Subsystems
     }
 
     public final LightAction getColor(final TorqueMode mode) {
-        // First we check if we are in debug mode and blink yellow
+        // Not prsent: first we check if we are in debug mode and blink yellow
 
-        if (Input.getInstance().isClimbing())
+        // We must check the vision status of vision and return the 
+        // failure conditions if necessary
+        // final Status visionStatus = perception.getMostFatalVisionStatus();
+        // if (visionStatus == Status.STALE) {
+        //     return blinkYellow;
+        // } 
+        // if (visionStatus == Status.DOWN) {
+        //     return blinkRed;
+        // }
+
+
+        // We go rainbow if we are in climb mode
+        if (Input.getInstance().isClimbing()) {
             return rainbow;
+        }
 
         // Otherwise we check if we have a note
         if (shooter.hasNote()) {

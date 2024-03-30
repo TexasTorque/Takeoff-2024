@@ -17,8 +17,8 @@ import org.texastorque.torquelib.base.TorqueMode;
 import org.texastorque.torquelib.base.TorqueState;
 import org.texastorque.torquelib.base.TorqueStatorSubsystem;
 import org.texastorque.torquelib.swerve.TorqueSwerveSpeeds;
-import org.texastorque.torquelib.swerve.TorqueSwerveModule2022;
-import org.texastorque.torquelib.swerve.TorqueSwerveModule2022.SwerveConfig;
+import org.texastorque.torquelib.swerve.base.TorqueSwerveModule;
+import org.texastorque.torquelib.swerve.TorqueSwerveModuleKraken;
 import org.texastorque.torquelib.util.TorqueMath;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.geometry.Pose2d;
@@ -30,6 +30,7 @@ import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.Timer;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 /**
  * Swerve drivebase subsystem.
@@ -102,9 +103,30 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
 
     private static volatile Drivebase instance;
 
+    /**
+     * Returns the normal distance between the rotational axis of the outermost
+     * wheel and the center of the robot, used to satisfy the TorquePathingDrivebase
+     * interface.
+     */
+    public double getRadius() {
+        return WIDTH * Math.sqrt(2);
+    }
+
+    /** Return the maximum translational speed to satisfy TorquePathingDrivebase. */
+    public double getMaxPathingVelocity() {
+        return MAX_VELOCITY;
+    }
+
     public static final double WIDTH = Units.inchesToMeters(21.25), // distance between swerve axis
-            MAX_VELOCITY = SwerveConfig.WHEEL_FREE_SPEED, // maximum translational velocity of the swerve (m/s)
-            MAX_ACCELERATION = 5, // maximum translation acceleration of the swerver (m/s^2)
+
+            // WARNING: make sure you have the correct one for the modules
+
+            // MAX_VELOCITY = SwerveConfig.swervexNeo.maxVelocity, // maximum translational
+            // velocity of the swerve (m/s)
+            MAX_VELOCITY = TorqueSwerveModuleKraken.maxVelocity, // maximum translational velocity of the swerve (m/s)
+
+            // WARNING: the above is very important!
+
             MAX_ANGULAR_VELOCITY = 2 * Math.PI; // maximum rotation velocity of the swerve (rad/s)
 
     public static synchronized final Drivebase getInstance() {
@@ -120,7 +142,7 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
             LOC_BL = new Translation2d(-WIDTH / 2, WIDTH / 2),
             LOC_BR = new Translation2d(-WIDTH / 2, -WIDTH / 2);
 
-    private final TorqueSwerveModule2022 fl, fr, bl, br;
+    private final TorqueSwerveModule fl, fr, bl, br;
 
     public TorqueSwerveSpeeds inputSpeeds; // swerve velocity vector
     public final SwerveDriveKinematics kinematics; // used to transform swerve velo vector to module vectors
@@ -140,13 +162,17 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
     private Drivebase() {
         super(State.FIELD_RELATIVE);
 
-        // These are using the swerve-x config.
-        final SwerveConfig swerveConfig = SwerveConfig.swervex;
+        // For Bravo -- using the swerve-x Neo.
+        // fl = new TorqueSwerveModuleNEO("Front Left", Ports.FL_MOD);
+        // fr = new TorqueSwerveModuleNEO("Front Right", Ports.FR_MOD);
+        // bl = new TorqueSwerveModuleNEO("Back Left", Ports.BL_MOD);
+        // br = new TorqueSwerveModuleNEO("Back Right", Ports.BR_MOD);
 
-        fl = new TorqueSwerveModule2022("Front Left", Ports.FL_MOD, swerveConfig, .2);
-        fr = new TorqueSwerveModule2022("Front Right", Ports.FR_MOD, swerveConfig, .2);
-        bl = new TorqueSwerveModule2022("Back Left", Ports.BL_MOD, swerveConfig, .2);
-        br = new TorqueSwerveModule2022("Back Right", Ports.BR_MOD, swerveConfig, .2);
+        // For Charlie -- using the swerve-x Kraken.
+        fl = new TorqueSwerveModuleKraken("Front Left", Ports.FL_MOD);
+        fr = new TorqueSwerveModuleKraken("Front Right", Ports.FR_MOD);
+        bl = new TorqueSwerveModuleKraken("Back Left", Ports.BL_MOD);
+        br = new TorqueSwerveModuleKraken("Back Right", Ports.BR_MOD);
 
         inputSpeeds = new TorqueSwerveSpeeds(0, 0, 0);
         kinematics = new SwerveDriveKinematics(LOC_FL, LOC_FR, LOC_BL, LOC_BR);
@@ -154,10 +180,12 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
         for (int i = 0; i < swerveStates.length; i++)
             swerveStates[i] = new SwerveModuleState();
 
-        headingLockPID = new PIDController(.085, 0, 0);
+        headingLockPID = new PIDController(.08, 0, 0);
         headingLockPID.enableContinuousInput(0, 360);
 
-        offsetTargetingPID = new PIDController(1, 0, 0);
+        offsetTargetingPID = new PIDController(.00088, 0, 0);
+
+        SmartDashboard.putNumber("Align PID P", 0);
         // maybe make continuous input to something idk?
     }
 
@@ -168,15 +196,11 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
         setAlignTarget(perception::getHeadingLock);
     }
 
-    public SwerveModulePosition invertSwerveModuleDistance(SwerveModulePosition position) {
-        return new SwerveModulePosition(-position.distanceMeters, position.angle);
-    }
-
     /** Get aggregate module positions for feedback. */
     public SwerveModulePosition[] getModulePositions() {
         return new SwerveModulePosition[] {
-                invertSwerveModuleDistance(fl.getPosition()), invertSwerveModuleDistance(fr.getPosition()),
-                invertSwerveModuleDistance(bl.getPosition()), invertSwerveModuleDistance(br.getPosition())
+                fl.getPosition(), fr.getPosition(),
+                bl.getPosition(), br.getPosition()
         };
     }
 
@@ -209,9 +233,19 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
         return TorqueMath.constrain0to360(alignTarget.get().getDegrees());
     }
 
-    /** Is the drivebase aligned within an acceptable tolerance */
+    public static final double ALIGN_TOLERANCE = 2, TARGET_TOLERANCE = 150;
+
+    /**
+     * Is the drivebase aligned to the requested angle within an acceptable
+     * tolerance
+     */
     public boolean isAligned() {
-        return TorqueMath.toleranced(perception.getHeading().getDegrees(), getAlignTarget(), 2);
+        return TorqueMath.toleranced(perception.getHeading().getDegrees(), getAlignTarget(), ALIGN_TOLERANCE);
+    }
+
+    /** Is the target error low enough */
+    public boolean isTargetLocked(final double fusedPos) {
+        return Math.abs(fusedPos) <= TARGET_TOLERANCE;
     }
 
     /**
@@ -221,6 +255,7 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
     public boolean hasBeenAligned() {
         return loopsThatDBIsAligned > 3;
     }
+ 
 
     @Override
     public final void update(final TorqueMode mode) {
@@ -230,16 +265,20 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
         Debug.log("Align Target", getAlignTarget());
         Debug.log("Drivebase State", desiredState.toString());
         Debug.log("Speed Setting at Start", speedSetting.toString());
+        Debug.log("Input Speeds", inputSpeeds.toString());
 
-        if ( (shooter.wantsState(Shooter.State.SMART) || shooter.wantsState(Shooter.State.FUTURE_SMART_ALIGN))
-            // ^ these are the 2 states we want to align in
-                && !shooter.isShift() && !shooter.inDebugMode()) { 
+        // offsetTargetingPID.setP(SmartDashboard.getNumber("Align PID P", 0));
+
+        if ((shooter.wantsState(Shooter.State.SMART) || shooter.wantsState(Shooter.State.FUTURE_SMART_ALIGN)
+                || shooter.wantsState(Shooter.State.LASER))
+                // ^ these are the 3 states we want to align in
+                && !shooter.isShift() && !shooter.inDebugMode()) {
             // ^ if we are in shift or debug mode then we dont want to align
             runSpeedSequence();
             desiredState = State.ALIGN_TO_ANGLE;
         } else if (wantsState(State.DASH)) {
             // dash forward at max velocity
-            inputSpeeds = new TorqueSwerveSpeeds(MAX_VELOCITY, 0, 
+            inputSpeeds = new TorqueSwerveSpeeds(MAX_VELOCITY, 0,
                     headingLockPID.calculate(perception.getHeading().getDegrees(), 15));
         } else {
             if (mode.isTeleop()) {
@@ -252,22 +291,14 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
             runSpeedSequence();
         }
 
-        // Handle alignment readiness counter. Increment every loop the drivebase is
-        // aligned properly. Set back to zero if the drivebase is not aligned properly.
-        // This makes the variable hold the ammount of consecutive iterations that
-        // the drivebase has been properly alligned.
-        if (isAligned()) {
-            loopsThatDBIsAligned++;
-        } else {
-            loopsThatDBIsAligned = 0;
-        }
-
-        // If we are in FIELD_RELATIVE or ALIGN_TO_ANGLE then we want to convert our field
+        // If we are in FIELD_RELATIVE or ALIGN_TO_ANGLE then we want to convert our
+        // field
         // relative chassis speeds into robot relative chassis speeds. We also want to
         // multiply by speed setting stuff.
         if (wantsState(State.FIELD_RELATIVE) || wantsState(State.ALIGN_TO_ANGLE) || wantsState(State.DASH)) {
             if (!wantsState(State.DASH)) { // If not dash then we apply speed settings.
-                inputSpeeds = inputSpeeds.times(speedSetting == SpeedSetting.SEQ ? speedSequence.get() : speedSetting.speed);
+                inputSpeeds = inputSpeeds
+                        .times(speedSetting == SpeedSetting.SEQ ? speedSequence.get() : speedSetting.speed);
             }
             inputSpeeds = inputSpeeds.toFieldRelativeSpeeds(perception.getHeading());
         }
@@ -280,18 +311,50 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
 
         // If we are in the align state then we want to set our rotational velocity to
         // the output of the align to angle PID controller.
+
+        
         if (wantsState(State.ALIGN_TO_ANGLE)) {
             double requestedAngularVelocity = 0;
 
-            if (fusedTargetOffset.isPresent()) { 
+            if (shooter.wantsState(Shooter.State.LASER) && !shooter.isShift()) {
+                requestedAngularVelocity = headingLockPID.calculate(perception.getHeading().getDegrees(),
+                        field.getAngleToLaser(perception.getPose()).getDegrees());
+            } else if (fusedTargetOffset.isPresent() && mode.isTeleop()) {
                 // We see the correct targets, we can lock our shooter to that target.
                 requestedAngularVelocity = offsetTargetingPID.calculate(fusedTargetOffset.get(), 0);
             } else {
+                System.out.println("Auto Aligning!!!");
                 // We do not see the correct targets, we need to lock to our estimated angle.
-                requestedAngularVelocity = headingLockPID.calculate(perception.getHeading().getDegrees(), getAlignTarget());
+                requestedAngularVelocity = headingLockPID.calculate(perception.getHeading().getDegrees(),
+                        getAlignTarget());
             }
 
-            inputSpeeds.omegaRadiansPerSecond = -TorqueMath.constrain(requestedAngularVelocity, 2 * Math.PI);
+            // WARNING: make sure this is going the correct direction.
+            inputSpeeds.omegaRadiansPerSecond = TorqueMath.constrain(requestedAngularVelocity, 2 * Math.PI);
+        }
+
+        // Handle alignment readiness counter. Increment every loop the drivebase is
+        // aligned properly. Set back to zero if the drivebase is not aligned properly.
+        // This makes the variable hold the ammount of consecutive iterations that
+        // the drivebase has been properly alligned.
+        //
+        // We check if the drivebase is aligned properly by first checking which
+        // alignment
+        // mode we are in, wether its alignment mode or angle mode. Then we use that
+        // mode
+        // to check if we are aligned properly.
+        if (mode.isTeleop()) {
+            if (fusedTargetOffset.isPresent() ? isTargetLocked(fusedTargetOffset.get()) : isAligned()) {
+                loopsThatDBIsAligned++;
+            } else {
+                loopsThatDBIsAligned = 0;
+            }
+        } else {
+            if (isAligned()) {
+                loopsThatDBIsAligned++;
+            } else {
+                loopsThatDBIsAligned = 0;
+            }
         }
 
         // Use kinematics to convert robot vector to swerve vectors, then desaturate
@@ -385,19 +448,14 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
         setState(State.FIELD_RELATIVE);
     }
 
-    /**
-     * Returns the normal distance between the rotational axis of the outermost
-     * wheel and the center of the robot, used to satisfy the TorquePathingDrivebase
-     * interface.
-     */
-    public double getRadius() {
-        return WIDTH * Math.sqrt(2);
-    }
-
     @Override
     public void clean(TorqueMode mode) {
         if (mode.isTeleop()) {
             desiredState = desiredState.parent;
         }
+    }
+
+    public ChassisSpeeds getActualChassisSpeeds() {
+        return kinematics.toChassisSpeeds(swerveStates);
     }
 }

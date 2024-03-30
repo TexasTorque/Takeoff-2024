@@ -20,9 +20,26 @@
   "NetworkTables": {
     "Transitory Values": {
       "open": false
+    },
+    "retained": {
+      "toast": {
+        "open": true
+      }
     }
   },
   "NetworkTables Info": {
+    "Clients": {
+      "open": true
+    },
+    "DartClient_14917150@2": {
+      "open": true
+    },
+    "Server": {
+      "Publishers": {
+        "open": true
+      },
+      "open": true
+    },
     "visible": true
   }
 }
