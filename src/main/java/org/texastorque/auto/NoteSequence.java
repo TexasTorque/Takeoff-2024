@@ -64,7 +64,7 @@ public class NoteSequence {
         private NotePoint(int id) { this.id = id; }
         public String get() { return "" + id; }
         public boolean isMidline() { return id >= 10; }
-        public boolean isFarSide() { return id == 40 || id == 50; }
+        public boolean isFarSide() { return id >= 20; } 
 
         @Override
         public String toString() {
