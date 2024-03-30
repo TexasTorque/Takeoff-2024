@@ -311,6 +311,8 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
 
         // If we are in the align state then we want to set our rotational velocity to
         // the output of the align to angle PID controller.
+
+        
         if (wantsState(State.ALIGN_TO_ANGLE)) {
             double requestedAngularVelocity = 0;
 
@@ -321,6 +323,7 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
                 // We see the correct targets, we can lock our shooter to that target.
                 requestedAngularVelocity = offsetTargetingPID.calculate(fusedTargetOffset.get(), 0);
             } else {
+                System.out.println("Auto Aligning!!!");
                 // We do not see the correct targets, we need to lock to our estimated angle.
                 requestedAngularVelocity = headingLockPID.calculate(perception.getHeading().getDegrees(),
                         getAlignTarget());

@@ -7,6 +7,9 @@
 package org.texastorque;
 
 import java.io.IOException;
+
+import org.texastorque.toast.lib.Util;
+import org.texastorque.torquelib.Debug;
 import org.texastorque.torquelib.util.TorqueMath;
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.apriltag.AprilTagFields;
@@ -22,11 +25,12 @@ public final class Field {
     private static volatile Field instance;
 
     public static final double FIELD_LENGTH = 16.541, FIELD_WIDTH = Units.inchesToMeters(315.5), SPEAKER_Y = 5.55,
-            SPEAKER_X = 0, ANGLE_TO_LASER = 60, ALLIANCE_WING_LENGTH = 6, FAR_SIDE_SPEAKER_Y = 2;
+            SPEAKER_X = 0, ANGLE_TO_LASER = 60, ALLIANCE_WING_LENGTH = 6, FAR_SIDE_SPEAKER_Y = 4.5;
 
     public Pose2d speakerPose = new Pose2d();
     public Pose2d passingZone = new Pose2d();
-    public Pose2d farSideSpeakerPose = new Pose2d();
+    private Pose2d normalSpeakerPose = new Pose2d();
+    private Pose2d farSideSpeakerPose = new Pose2d();
 
     public boolean isRedAlliance;
 
@@ -40,10 +44,13 @@ public final class Field {
         isRedAlliance = DriverStation.getAlliance().isPresent()
                 && DriverStation.getAlliance().get() == DriverStation.Alliance.Red;
 
-        speakerPose = new Pose2d(isRedAlliance ? FIELD_LENGTH - SPEAKER_X : SPEAKER_X,
-                SPEAKER_Y, Rotation2d.fromDegrees(0));
+        normalSpeakerPose = new Pose2d(isRedAlliance ? FIELD_LENGTH - SPEAKER_X : SPEAKER_X, SPEAKER_Y,
+                Rotation2d.fromDegrees(0));
 
-        farSideSpeakerPose = new Pose2d(isRedAlliance ? FIELD_LENGTH - SPEAKER_X : SPEAKER_X, FAR_SIDE_SPEAKER_Y, Rotation2d.fromDegrees(0));
+        farSideSpeakerPose = new Pose2d(isRedAlliance ? FIELD_LENGTH - SPEAKER_X : SPEAKER_X, FAR_SIDE_SPEAKER_Y,
+                Rotation2d.fromDegrees(0));
+
+        Debug.log("Speaker Pose", Util.pose2d2str(speakerPose));
     }
 
     public boolean isPoseOnField(final Pose2d pose) {
@@ -56,8 +63,8 @@ public final class Field {
         return 3 <= id && id <= 8;
     }
 
-    public void setSpeakerPose(final Pose2d speakerPose) {
-        this.speakerPose = speakerPose;
+    public void useFarSideSpeaker(final boolean useFarSide) {
+        speakerPose = useFarSide ? farSideSpeakerPose : normalSpeakerPose;
     }
 
     /** Compute the distance between two poses */
@@ -69,7 +76,7 @@ public final class Field {
 
     /** Calculates the distance from some pose to the speaker */
     public final double distanceToSpeaker(final Pose2d pose) {
-        return distanceBetween(speakerPose, pose);
+        return distanceBetween(normalSpeakerPose, pose);
     }
 
     /** Compute angle between two poses */

@@ -147,7 +147,8 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
 
     @Override
     public void initialize(final TorqueMode mode) {
-        if (mode.isTeleop()) field.setSpeakerPose(field.speakerPose);
+        if (mode.isTeleop())
+            field.useFarSideSpeaker(false);
     }
 
     @Override

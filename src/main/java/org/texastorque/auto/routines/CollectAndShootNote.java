@@ -51,7 +51,7 @@ public class CollectAndShootNote extends TorqueSequence implements Subsystems {
 
         log("isFarSide", () -> isFarSide);
 
-        addBlock(new TorqueRun(() -> field.setSpeakerPose(isFarSide ? field.farSideSpeakerPose : field.speakerPose)));
+        addBlock(new TorqueRun(() -> field.useFarSideSpeaker(isFarSide)));
         addBlock(new TorqueRunSequence(new Shoot(Shooter.State.FUTURE_SMART_ALIGN)));
     }
 }
