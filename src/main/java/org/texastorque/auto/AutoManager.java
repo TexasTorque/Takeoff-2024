@@ -99,7 +99,7 @@ public final class AutoManager extends TorqueAutoManager implements Subsystems {
         addBaseAuto(StartPoint.CTR, NotePoint.N_2, NotePoint.N_3, NotePoint.N_50);
         addBaseAuto(StartPoint.SRC, NotePoint.N_3, NotePoint.N_50);
         addBaseAuto(StartPoint.SRC, NotePoint.N_50, NotePoint.N_40);
-        addBaseAuto(StartPoint.SRC, NotePoint.N_50, NotePoint.N_40, NotePoint.N_3);
+        // addBaseAuto(StartPoint.SRC, NotePoint.N_50, NotePoint.N_40, NotePoint.N_3);
     }
 
     /** Create a base auto and come up with a name for it */

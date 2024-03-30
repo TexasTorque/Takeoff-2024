@@ -25,7 +25,7 @@ public final class Field {
     private static volatile Field instance;
 
     public static final double FIELD_LENGTH = 16.541, FIELD_WIDTH = Units.inchesToMeters(315.5), SPEAKER_Y = 5.55,
-            SPEAKER_X = 0, ANGLE_TO_LASER = 60, ALLIANCE_WING_LENGTH = 6, FAR_SIDE_SPEAKER_Y = 4.5;
+            SPEAKER_X = 0, ANGLE_TO_LASER = 60, ALLIANCE_WING_LENGTH = 6, FAR_SIDE_SPEAKER_Y = 5.2;
 
     public Pose2d speakerPose = new Pose2d();
     public Pose2d passingZone = new Pose2d();
