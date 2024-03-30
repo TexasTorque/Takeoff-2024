@@ -31,6 +31,7 @@ public class NoteSequence {
         public String get();
         public default boolean isMidline() { return false; }
         public default boolean isFarSide() { return false; }
+        public default int getID() { return 0; }
     }
 
     public static enum StartPoint implements Location {
@@ -65,6 +66,7 @@ public class NoteSequence {
         public String get() { return "" + id; }
         public boolean isMidline() { return id >= 10; }
         public boolean isFarSide() { return id >= 20; } 
+        public int getId() { return id; }
 
         @Override
         public String toString() {

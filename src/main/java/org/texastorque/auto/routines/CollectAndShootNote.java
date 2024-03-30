@@ -30,14 +30,20 @@ public class CollectAndShootNote extends TorqueSequence implements Subsystems {
     }
 
     private boolean deployIntakeRightAway = true; // init val doesnt matter
-
     private boolean isFarSide = false;
+    private boolean dangerous = false;
 
     public CollectAndShootNote(final NoteSequence noteSequence) {
 
         // Peek the next note pair and collect some data on it
         addBlock(new TorqueRun(() -> deployIntakeRightAway = !noteSequence.peekNext().end().isMidline()));
         addBlock(new TorqueRun(() -> isFarSide = noteSequence.peekNext().end().isFarSide()));
+        // Set paths that are "dangerous"
+        addBlock(new TorqueRun(() -> {
+            int start = noteSequence.peekNext().start().getID();
+            int end = noteSequence.peekNext().end().getID();
+            dangerous = (start == 40 && end == 30);
+        }));
 
         log("Can Deploy Intake", () -> deployIntakeRightAway);
 
@@ -46,8 +52,9 @@ public class CollectAndShootNote extends TorqueSequence implements Subsystems {
         // WARNING: THIS IS THE POP!!! -- any subsequent peeks will be for the next
         // note!
         addBlock(followPath(() -> noteSequence.popNext().getPath()),
-                new DeployIntakeWhen(() -> field.isXPast(perception.getPose(), 4.5) || deployIntakeRightAway)
-                        .command());
+                new DeployIntakeWhen(() -> {
+                    return field.isXPast(perception.getPose(), 4.5) || deployIntakeRightAway; 
+                }) .command());
 
         log("isFarSide", () -> isFarSide);
 

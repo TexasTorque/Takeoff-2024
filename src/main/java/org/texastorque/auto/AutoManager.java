@@ -39,6 +39,7 @@ public final class AutoManager extends TorqueAutoManager implements Subsystems {
         pathLoader.preloadPath("go_10_to_20");
         pathLoader.preloadPath("go_NONE_to_NONE");
         pathLoader.preloadPath("go_SRC_to_50");
+        pathLoader.preloadPath("go_SRC_to_40");
         pathLoader.preloadPath("go_AMP_to_1");
         pathLoader.preloadPath("go_2_to_3");
         pathLoader.preloadPath("go_1_to_10");
@@ -48,10 +49,14 @@ public final class AutoManager extends TorqueAutoManager implements Subsystems {
         pathLoader.preloadPath("go_CTR_to_2");
         pathLoader.preloadPath("go_50_to_40");
         pathLoader.preloadPath("go_40_to_3");
+        pathLoader.preloadPath("go_40_to_30");
         pathLoader.preloadPath("go_2_to_1");
         pathLoader.preloadPath("line");
         pathLoader.preloadPath("go_1_to_20");
         pathLoader.preloadPath("go_3_to_50");
+        pathLoader.preloadPath("go_2_to_30");
+        pathLoader.preloadPath("go_30_to_40");
+        pathLoader.preloadPath("go_30_to_30");
     }
 
     // /**
@@ -86,29 +91,35 @@ public final class AutoManager extends TorqueAutoManager implements Subsystems {
         addSequence(new Shoot(Shooter.State.LAYUP));
         addSequence(new Line());
 
-        // Amp side only
+        // Amp side only -- 4 notes
         addBaseAuto(StartPoint.AMP, NotePoint.N_1, NotePoint.N_10, NotePoint.N_20);
-        addBaseAuto(StartPoint.AMP, NotePoint.N_1, NotePoint.N_20);
         addBaseAuto(StartPoint.AMP, NotePoint.N_1, NotePoint.N_20, NotePoint.N_30);
 
-        // Clear center area
-        addBaseAuto(StartPoint.CTR, NotePoint.N_2, NotePoint.N_1);
-        addBaseAuto(StartPoint.CTR, NotePoint.N_3, NotePoint.N_2);
-        addBaseAuto(StartPoint.CTR, NotePoint.N_3, NotePoint.N_2, NotePoint.N_1);
-        addBaseAuto(StartPoint.CTR, NotePoint.N_3, NotePoint.N_2, NotePoint.N_1, NotePoint.N_10);
-        addBaseAuto(StartPoint.CTR, NotePoint.N_3, NotePoint.N_2, NotePoint.N_1, NotePoint.N_20);
+        // Clear center area -- 5 notes
+        addBaseAuto(StartPoint.CTR, NotePoint.N_3, NotePoint.N_2, NotePoint.N_1, NotePoint.N_10); 
+        addBaseAuto(StartPoint.CTR, NotePoint.N_3, NotePoint.N_2, NotePoint.N_1, NotePoint.N_20);  
+        addBaseAuto(StartPoint.CTR, NotePoint.N_3, NotePoint.N_2, NotePoint.N_30, NotePoint.N_40); 
 
-        // Far side capable
-        addBaseAuto(StartPoint.CTR, NotePoint.N_2, NotePoint.N_3, NotePoint.N_50);
-        addBaseAuto(StartPoint.SRC, NotePoint.N_3, NotePoint.N_50);
+        // Far side capable -- 3 notes
         addBaseAuto(StartPoint.SRC, NotePoint.N_50, NotePoint.N_40);
-        addBaseAuto(StartPoint.SRC, NotePoint.N_40);
+        addBaseAuto(StartPoint.SRC, NotePoint.N_40, NotePoint.N_30);
     }
 
     /** Create a base auto and come up with a name for it */
     private void addBaseAuto(final Location... notes) {
-        final NoteSequence ns = new NoteSequence(notes);
-        addSequence(ns.toString(), new BaseAuto(ns));
+        // Make a new list of notes w/ 30 at the end 
+        final Location[] locations = new Location[notes.length + 1];
+        for (int i = 0; i < notes.length; i++) {
+            locations[i] = notes[i];
+        }
+        locations[locations.length - 1] = NotePoint.N_30;
+
+        // Get the name, but we cut off the last 4 characters (->30)
+        final NoteSequence ns = new NoteSequence(locations);
+        final String title = ns.toString();
+        
+        // Hack complete (:
+        addSequence(title.substring(0, title.length() - 4), new BaseAuto(ns));
     }
 
     public static final synchronized AutoManager getInstance() {
