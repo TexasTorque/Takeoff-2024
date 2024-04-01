@@ -17,6 +17,7 @@ import org.texastorque.auto.routines.CollectAndShootNote;
 import org.texastorque.auto.routines.Shoot;
 import org.texastorque.subsystems.*;
 import org.texastorque.torquelib.auto.TorqueSequence;
+import org.texastorque.torquelib.auto.commands.TorqueFollowPath;
 import org.texastorque.torquelib.auto.commands.TorqueRun;
 import org.texastorque.torquelib.auto.commands.TorqueRunSequence;
 import org.texastorque.torquelib.auto.commands.TorqueWhile;
@@ -27,7 +28,7 @@ public class BaseAuto extends TorqueSequence implements Subsystems {
     private final NoteSequence noteSequence;
 
     /** Pass in the sequence of notes */
-    public BaseAuto(final NoteSequence ns) {
+    public BaseAuto(final String extraTimePathName, final NoteSequence ns) {
         this.noteSequence = ns;
 
         // Reset the pose to the initial position for this sequence
@@ -41,6 +42,8 @@ public class BaseAuto extends TorqueSequence implements Subsystems {
         addBlock(new TorqueRunSequence(new Shoot(Shooter.State.LAYUP)));
 
         addBlock(new TorqueWhile(noteSequence::hasNext, new CollectAndShootNote(noteSequence)));
+
+        // addBlock(new TorqueFollowPath(() -> AutoManager.getInstance().getPath(extraTimePathName), drivebase));
     }
 
    
