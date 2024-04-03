@@ -43,7 +43,7 @@ public class Climber extends TorqueStatorSubsystem<Climber.State> implements Sub
 
     public static enum ServoState {
         RELEASE(0),
-        LOCK(1);
+        LOCK(0.5);
 
         public final double position;
 
@@ -71,7 +71,7 @@ public class Climber extends TorqueStatorSubsystem<Climber.State> implements Sub
 
         servo = new Servo(Ports.CLIMB_SERVO);
         // Set these to correct for rev servo when added
-        servo.setBoundsMicroseconds(2000, 0, 0, 0, 500);
+        servo.setBoundsMicroseconds(2500, 0, 0, 0, 500);
     }
 
     @Override

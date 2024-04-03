@@ -217,4 +217,8 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
     public boolean isClimbing() {
         return shooterClimbMode.get();
     }
+
+    public boolean isOperatorClimbing() {
+        return operatorClimbUp.get();
+    }
 }

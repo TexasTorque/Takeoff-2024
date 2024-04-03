@@ -9,6 +9,7 @@ package org.texastorque.subsystems;
 import java.util.Optional;
 import java.util.function.Supplier;
 
+import org.texastorque.Input;
 import org.texastorque.Ports;
 import org.texastorque.Subsystems;
 import org.texastorque.torquelib.Debug;
@@ -287,7 +288,10 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
         }
 
         // Make drivebase slow during climb mode
-        if (shooter.wantsState(Shooter.State.CLIMB)) {
+
+        if (Input.getInstance().isOperatorClimbing()) {
+            speedSetting = SpeedSetting.FAST;
+        } else if (shooter.wantsState(Shooter.State.CLIMB)) {
             runSpeedSequence();
         }
 
@@ -296,6 +300,7 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
         // relative chassis speeds into robot relative chassis speeds. We also want to
         // multiply by speed setting stuff.
         if (wantsState(State.FIELD_RELATIVE) || wantsState(State.ALIGN_TO_ANGLE) || wantsState(State.DASH)) {
+            Debug.log("Speed Value", speedSetting == SpeedSetting.SEQ ? speedSequence.get() : speedSetting.speed);
             if (!wantsState(State.DASH)) { // If not dash then we apply speed settings.
                 inputSpeeds = inputSpeeds
                         .times(speedSetting == SpeedSetting.SEQ ? speedSequence.get() : speedSetting.speed);
@@ -323,7 +328,6 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
                 // We see the correct targets, we can lock our shooter to that target.
                 requestedAngularVelocity = offsetTargetingPID.calculate(fusedTargetOffset.get(), 0);
             } else {
-                System.out.println("Auto Aligning!!!");
                 // We do not see the correct targets, we need to lock to our estimated angle.
                 requestedAngularVelocity = headingLockPID.calculate(perception.getHeading().getDegrees(),
                         getAlignTarget());

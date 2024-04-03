@@ -84,15 +84,16 @@ public class Intake extends TorqueStatorSubsystem<Intake.State> implements Subsy
 
     @Override
     public void update(final TorqueMode mode) {
-        // *** LOG TO SMARTDASHBOARD *** 
-        Debug.log("Intake State", desiredState.toString());
+        // *** LOG TO SMARTDASHBOARD ***
+        
         Debug.log("Intake Rotary Right", rotaryRight.getPosition());
         Debug.log("Intake Rotary Left", rotaryLeft.getPosition());
         Debug.log("Rotary Down Enough", isAtState());
 
         // If we want to intake but the shooter has a note now we need to
         // alert the drivers via a rumble and leave intaking...
-        if (shooter.wantsState(Shooter.State.CLIMB) || shooter.wantsState(Shooter.State.TRAP)) {
+        if (shooter.wantsState(Shooter.State.CLIMB) || shooter.wantsState(Shooter.State.TRAP)
+                || (!isIntaking() && !wantsState(State.OUTTAKE) && shooter.getRotaryEncoderDegrees() >= 190)) {
             desiredState = State.OUT;
         } else if (wantsState(State.SMART_INTAKE) && shooter.hasNote()) {
             Input.getInstance().setRumbleFor(.2);
@@ -104,7 +105,9 @@ public class Intake extends TorqueStatorSubsystem<Intake.State> implements Subsy
 
         } else if (!isIntaking() && !isOutaking() && shooter.isShift()) {
             desiredState = State.PRIME; // we go into prime if we are in shift state
-        } 
+        }
+
+        Debug.log("Intake State", desiredState.toString());
 
         rollers.setVolts(desiredState.rollerSpeed);
 
@@ -113,8 +116,9 @@ public class Intake extends TorqueStatorSubsystem<Intake.State> implements Subsy
         rotaryRight.setVolts(rotaryRightPID.calculate(rotaryRight.getPosition(),
                 desiredState.rotaryPosition));
 
-        // If intake rotary breaks, comment ^ above rotary statements out and comment below in.
-        // rotaryLeft.setVolts(6); 
+        // If intake rotary breaks, comment ^ above rotary statements out and comment
+        // below in.
+        // rotaryLeft.setVolts(6);
         // rotaryRight.setVolts(6);
     }
 

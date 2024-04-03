@@ -82,9 +82,9 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         // 1400 decent on soft
         // 1300 too low on hard
         AMP(new Shot(1400, Rotation2d.fromDegrees(87)), false), // 80.7 <-- real angle
-        AMP_INIITAL(new Shot(0, Rotation2d.fromDegrees(125)), false),
+        AMP_INIITAL(new Shot(1400, Rotation2d.fromDegrees(125)), false),
         CLIMB(new Shot(0, Rotation2d.fromDegrees(96)), false),
-        TRAP(new Shot(2000, Rotation2d.fromDegrees(81)), false),
+        TRAP(new Shot(1700, Rotation2d.fromDegrees(74)), false),
 
         // Layup, black line, and safe zone backup shots. These have reversable "shift
         // shots"
@@ -93,7 +93,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         // Used for tossing a note across the field
         LASER(new Shot(4000, Rotation2d.fromDegrees(54)), new Shot(3000, Rotation2d.fromDegrees(54)), false),
 
-        MID(new Shot(5400, Rotation2d.fromDegrees(32)), true), 
+        MID(new Shot(5400, Rotation2d.fromDegrees(32)), true),
         SAFEZONE(new Shot(4600, Rotation2d.fromDegrees(37)), new Shot(4300, Rotation2d.fromDegrees(148)), true),
 
         // Future and Smart shots are special.
@@ -157,7 +157,8 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         }
     }
 
-    private static final double FLYWHEEL_TOLERANCE = 200, ROTARY_TOLERANCE_TELEOP = 1.5, ROTARY_TOLERANCE_AUTO = 2, MAX_SHOT_VELO_RPM = 5500,
+    private static final double FLYWHEEL_TOLERANCE = 200, ROTARY_TOLERANCE_TELEOP = 1.5, ROTARY_TOLERANCE_AUTO = 2,
+            MAX_SHOT_VELO_RPM = 5500,
             CHUTE_TOLERANCE = 20, CHUTE_OFFSET = 346, FLYWHEEL_INTAKE_CURRENT_SPIKE = 35;
 
     // Subsystem hardware...
@@ -325,7 +326,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         shotTable.put(5.2, new Shot(6000, Rotation2d.fromDegrees(25)));
         shotTable.put(5.4, new Shot(6100, Rotation2d.fromDegrees(24)));
 
-        // shotTable.put(1.19, new Shot(4200, Rotation2d.fromDegrees(64))); 
+        // shotTable.put(1.19, new Shot(4200, Rotation2d.fromDegrees(64)));
         // shotTable.put(1.61, new Shot(4400, Rotation2d.fromDegrees(56)));
         // shotTable.put(1.85, new Shot(4500, Rotation2d.fromDegrees(52)));
         // shotTable.put(2.2, new Shot(4600, Rotation2d.fromDegrees(47)));
@@ -415,7 +416,9 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
 
     /** Is the rotary at the current shot angle? */
     public boolean isRotaryAtState() {
-        return Math.abs(getRotaryEncoderDegrees() - shot.angle.getDegrees()) <= (DriverStation.isAutonomous() ? ROTARY_TOLERANCE_AUTO : ROTARY_TOLERANCE_TELEOP);
+        return Math.abs(getRotaryEncoderDegrees() - shot.angle.getDegrees()) <= (DriverStation.isAutonomous()
+                ? ROTARY_TOLERANCE_AUTO
+                : ROTARY_TOLERANCE_TELEOP);
     }
 
     /**
@@ -684,8 +687,11 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
             return 3;
         if (wantsState(State.INTAKE) && getRotaryEncoderDegrees() > 140)
             return 3;
+        if (wantsState(State.TRAP))
+            return 1;
         if (debugMode)
             return SmartDashboard.getNumber("Rotary Max Volts", 8);
+
         return 8;
     }
 
