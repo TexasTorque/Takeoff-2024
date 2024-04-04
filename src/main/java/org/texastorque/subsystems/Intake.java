@@ -92,7 +92,7 @@ public class Intake extends TorqueStatorSubsystem<Intake.State> implements Subsy
 
         // If we want to intake but the shooter has a note now we need to
         // alert the drivers via a rumble and leave intaking...
-        if (shooter.wantsState(Shooter.State.CLIMB) || shooter.wantsState(Shooter.State.TRAP)
+        if (shooter.wantsState(Shooter.State.CLIMB) || shooter.wantsState(Shooter.State.TRAP) || shooter.wantsState(Shooter.State.RELEASE_TRAP_HOOK)
                 || (!isIntaking() && !wantsState(State.OUTTAKE) && shooter.getRotaryEncoderDegrees() >= 190)) {
             desiredState = State.OUT;
         } else if (wantsState(State.SMART_INTAKE) && shooter.hasNote()) {

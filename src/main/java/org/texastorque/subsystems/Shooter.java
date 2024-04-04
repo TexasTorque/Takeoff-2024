@@ -95,6 +95,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
 
         MID(new Shot(5400, Rotation2d.fromDegrees(32)), true),
         SAFEZONE(new Shot(4600, Rotation2d.fromDegrees(37)), new Shot(4300, Rotation2d.fromDegrees(148)), true),
+        RELEASE_TRAP_HOOK(new Shot(0, Rotation2d.fromDegrees(124)), false),
 
         // Future and Smart shots are special.
         // - Smart: will be overridden later w/ a calculated shot for our *current*

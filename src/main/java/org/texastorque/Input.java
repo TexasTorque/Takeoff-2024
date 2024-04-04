@@ -25,7 +25,7 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
             runDumbIntake, runOuttake, speakerSmartShot, speakerLayup, speakerSafeZone, amp, trap,
             deaccelerateClick, deaccelerateHold, manualGateOut, manualGateIn, babyBird, speakerMid,
             shooterIdle, shooterShift, climbUp, climbDown, climbLeftUp, climbRightUp, climbLeftDown, climbRightDown,
-            shooterClimbMode, laser, operatorClimbUp, debugMode, releaseTrap;
+            shooterClimbMode, laser, operatorClimbUp, debugMode, releaseTrap, pullTrapBack;
 
     private Input() {
         driver = new TorqueController(0, 0.1);
@@ -77,6 +77,8 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
         shooterClimbMode = new TorqueToggleSupplier(operator::isDPADLeftDown);
 
         releaseTrap = new TorqueBoolSupplier(operator::isXButtonDown);
+
+        pullTrapBack = new TorqueToggleSupplier(operator::isBButtonDown);
 
         debugMode = new TorqueToggleSupplier(
                 () -> operator.isLeftCenterButtonDown() && operator.isRightCenterButtonDown());
@@ -138,6 +140,8 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
         trap.onTrue(() -> shooter.setState(Shooter.State.TRAP));
 
         speakerSmartShot.onTrue(() -> shooter.setState(Shooter.State.SMART));
+
+        pullTrapBack.onTrue(() -> shooter.setState(Shooter.State.RELEASE_TRAP_HOOK));
     }
 
     public void updateDrivebase() {
