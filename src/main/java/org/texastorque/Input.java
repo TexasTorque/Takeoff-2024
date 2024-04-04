@@ -123,6 +123,9 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
 
         shooter.setDebugMode(debugMode.get());
 
+        shooter.setAmpRampHigh(!TorqueMath.toleranced(operator.getRightXAxis(), 0, CONTROLLER_DEADBAND)
+                || !TorqueMath.toleranced(operator.getRightYAxis(), 0, CONTROLLER_DEADBAND));
+
         shooter.setEmergencyCurrentLimit(driver.isAButtonDown());
         shooter.setShift(shooterShift.get());
 

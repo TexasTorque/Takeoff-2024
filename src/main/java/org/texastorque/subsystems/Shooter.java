@@ -84,7 +84,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         AMP(new Shot(1400, Rotation2d.fromDegrees(87)), false), // 80.7 <-- real angle
         AMP_INIITAL(new Shot(1400, Rotation2d.fromDegrees(125)), false),
         CLIMB(new Shot(0, Rotation2d.fromDegrees(96)), false),
-        TRAP(new Shot(1700, Rotation2d.fromDegrees(74)), false),
+        TRAP(new Shot(1850, Rotation2d.fromDegrees(68)), false),
 
         // Layup, black line, and safe zone backup shots. These have reversable "shift
         // shots"
@@ -148,7 +148,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
      * Chute state is a specialty state used for the flap motor.
      */
     public static enum ChuteState implements TorqueState {
-        IN(Rotation2d.fromDegrees(170)), OUT(Rotation2d.fromDegrees(334));
+        IN(Rotation2d.fromDegrees(170)), OUT(Rotation2d.fromDegrees(334)), TRAP(Rotation2d.fromDegrees(200)), HIGH(Rotation2d.fromDegrees(360));
 
         private Rotation2d position;
 
@@ -201,6 +201,8 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
      * are in a good state to shoot so we avoid shooting too quickly based on noise.
      */
     private int loopsThatShooterHasBeenReadyToShoot = 0;
+
+    private boolean setAmpRampHigh = false;
 
     /**
      * These are special cases that the subsystem needs to be aware of.
@@ -360,6 +362,8 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         SmartDashboard.putNumber("Shot Velocity", 0);
         SmartDashboard.putNumber("Shot Angle", 0);
         SmartDashboard.putNumber("Rotary Max Volts", 8);
+        SmartDashboard.putNumber("Amp Ramp Position", 170);
+        SmartDashboard.putNumber("Amp Ramp Volts", 6);
     }
 
     @Override
@@ -513,6 +517,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         Debug.log("Has Been Ready", hasBeenReadyToShoot());
         Debug.log("Is Aligned", getIsAligned());
         Debug.log("Drivebase has been aligned", drivebase.hasBeenAligned());
+        Debug.log("Chute Degrees", getChuteEncoderDegrees());
 
         // Handle intaking. If we are in teleop and the intake says that we are
         // intaking, then
@@ -640,13 +645,18 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         if (getRotaryEncoderDegrees() >= State.AMP_INIITAL.shot.angle.getDegrees() + 3)
             chuteState = ChuteState.IN;
 
+        if (wantsState(State.TRAP)) chuteState = ChuteState.TRAP;
+
+        if (setAmpRampHigh) chuteState = ChuteState.HIGH;
+
         chute.setVolts(
                 -TorqueMath.constrain(chutePID.calculate(getChuteEncoderDegrees(),
                         chuteState.position.getDegrees())
+                        // SmartDashboard.getNumber("Amp Ramp Position", 0))
                         +
                         chuteFF.calculate(getChuteSetpointActualRadians(chuteState.position.getDegrees()),
                                 0),
-                        6));
+                        getAmpRampVolts()));
         double rotaryVolts = rotaryPID.calculate(getRotaryEncoderDegrees(), shot.angle.getDegrees())
                 + rotaryFF.calculate(shot.angle.getRadians(), 0);
 
@@ -663,6 +673,10 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         }
     }
 
+    public void setAmpRampHigh(boolean goHigh) {
+        setAmpRampHigh = goHigh;
+    }
+
     public boolean getIsAligned() {
         if (wantsState(State.SMART) && !shift)
             return drivebase.hasBeenAligned();
@@ -671,6 +685,11 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         } else
             return true;
 
+    }
+
+    public double getAmpRampVolts() {
+        if (wantsState(State.TRAP)) return 1;
+        else return 6;
     }
 
     /**
