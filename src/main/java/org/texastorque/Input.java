@@ -141,7 +141,7 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
 
         speakerSmartShot.onTrue(() -> shooter.setState(Shooter.State.SMART));
 
-        pullTrapBack.onTrue(() -> shooter.setState(Shooter.State.RELEASE_TRAP_HOOK));
+        if (shooterClimbMode.get()) pullTrapBack.onTrue(() -> shooter.setState(Shooter.State.RELEASE_TRAP_HOOK));
     }
 
     public void updateDrivebase() {

@@ -53,8 +53,8 @@ public class CollectAndShootNote extends TorqueSequence implements Subsystems {
         // note!
         addBlock(followPath(() -> noteSequence.popNext().getPath()),
                 new DeployIntakeWhen(() -> {
-                    return field.isXPast(perception.getPose(), 4.5) || deployIntakeRightAway; 
-                }) .command());
+                    return field.isXPast(perception.getPose(), 4.5) || deployIntakeRightAway;
+                }).command());
 
         log("isFarSide", () -> isFarSide);
 

@@ -43,7 +43,7 @@ public class Climber extends TorqueStatorSubsystem<Climber.State> implements Sub
 
     public static enum ServoState {
         RELEASE(0),
-        LOCK(0.5);
+        LOCK(0.75);
 
         public final double position;
 

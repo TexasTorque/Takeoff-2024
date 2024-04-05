@@ -536,6 +536,11 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
                 desiredState = State.OFF;
                 gateState = GateState.OFF;
             }
+
+            if (intake.wantsState(Intake.State.INTAKE)) {
+                desiredState = State.INTAKE;
+                gateState = GateState.IN;
+            }
         } else {
             timeSinceStartedIntaking.restart();
         }
