@@ -125,9 +125,8 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
 
         shooter.setDebugMode(debugMode.get());
 
-        shooter.setAmpRampHigh(!TorqueMath.toleranced(operator.getRightXAxis(), 0, CONTROLLER_DEADBAND)
-                || !TorqueMath.toleranced(operator.getRightYAxis(), 0, CONTROLLER_DEADBAND));
-
+        shooter.setEscapeAmp(operator.getRightYAxis() < -.1);
+        shooter.setAmpRampHigh(operator.getRightYAxis() > .1);
         shooter.setEmergencyCurrentLimit(driver.isAButtonDown());
         shooter.setShift(shooterShift.get());
 
@@ -141,7 +140,8 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
 
         speakerSmartShot.onTrue(() -> shooter.setState(Shooter.State.SMART));
 
-        if (shooterClimbMode.get()) pullTrapBack.onTrue(() -> shooter.setState(Shooter.State.RELEASE_TRAP_HOOK));
+        if (shooterClimbMode.get())
+            pullTrapBack.onTrue(() -> shooter.setState(Shooter.State.RELEASE_TRAP_HOOK));
     }
 
     public void updateDrivebase() {

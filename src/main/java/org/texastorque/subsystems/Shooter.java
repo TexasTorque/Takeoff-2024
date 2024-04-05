@@ -82,7 +82,8 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         // 1400 decent on soft
         // 1300 too low on hard
         AMP(new Shot(1400, Rotation2d.fromDegrees(87)), false), // 80.7 <-- real angle
-        AMP_INIITAL(new Shot(1400, Rotation2d.fromDegrees(125)), false),
+        AMP_INIITAL(new Shot(1350, Rotation2d.fromDegrees(125)), false),
+        LEAVE_AMP(new Shot(0, Rotation2d.fromDegrees(115)), false),
         CLIMB(new Shot(0, Rotation2d.fromDegrees(96)), false),
         TRAP(new Shot(1850, Rotation2d.fromDegrees(68)), false),
 
@@ -498,6 +499,12 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
                 && flywheelTop.getCurrent() >= FLYWHEEL_INTAKE_CURRENT_SPIKE;
     }
 
+
+    public boolean escapeAmp = false;
+
+    public void setEscapeAmp(boolean leave) {
+        escapeAmp = leave;
+    }
     @Override
     public void update(TorqueMode mode) {
         // *** SMARTDASHBOARD ENTRIES FOR DEBUG PURPOSES ***
@@ -653,7 +660,13 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
 
         if (wantsState(State.TRAP)) chuteState = ChuteState.TRAP;
 
-        if (setAmpRampHigh) chuteState = ChuteState.HIGH;
+        if (setAmpRampHigh) {
+            chuteState = ChuteState.HIGH;
+            shot = State.AMP.shot;
+        } else if (escapeAmp) {
+            chuteState = ChuteState.HIGH;
+            shot = State.LEAVE_AMP.shot;
+        }
 
         chute.setVolts(
                 -TorqueMath.constrain(chutePID.calculate(getChuteEncoderDegrees(),
