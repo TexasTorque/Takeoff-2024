@@ -81,8 +81,8 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         // 1500 still high on soft
         // 1400 decent on soft
         // 1300 too low on hard
-        AMP(new Shot(1400, Rotation2d.fromDegrees(87)), false), // 80.7 <-- real angle
-        AMP_INIITAL(new Shot(1350, Rotation2d.fromDegrees(125)), false),
+        AMP(new Shot(1450, Rotation2d.fromDegrees(87)), false), // 80.7 <-- real angle
+        AMP_INIITAL(new Shot(1450, Rotation2d.fromDegrees(125)), false),
         LEAVE_AMP(new Shot(0, Rotation2d.fromDegrees(115)), false),
         CLIMB(new Shot(0, Rotation2d.fromDegrees(96)), false),
         TRAP(new Shot(1850, Rotation2d.fromDegrees(68)), false),
@@ -150,7 +150,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
      * Chute state is a specialty state used for the flap motor.
      */
     public static enum ChuteState implements TorqueState {
-        IN(Rotation2d.fromDegrees(170)), OUT(Rotation2d.fromDegrees(334)), TRAP(Rotation2d.fromDegrees(200)), HIGH(Rotation2d.fromDegrees(360));
+        IN(Rotation2d.fromDegrees(170)), OUT(Rotation2d.fromDegrees(343)), TRAP(Rotation2d.fromDegrees(200)), HIGH(Rotation2d.fromDegrees(360));
 
         private Rotation2d position;
 
@@ -526,6 +526,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         Debug.log("Is Aligned", getIsAligned());
         Debug.log("Drivebase has been aligned", drivebase.hasBeenAligned());
         Debug.log("Chute Degrees", getChuteEncoderDegrees());
+        Debug.log("Shooter Neo Position", rotary.getPosition());
 
         // Handle intaking. If we are in teleop and the intake says that we are
         // intaking, then
@@ -676,6 +677,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
                         chuteFF.calculate(getChuteSetpointActualRadians(chuteState.position.getDegrees()),
                                 0),
                         getAmpRampVolts()));
+                        
         double rotaryVolts = rotaryPID.calculate(getRotaryEncoderDegrees(), shot.angle.getDegrees())
                 + rotaryFF.calculate(shot.angle.getRadians(), 0);
 
