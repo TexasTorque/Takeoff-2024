@@ -159,9 +159,8 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         }
     }
 
-    private static final double FLYWHEEL_TOLERANCE = 200, ROTARY_TOLERANCE_TELEOP = 1.5, ROTARY_TOLERANCE_AUTO = 2,
-            MAX_SHOT_VELO_RPM = 5500,
-            CHUTE_TOLERANCE = 20, CHUTE_OFFSET = 346, FLYWHEEL_INTAKE_CURRENT_SPIKE = 35;
+    private static final double FLYWHEEL_TOLERANCE = 200, ROTARY_TOLERANCE_TELEOP = 1.5, ROTARY_TOLERANCE_AUTO = 1.7,
+            MAX_SHOT_VELO_RPM = 5500, CHUTE_TOLERANCE = 20, CHUTE_OFFSET = 346, FLYWHEEL_INTAKE_CURRENT_SPIKE = 35;
 
     // Subsystem hardware...
     private final TorqueNEO rotary, flywheelTop, flywheelBottom, gate, chute;
@@ -452,7 +451,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         // Constrain the RPM on regression shots to be under the max shot velocity.
         final double rpm = TorqueMath.constrain(rpmRegression.predict(distance), 0, MAX_SHOT_VELO_RPM);
         // Constrain the angle on regression shots to be between 0 and 90 degrees.
-        final double angle = TorqueMath.constrain(angleRegression.predict(distance), 0, 90);
+        final double angle = TorqueMath.constrain(angleRegression.predict(distance), 9, 90);
 
         return new Shot(rpm, Rotation2d.fromDegrees(angle));
     }
@@ -521,12 +520,11 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         Debug.log("Has Note", hasNote());
         Debug.log("Debug Mode", debugMode);
         Debug.log("Regression Shot", getRegressionShot(perception.getDistanceToSpeaker()).toString());
-        Debug.log("Shooter Rotary Positon", getRotaryEncoderDegrees());
         Debug.log("Has Been Ready", hasBeenReadyToShoot());
         Debug.log("Is Aligned", getIsAligned());
         Debug.log("Drivebase has been aligned", drivebase.hasBeenAligned());
         Debug.log("Chute Degrees", getChuteEncoderDegrees());
-        Debug.log("Shooter Neo Position", rotary.getPosition());
+        
 
         // Handle intaking. If we are in teleop and the intake says that we are
         // intaking, then
@@ -680,6 +678,8 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
                         
         double rotaryVolts = rotaryPID.calculate(getRotaryEncoderDegrees(), shot.angle.getDegrees())
                 + rotaryFF.calculate(shot.angle.getRadians(), 0);
+
+        Debug.log("Requested Rotary Position", shot.angle.getDegrees());
 
         rotaryVolts = TorqueMath.constrain(rotaryVolts, getRotaryMaxVolts());
 

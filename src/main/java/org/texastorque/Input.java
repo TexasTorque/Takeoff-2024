@@ -25,7 +25,7 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
             runDumbIntake, runOuttake, speakerSmartShot, speakerLayup, speakerSafeZone, amp, trap,
             deaccelerateClick, deaccelerateHold, manualGateOut, manualGateIn, babyBird, speakerMid,
             shooterIdle, shooterShift, climbUp, climbDown, climbLeftUp, climbRightUp, climbLeftDown, climbRightDown,
-            shooterClimbMode, laser, operatorClimbUp, debugMode, releaseTrap, pullTrapBack;
+            shooterClimbMode, laser, operatorClimbUp, debugMode, releaseTrap, pullTrapBack, runAi;
 
     private Input() {
         driver = new TorqueController(0, 0.1);
@@ -82,6 +82,8 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
 
         debugMode = new TorqueToggleSupplier(
                 () -> operator.isLeftCenterButtonDown() && operator.isRightCenterButtonDown());
+
+        runAi = new TorqueToggleSupplier(operator::isRightStickClickDown);
     }
 
     @Override
@@ -91,6 +93,8 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
         updateShooter();
         updateClimber();
         updateRumble();
+
+        perception.setDoAi(runAi.get());
     }
 
     public void updateIntake() {
