@@ -37,6 +37,7 @@ public final class AutoManager extends TorqueAutoManager implements Subsystems {
         // > python3 listpaths.py
         pathLoader.preloadPath("go_3_to_2");
         pathLoader.preloadPath("go_10_to_20");
+        pathLoader.preloadPath("ee_10_to_20");
         pathLoader.preloadPath("go_NONE_to_NONE");
         pathLoader.preloadPath("go_SRC_to_50");
         pathLoader.preloadPath("go_SRC_to_40");

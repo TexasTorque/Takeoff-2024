@@ -93,16 +93,18 @@ public final class Lights extends TorqueStatelessSubsystem implements Subsystems
     private final List<AddressableLED> lights;
     private final AddressableLEDBuffer buff;
 
+    public static final double HERTZ = 15;
+
     // Leave all these combinations
     private LightAction rainbow = new Rainbow(), 
 
         red = new Solid(() -> Color.kRed), 
       
         green = new Solid(() -> Color.kGreen),
-        blinkGreen = new Blink(() -> Color.kGreen, 6),
+        blinkGreen = new Blink(() -> Color.kGreen, HERTZ),
 
         purple = new Solid(() -> Color.kPurple),
-        blinkPurple = new Blink(() -> Color.kPurple, 6);
+        blinkPurple = new Blink(() -> Color.kPurple, HERTZ);
 
     private Lights() {
         lights = new ArrayList<>();
@@ -158,6 +160,10 @@ public final class Lights extends TorqueStatelessSubsystem implements Subsystems
         // We go rainbow if we are in climb mode
         if (Input.getInstance().isClimbing()) {
             return rainbow;
+        }
+
+        if (perception.isUsingDetectionLock()) {
+            return blinkPurple;
         }
 
         // Otherwise we check if we have a note

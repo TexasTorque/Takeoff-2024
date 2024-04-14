@@ -12,6 +12,7 @@ import java.util.function.Supplier;
 import org.texastorque.Input;
 import org.texastorque.Ports;
 import org.texastorque.Subsystems;
+import org.texastorque.subsystems.Perception.Note;
 import org.texastorque.torquelib.Debug;
 import org.texastorque.torquelib.auto.commands.TorqueFollowPath.TorquePathingDrivebase;
 import org.texastorque.torquelib.base.TorqueMode;
@@ -30,6 +31,7 @@ import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.math.util.Units;
+import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
@@ -128,7 +130,7 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
 
             // WARNING: the above is very important!
 
-            MAX_ANGULAR_VELOCITY = 2 * Math.PI; // maximum rotation velocity of the swerve (rad/s)
+            MAX_ANGULAR_VELOCITY = 4 * Math.PI; // maximum rotation velocity of the swerve (rad/s)
 
     public static synchronized final Drivebase getInstance() {
         return instance == null ? instance = new Drivebase() : instance;
@@ -163,6 +165,9 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
     private Drivebase() {
         super(State.FIELD_RELATIVE);
 
+        Debug.log("Set Speeds", "");
+        Debug.log("Override Speeds", "");
+
         // For Bravo -- using the swerve-x Neo.
         // fl = new TorqueSwerveModuleNEO("Front Left", Ports.FL_MOD);
         // fr = new TorqueSwerveModuleNEO("Front Right", Ports.FR_MOD);
@@ -183,6 +188,7 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
 
         headingLockPID = new PIDController(.08, 0, 0);
         headingLockPID.enableContinuousInput(0, 360);
+
 
         offsetTargetingPID = new PIDController(.00088, 0, 0);
 
@@ -256,9 +262,8 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
     public boolean hasBeenAligned() {
         return loopsThatDBIsAligned > 3;
     }
- 
 
-    @Override
+     @Override
     public final void update(final TorqueMode mode) {
         // *** LOG SOME STUFF TO SMART DASHBOARD ***
         Debug.log("Is Aligned", isAligned());
@@ -427,6 +432,12 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
      */
     @Override
     public void setInputSpeeds(TorqueSwerveSpeeds speeds) {
+        Debug.log("Set Speeds", speeds.toString());
+        if (DriverStation.isAutonomous()) { // TODO: note detection "in teleop"
+            speeds.omegaRadiansPerSecond = perception.omegaOverrider(speeds.omegaRadiansPerSecond);
+        }
+        Debug.log("Override Speeds", speeds.toString());
+        // speeds = speeds.times(.1, .1, 1);
         inputSpeeds = speeds;
     }
 

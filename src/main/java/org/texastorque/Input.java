@@ -94,12 +94,13 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
         updateClimber();
         updateRumble();
 
-        perception.setDoAi(runAi.get());
+        // perception.useAI(runAi.get());
     }
 
     public void updateIntake() {
         if (!shooter.wantsState(Shooter.State.CLIMB) && !shooter.wantsState(Shooter.State.TRAP)) {
             runSmartIntake.onTrue(() -> intake.setState(Intake.State.SMART_INTAKE));
+
             runDumbIntake.onTrue(() -> intake.setState(Intake.State.INTAKE));
             runOuttake.onTrue(() -> intake.setState(Intake.State.OUTTAKE));
         }

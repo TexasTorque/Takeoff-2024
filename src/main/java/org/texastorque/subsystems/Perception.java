@@ -6,6 +6,8 @@
  */
 package org.texastorque.subsystems;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -22,15 +24,20 @@ import org.texastorque.toast.lib.pipelines.ObjDetector;
 import org.texastorque.toast.lib.pipelines.AprilTags.AprilTagDetection;
 import org.texastorque.toast.lib.pipelines.ObjDetector.Detectable;
 import org.texastorque.torquelib.Debug;
+import org.texastorque.torquelib.auto.commands.TorqueFollowPath;
 import org.texastorque.torquelib.base.TorqueMode;
 import org.texastorque.torquelib.base.TorqueState;
 import org.texastorque.torquelib.base.TorqueStatorSubsystem;
 import org.texastorque.torquelib.control.TorqueRollingMedian;
+import org.texastorque.torquelib.control.TorqueToggle;
 import org.texastorque.torquelib.sensors.TorqueNavXGyro;
+import org.texastorque.torquelib.util.TorqueMath;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.Vector;
+import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
@@ -106,18 +113,24 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
 
     // a position that we could be at in the future that we want to
     // run computations for.
-    private Pose2d futureShootingPose = new Pose2d();
+    private Pose2d futureShootingPose =new Pose2d();
 
     public static final String SHTR_R = "SHTR_R", SHTR_L = "SHTR_L", INTK_R = "INTK_R";
 
     private final AprilTags tagCameraLeft, tagCameraRight;
     private final ObjDetector<Note> intakeCamera;
 
-    private boolean doAi = false;
+    private boolean usingAI = false;
 
     @SuppressWarnings("unchecked")
     public Perception() {
         super(State.VISION);
+
+        Debug.log("Heading to lock", 0);
+
+        noteLockPID.enableContinuousInput(0, 360);
+
+        // TorqueFollowPath.omegaOverride = this::omegaOverrider;
 
         toast = new Toast();
         poseEstimator = new SwerveDrivePoseEstimator(
@@ -149,12 +162,15 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
         filteredY = new TorqueRollingMedian(5);
 
         fieldMap = field.getFieldLayout();
+
+        useAI(true);
     }
 
     @Override
     public void initialize(final TorqueMode mode) {
-        if (mode.isTeleop())
+        if (mode.isTeleop()) {
             field.useFarSideSpeaker(false);
+        }
     }
 
     @Override
@@ -163,6 +179,9 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
 
         // Update the various perception pipelines.
         updateOdometryLocalization();
+
+        toast.update(); // Updates all the vision pipelines.
+
         updateVisionLocalization();
         updateObjectDetection();
 
@@ -182,8 +201,6 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
 
         SmartDashboard.putNumber("match_time", DriverStation.getMatchTime());
 
-        NetworkTableInstance.getDefault().getTable("toast").putValue("do_ai", NetworkTableValue.makeBoolean(doAi));
-
         // Update the field map
         field2d.setRobotPose(getPose());
         if (!Robot.isReal() && shooter.wantsState(Shooter.State.SMART) && mode.isAuto()) {
@@ -201,8 +218,11 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
                 getHeading());
     }
 
-    public void setDoAi(boolean run) {
-        doAi = run;
+    public void useAI(final boolean use) {
+        if (usingAI != use) {
+            NetworkTableInstance.getDefault().getTable("toast").putValue("do_ai", NetworkTableValue.makeBoolean(use));
+        }
+        usingAI = use;
     }
 
     /**
@@ -237,7 +257,6 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
 
     /** Update vision pipeline */
     public void updateVisionLocalization() {
-        toast.update(); // Updates all the vision pipelines.
 
         // This gets comented/uncomented out based on if or if not we want to use
         // vision to update our odometry while we are pathing (like physically following
@@ -323,8 +342,32 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
 
     /** Run the object detection pipeline */
     public void updateObjectDetection() {
+
+        // Check if any of them are < 15° off
+        noCloseNotes = true;
+        for (final Note note : getNoteDetections()) {
+            if (Math.abs(note.angle) < 15) {
+                noCloseNotes = false;
+                break;
+            }
+        }
+
+        Debug.log("No close detections", noCloseNotes);
+
         final Note note = getBestDetection().isPresent() ? getBestDetection().get() : Note.EMPTY;
         Debug.log("Best Detection", note.toString());
+
+        if (useDetectionLock && !usingDetectionLock) {
+            // Weird hack -- just trust. Seasons almost over... do it differently in the offseason.
+            headingToLock = Rotation2d.fromDegrees(getHeading().getDegrees() - (note.angle + 5) * 2);
+
+
+            Debug.log("Heading to lock", headingToLock.getDegrees());
+        }  
+        if (!useDetectionLock && usingDetectionLock) {
+            headingToLock = Rotation2d.fromDegrees(0);
+        }
+        usingDetectionLock = useDetectionLock;
     }
 
     /**
@@ -557,20 +600,99 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
 
     /** Get the best detection of the notes. */
     public Optional<Note> getBestDetection() {
-        return ObjDetector.getBestDetection(getNoteDetections());
+
+        // return ObjDetector.getBestDetection(getNoteDetections());
+            // double smallestAngle = 1000;
+            // Note bestNote = null;
+            // for (final Note note : getNoteDetections()) {
+            //     final double angle = Math.abs(note.angle);
+            //     if (angle < smallestAngle) {
+            //         smallestAngle = note.angle;
+            //         bestNote = note;
+            //     }
+            // }
+            // return bestNote == null ? Optional.empty() : Optional.of(bestNote);
+
+        final List<Note> notes = getNoteDetections();
+
+    
+
+        // Strat -- smallest angle of best 2 conf:
+
+        // Collections.sort(notes, (a, b) -> a.confidence >= b.confidence ? 1 : -1);
+
+        // final List<Note> bestConf = new ArrayList<>();
+
+        // for (int i = 0; i < Math.min(notes.size(), 2) ; i++) {
+        //     bestConf.add(notes.get(i));
+        // }
+
+
+        // double smallestAngle = 1000;
+        // Note bestNote = null;
+        // for (final Note note : bestConf) {
+        //     final double angle = Math.abs(note.angle);
+        //     if (angle < smallestAngle) {
+        //         smallestAngle = angle;
+        //         bestNote = note;
+        //     }
+        // }
+        // return bestNote == null ? Optional.empty() : Optional.of(bestNote);
+
+        // Strat -- biggest width:
+
+        double bestWidth = 0;
+        Note bestNote = null;
+        for (final Note note : notes) {
+            if (note.width < bestWidth) {
+                bestWidth = note.width;
+                bestNote = note;
+            }
+        }
+        return bestNote == null ? Optional.empty() : Optional.of(bestNote);
+    }
+
+    private boolean useDetectionLock = false, usingDetectionLock = false, noCloseNotes = false;
+    private Rotation2d headingToLock = Rotation2d.fromDegrees(0);
+    public void useDetectionLock(boolean use) {
+        useDetectionLock = use;
+    }
+    public boolean isUsingDetectionLock() {
+        return useDetectionLock;
+    }
+    public boolean hasNoCloseNotes() {
+        return noCloseNotes;
+    }
+
+    private final PIDController noteLockPID = new PIDController(.15, 0, 0);
+
+    public double omegaOverrider(final double omega) {
+       
+        // final Optional<Note> bestNoteOpt = perception.getBestDetection();
+        // if (!bestNoteOpt.isPresent()) {
+        //     return omega;
+        // }
+        if (!useDetectionLock) { return omega; }
+
+        // final Note bestNote = bestNoteOpt.get();
+        // final double noteXOffset = bestNote.x - Note.W / 2.0;
+        
+        final double requestedAngularVelocity = noteLockPID.calculate(getHeading().getDegrees(), headingToLock.getDegrees());
+        return TorqueMath.constrain(requestedAngularVelocity, 1.5 * Math.PI);
     }
 
     /**
      * Class representing a Note detected by an ObjDetector pipeline.
      */
     public static class Note extends Detectable {
-        public static final Note EMPTY = new Note("empty", 0, 0, 0);
+        public static final Note EMPTY = new Note("empty", 0, 0, 0, 0);
 
         public static final double F = 70, W = 640, D = 100;
 
         public final String name;
         public final double x;
         public final double angle;
+        public final double width;
 
         private static double calculateAngle(final double x) {
             return (x / (2 * W * D) - 0.5) * (2 * F - (D * F) / W);
@@ -580,13 +702,14 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
             final String name = det.get("name").asText("unknown");
             final double x = det.get("ctr_x").asDouble(0);
             final double confidence = det.get("conf").asDouble(0);
-            return new Note(name, x, 180, confidence);
+            final double width = det.get("width").asDouble(0);
+            return new Note(name, x, 180, confidence, width);
         }
 
         public static Note fromJSONRight(final JsonNode det) {
             final Note parsed = parseJSON(det);
-            final double angle = calculateAngle(parsed.x + W - D);
-            return new Note(parsed.name, parsed.x, angle, parsed.confidence);
+            final double angle = ((parsed.x - W/2.0) / W) * F;
+            return new Note(parsed.name, parsed.x, angle, parsed.confidence, parsed.width);
         }
 
         // public static Note fromJSONLeft(final JsonNode det) {
@@ -595,11 +718,12 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
         // return new Note(parsed.name, parsed.x, angle, parsed.confidence);
         // }
 
-        public Note(final String name, final double x, final double angle, final double confidence) {
+        public Note(final String name, final double x, final double angle, final double confidence, final double width) {
             this.name = name;
             this.x = x;
             this.angle = angle;
             this.confidence = confidence;
+            this.width = width;
         }
 
         public String toString() {

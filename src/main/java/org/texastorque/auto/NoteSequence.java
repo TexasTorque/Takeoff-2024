@@ -110,11 +110,21 @@ public class NoteSequence {
         return altEntry.getBoolean(false);
     }
 
-    public static record LocationPair(Location start, Location end) {
+    public static class LocationPair {
+        public final Location start;
+        public final Location end;
+        public boolean fragmented = false;
+
         public static final LocationPair NONE = new LocationPair(StartPoint.NONE, StartPoint.NONE);
 
+        public LocationPair(Location start, Location end) {
+            this.start = start;
+            this.end = end;
+        }
+
         private String getPathName() {
-            return "go_" + start.get() + "_to_" + end.get();
+            final String prefix = fragmented ? "ee" : "go";
+            return prefix + "_" + start.get() + "_to_" + end.get();
         } 
         /**
          * Calculates the name of and loads the path that will take the robot from the
@@ -189,5 +199,15 @@ public class NoteSequence {
      */
     public boolean hasNext() {
         return pairs.size() > 0;
+    }
+
+    public void makeNextFragmented() {
+        if (pairs.size() <= 0) {
+            return;
+        }
+
+        final LocationPair first = pairs.get(0);
+        first.fragmented = true;
+        pairs.set(0, first);
     }
 }

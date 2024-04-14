@@ -22,7 +22,7 @@ public class DeployIntakeWhen extends TorqueSequence implements Subsystems {
     private Timer timer = new Timer();
     private boolean isCenterLine = true;
 
-    public DeployIntakeWhen(final BooleanSupplier when) {
+    public DeployIntakeWhen(final BooleanSupplier when, final BooleanSupplier endedEarly) {
         addBlock(new TorqueRun(() -> isCenterLine = !when.getAsBoolean()));
         addBlock(new TorqueWaitUntil(when));
         addBlock(new TorqueRun(() -> timer.restart()));
@@ -39,7 +39,7 @@ public class DeployIntakeWhen extends TorqueSequence implements Subsystems {
         addBlock(shooter.yieldGateState(Shooter.GateState.IN));
 
         if (RobotBase.isReal()) {
-            addBlock(new TorqueWaitUntil(() -> shooter.hasNote() || timer.get() > 3));
+            addBlock(new TorqueWaitUntil(() -> shooter.hasNote() || timer.get() > 3 || endedEarly.getAsBoolean()));
         } else {
             addBlock(new TorqueWaitTime(2));
         }
