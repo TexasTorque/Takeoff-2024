@@ -362,7 +362,7 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
             // offseason.
             // headingToLock = Rotation2d.fromDegrees(getHeading().getDegrees() -
             // (note.angle + 5) * 2); // old
-            headingToLock = Rotation2d.fromDegrees(getHeading().getDegrees() - note.angle);
+            headingToLock = Rotation2d.fromDegrees(getHeading().getDegrees() - (note.angle + 10));
 
             Debug.log("Heading to lock", headingToLock.getDegrees());
         }
