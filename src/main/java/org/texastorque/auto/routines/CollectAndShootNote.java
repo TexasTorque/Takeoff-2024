@@ -40,13 +40,17 @@ public class CollectAndShootNote extends TorqueSequence implements Subsystems {
     private int timesTried = 0;
 
     private boolean endsEarly() {
-        // if(!field.isXPast(perception.getPose(), 6)) return false;
-        if (!perception.isUsingDetectionLock()) return false;
-        if (deployIntakeRightAway) return false;
-        if (timesTried > 3) return false;
-        endedEarly = perception.hasNoCloseNotes();
-        timesTried++;
-        return endedEarly;
+        // if (!perception.isUsingDetectionLock())
+        // return false;
+        // if (deployIntakeRightAway)
+        // return false;
+        // if (timesTried > 3)
+        // return false;
+        // endedEarly = perception.hasNoCloseNotes();
+        // timesTried++;
+        // return endedEarly;
+        endedEarly = false;
+        return false;
     }
 
     public CollectAndShootNote(final NoteSequence noteSequence) {
@@ -58,30 +62,28 @@ public class CollectAndShootNote extends TorqueSequence implements Subsystems {
         addBlock(new TorqueRun(() -> isFarSide = noteSequence.peekNext().end.isFarSide()));
         // // Set paths that are "dangerous"
         // addBlock(new TorqueRun(() -> {
-        //     int start = noteSequence.peekNext().start().getID();
-        //     int end = noteSequence.peekNext().end().getID();
-        //     dangerous = (start == 40 && end == 30);
+        // int start = noteSequence.peekNext().start().getID();
+        // int end = noteSequence.peekNext().end().getID();
+        // dangerous = (start == 40 && end == 30);
         // }));
 
         log("Can Deploy Intake", () -> deployIntakeRightAway);
 
         log("Auto State", () -> "BEGIN PATH");
 
-
         // WARNING: THIS IS THE POP!!! -- any subsequent peeks will be for the next
         // note!
         addBlock(followPath(() -> noteSequence.popNext().getPath(), this::endsEarly),
                 new DeployIntakeWhen(
-                    () -> {
-                        return field.isXPast(perception.getPose(), 5.25) || deployIntakeRightAway || lastEndedEarly;
-                    }, 
-                    () -> endedEarly
-                ).command(),
+                        () -> {
+                            return field.isXPast(perception.getPose(), 5.25) || deployIntakeRightAway || lastEndedEarly;
+                        },
+                        () -> endedEarly).command(),
                 new NoteAlign(
-                    () -> !deployIntakeRightAway,
-                    () -> {
-                        return deployIntakeRightAway || field.isXPast(perception.getPose(), 6) || lastEndedEarly;
-                    }).command());
+                        () -> !deployIntakeRightAway,
+                        () -> {
+                            return deployIntakeRightAway || field.isXPast(perception.getPose(), 6) || lastEndedEarly;
+                        }).command());
 
         log("isFarSide", () -> isFarSide);
 

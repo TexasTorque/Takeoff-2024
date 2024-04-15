@@ -113,7 +113,7 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
 
     // a position that we could be at in the future that we want to
     // run computations for.
-    private Pose2d futureShootingPose =new Pose2d();
+    private Pose2d futureShootingPose = new Pose2d();
 
     public static final String SHTR_R = "SHTR_R", SHTR_L = "SHTR_L", INTK_R = "INTK_R";
 
@@ -358,12 +358,14 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
         Debug.log("Best Detection", note.toString());
 
         if (useDetectionLock && !usingDetectionLock) {
-            // Weird hack -- just trust. Seasons almost over... do it differently in the offseason.
-            headingToLock = Rotation2d.fromDegrees(getHeading().getDegrees() - (note.angle + 5) * 2);
-
+            // Weird hack -- just trust. Seasons almost over... do it differently in the
+            // offseason.
+            // headingToLock = Rotation2d.fromDegrees(getHeading().getDegrees() -
+            // (note.angle + 5) * 2); // old
+            headingToLock = Rotation2d.fromDegrees(getHeading().getDegrees() - note.angle);
 
             Debug.log("Heading to lock", headingToLock.getDegrees());
-        }  
+        }
         if (!useDetectionLock && usingDetectionLock) {
             headingToLock = Rotation2d.fromDegrees(0);
         }
@@ -602,20 +604,18 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
     public Optional<Note> getBestDetection() {
 
         // return ObjDetector.getBestDetection(getNoteDetections());
-            // double smallestAngle = 1000;
-            // Note bestNote = null;
-            // for (final Note note : getNoteDetections()) {
-            //     final double angle = Math.abs(note.angle);
-            //     if (angle < smallestAngle) {
-            //         smallestAngle = note.angle;
-            //         bestNote = note;
-            //     }
-            // }
-            // return bestNote == null ? Optional.empty() : Optional.of(bestNote);
+        // double smallestAngle = 1000;
+        // Note bestNote = null;
+        // for (final Note note : getNoteDetections()) {
+        // final double angle = Math.abs(note.angle);
+        // if (angle < smallestAngle) {
+        // smallestAngle = note.angle;
+        // bestNote = note;
+        // }
+        // }
+        // return bestNote == null ? Optional.empty() : Optional.of(bestNote);
 
         final List<Note> notes = getNoteDetections();
-
-    
 
         // Strat -- smallest angle of best 2 conf:
 
@@ -624,18 +624,17 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
         // final List<Note> bestConf = new ArrayList<>();
 
         // for (int i = 0; i < Math.min(notes.size(), 2) ; i++) {
-        //     bestConf.add(notes.get(i));
+        // bestConf.add(notes.get(i));
         // }
-
 
         // double smallestAngle = 1000;
         // Note bestNote = null;
         // for (final Note note : bestConf) {
-        //     final double angle = Math.abs(note.angle);
-        //     if (angle < smallestAngle) {
-        //         smallestAngle = angle;
-        //         bestNote = note;
-        //     }
+        // final double angle = Math.abs(note.angle);
+        // if (angle < smallestAngle) {
+        // smallestAngle = angle;
+        // bestNote = note;
+        // }
         // }
         // return bestNote == null ? Optional.empty() : Optional.of(bestNote);
 
@@ -644,7 +643,7 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
         double bestWidth = 0;
         Note bestNote = null;
         for (final Note note : notes) {
-            if (note.width < bestWidth) {
+            if (note.width > bestWidth) {
                 bestWidth = note.width;
                 bestNote = note;
             }
@@ -654,30 +653,38 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
 
     private boolean useDetectionLock = false, usingDetectionLock = false, noCloseNotes = false;
     private Rotation2d headingToLock = Rotation2d.fromDegrees(0);
+
     public void useDetectionLock(boolean use) {
         useDetectionLock = use;
     }
+
     public boolean isUsingDetectionLock() {
         return useDetectionLock;
     }
+
     public boolean hasNoCloseNotes() {
         return noCloseNotes;
     }
 
-    private final PIDController noteLockPID = new PIDController(.15, 0, 0);
+    // private final PIDController noteLockPID = new PIDController(.15, 0, 0); //
+    // old
+    private final PIDController noteLockPID = new PIDController(.1, 0, 0);
 
     public double omegaOverrider(final double omega) {
-       
+
         // final Optional<Note> bestNoteOpt = perception.getBestDetection();
         // if (!bestNoteOpt.isPresent()) {
-        //     return omega;
+        // return omega;
         // }
-        if (!useDetectionLock) { return omega; }
+        if (!useDetectionLock) {
+            return omega;
+        }
 
         // final Note bestNote = bestNoteOpt.get();
         // final double noteXOffset = bestNote.x - Note.W / 2.0;
-        
-        final double requestedAngularVelocity = noteLockPID.calculate(getHeading().getDegrees(), headingToLock.getDegrees());
+
+        final double requestedAngularVelocity = noteLockPID.calculate(getHeading().getDegrees(),
+                headingToLock.getDegrees());
         return TorqueMath.constrain(requestedAngularVelocity, 1.5 * Math.PI);
     }
 
@@ -708,7 +715,7 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
 
         public static Note fromJSONRight(final JsonNode det) {
             final Note parsed = parseJSON(det);
-            final double angle = ((parsed.x - W/2.0) / W) * F;
+            final double angle = ((parsed.x - W / 2.0) / W) * F;
             return new Note(parsed.name, parsed.x, angle, parsed.confidence, parsed.width);
         }
 
@@ -718,7 +725,8 @@ public final class Perception extends TorqueStatorSubsystem<Perception.State> im
         // return new Note(parsed.name, parsed.x, angle, parsed.confidence);
         // }
 
-        public Note(final String name, final double x, final double angle, final double confidence, final double width) {
+        public Note(final String name, final double x, final double angle, final double confidence,
+                final double width) {
             this.name = name;
             this.x = x;
             this.angle = angle;
