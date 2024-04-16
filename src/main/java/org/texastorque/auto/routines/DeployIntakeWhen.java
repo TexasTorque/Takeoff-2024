@@ -47,6 +47,7 @@ public class DeployIntakeWhen extends TorqueSequence implements Subsystems {
         log("Auto State", () -> "WARMING UP");
 
         addBlock(shooter.yieldGateState(GateState.OFF));
+        addBlock(intake.yieldState(Intake.State.AUTO_PRIME));
 
         addBlock(new TorqueRun(() -> perception.setFutureShootingPose(
                 !isCenterLine ? TorqueFollowPath.getEndingPositionForCurrentlyLoadedPath()
@@ -56,7 +57,5 @@ public class DeployIntakeWhen extends TorqueSequence implements Subsystems {
         )));
 
         addBlock(shooter.yieldState(Shooter.State.FUTURE_SMART));
-
-        addBlock(intake.yieldState(Intake.State.AUTO_PRIME));
     }
 }
