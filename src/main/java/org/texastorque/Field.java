@@ -114,6 +114,10 @@ public final class Field {
         return Rotation2d.fromDegrees(isRedAlliance ? 46 : -46);
     }
 
+    public Rotation2d getAngleToLaserUnderStage(final Pose2d curentPose) {
+        return Rotation2d.fromDegrees(isRedAlliance ? 28 : -28);
+    }
+
     public boolean isReadyToLaser(final Pose2d currentPose) {
         return false;
     }

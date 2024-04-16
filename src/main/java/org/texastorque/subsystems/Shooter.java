@@ -92,7 +92,8 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         LAYUP(new Shot(4200, Rotation2d.fromDegrees(64)), new Shot(4200, Rotation2d.fromDegrees(124)), true),
 
         // Used for tossing a note across the field
-        LASER(new Shot(4000, Rotation2d.fromDegrees(54)), new Shot(3000, Rotation2d.fromDegrees(54)), false),
+        LASER(new Shot(4000, Rotation2d.fromDegrees(54)), false),
+        LASER_UNDER_STAGE(new Shot(4000, Rotation2d.fromDegrees(54)), false),
 
         MID(new Shot(5400, Rotation2d.fromDegrees(32)), true),
         SAFEZONE(new Shot(4600, Rotation2d.fromDegrees(37)), new Shot(4300, Rotation2d.fromDegrees(148)), true),
@@ -533,7 +534,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
             // If the intake is down all the way and out of the shooters path, then we can
             // set
             // our own state to intake mode, and make sure that the gate is running inwards.
-            if (intake.isAtState() && !hasNote()) {
+            if (!hasNote()) {
                 desiredState = State.INTAKE;
                 gateState = GateState.IN;
                 // Otherwise (we do have a note), we want to return back to our stow position
@@ -555,7 +556,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
             desiredState = State.AMP_INIITAL;
 
         // Current limit handling.
-        if (emergencyCurrentLimit || wantsState(State.AMP)) {
+        if (emergencyCurrentLimit || wantsState(State.AMP) || wantsState(State.BABYBIRD)) {
             setFlywheelCurrentLimits(90);
         } else if (mode.isAuto()) {
             setFlywheelCurrentLimits(70);

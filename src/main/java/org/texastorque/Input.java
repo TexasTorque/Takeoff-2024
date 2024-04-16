@@ -25,7 +25,7 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
             runDumbIntake, runOuttake, speakerSmartShot, speakerLayup, speakerSafeZone, amp, trap,
             deaccelerateClick, deaccelerateHold, manualGateOut, manualGateIn, babyBird, speakerMid,
             shooterIdle, shooterShift, climbUp, climbDown, climbLeftUp, climbRightUp, climbLeftDown, climbRightDown,
-            shooterClimbMode, laser, operatorClimbUp, debugMode, releaseTrap, pullTrapBack, runAi;
+            shooterClimbMode, laser, operatorClimbUp, debugMode, releaseTrap, pullTrapBack, laserUnderStage;
 
     private Input() {
         driver = new TorqueController(0, 0.1);
@@ -58,7 +58,7 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
                 () -> operator.isLeftCenterButtonDown() && !operator.isRightCenterButtonDown());
         laser = new TorqueBoolSupplier(operator::isXButtonDown);
 
-        babyBird = new TorqueBoolSupplier(operator::isRightBumperDown);
+        babyBird = new TorqueBoolSupplier(driver::isXButtonDown);
 
         climbUp = new TorqueBoolSupplier(
                 () -> driver.isDPADUpDown() || (driver.isRightBumperDown() && driver.isLeftBumperDown()));
@@ -83,7 +83,7 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
         debugMode = new TorqueToggleSupplier(
                 () -> operator.isLeftCenterButtonDown() && operator.isRightCenterButtonDown());
 
-        runAi = new TorqueToggleSupplier(operator::isRightStickClickDown);
+        laserUnderStage = new TorqueBoolSupplier(operator::isRightBumperDown);
     }
 
     @Override
@@ -93,8 +93,6 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
         updateShooter();
         updateClimber();
         updateRumble();
-
-        // perception.useAI(runAi.get());
     }
 
     public void updateIntake() {
@@ -147,6 +145,8 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
 
         if (shooterClimbMode.get())
             pullTrapBack.onTrue(() -> shooter.setState(Shooter.State.RELEASE_TRAP_HOOK));
+
+        laserUnderStage.onTrue(() -> shooter.setState(Shooter.State.LASER_UNDER_STAGE));
     }
 
     public void updateDrivebase() {

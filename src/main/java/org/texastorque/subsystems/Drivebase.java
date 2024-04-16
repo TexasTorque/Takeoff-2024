@@ -190,7 +190,7 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
         headingLockPID.enableContinuousInput(0, 360);
 
 
-        offsetTargetingPID = new PIDController(.00088, 0, 0);
+        offsetTargetingPID = new PIDController(.0009, 0, 0);
 
         SmartDashboard.putNumber("Align PID P", 0);
         // maybe make continuous input to something idk?
@@ -276,7 +276,7 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
         // offsetTargetingPID.setP(SmartDashboard.getNumber("Align PID P", 0));
 
         if ((shooter.wantsState(Shooter.State.SMART) || shooter.wantsState(Shooter.State.FUTURE_SMART_ALIGN)
-                || shooter.wantsState(Shooter.State.LASER))
+                || shooter.wantsState(Shooter.State.LASER) || shooter.wantsState(Shooter.State.LASER_UNDER_STAGE))
                 // ^ these are the 3 states we want to align in
                 && !shooter.isShift() && !shooter.inDebugMode()) {
             // ^ if we are in shift or debug mode then we dont want to align
@@ -329,7 +329,11 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
             if (shooter.wantsState(Shooter.State.LASER) && !shooter.isShift()) {
                 requestedAngularVelocity = headingLockPID.calculate(perception.getHeading().getDegrees(),
                         field.getAngleToLaser(perception.getPose()).getDegrees());
-            } else if (fusedTargetOffset.isPresent() && mode.isTeleop()) {
+            } else if (shooter.wantsState(Shooter.State.LASER_UNDER_STAGE)) {
+                 requestedAngularVelocity = headingLockPID.calculate(perception.getHeading().getDegrees(),
+                        field.getAngleToLaserUnderStage(perception.getPose()).getDegrees()); 
+            }
+            else if (fusedTargetOffset.isPresent() && mode.isTeleop()) {
                 // We see the correct targets, we can lock our shooter to that target.
                 requestedAngularVelocity = offsetTargetingPID.calculate(fusedTargetOffset.get(), 0);
             } else {
