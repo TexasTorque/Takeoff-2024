@@ -25,7 +25,7 @@ public final class Field {
     private static volatile Field instance;
 
     public static final double FIELD_LENGTH = 16.541, FIELD_WIDTH = Units.inchesToMeters(315.5), SPEAKER_Y = 5.55,
-            SPEAKER_X = 0, ANGLE_TO_LASER = 60, ALLIANCE_WING_LENGTH = 6, FAR_SIDE_SPEAKER_Y = 5.2;
+            SPEAKER_X = 0, ANGLE_TO_LASER = 60, ALLIANCE_WING_LENGTH = 6, FAR_SIDE_SPEAKER_Y = 5.2, LASER_ADJUSTMENT = .6, LASER_SETPOINT = 46 * LASER_ADJUSTMENT, LASER_UNDER_STAGE = 28 * LASER_ADJUSTMENT;
 
     public Pose2d speakerPose = new Pose2d();
     public Pose2d passingZone = new Pose2d();
@@ -111,11 +111,11 @@ public final class Field {
     }
 
     public Rotation2d getAngleToLaser(final Pose2d curentPose) {
-        return Rotation2d.fromDegrees(isRedAlliance ? 46 : -46);
+        return Rotation2d.fromDegrees(isRedAlliance ? LASER_SETPOINT : -LASER_SETPOINT);
     }
 
     public Rotation2d getAngleToLaserUnderStage(final Pose2d curentPose) {
-        return Rotation2d.fromDegrees(isRedAlliance ? 28 : -28);
+        return Rotation2d.fromDegrees(isRedAlliance ? LASER_UNDER_STAGE : -LASER_UNDER_STAGE);
     }
 
     public boolean isReadyToLaser(final Pose2d currentPose) {

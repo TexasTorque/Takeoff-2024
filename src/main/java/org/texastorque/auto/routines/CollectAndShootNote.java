@@ -38,6 +38,7 @@ public class CollectAndShootNote extends TorqueSequence implements Subsystems {
     private boolean endedEarly = false;
     private boolean lastEndedEarly = false;
     private int timesTried = 0;
+    private boolean useAI = false;
 
     private boolean endsEarly() {
         // if (!perception.isUsingDetectionLock())
@@ -60,6 +61,10 @@ public class CollectAndShootNote extends TorqueSequence implements Subsystems {
         // Peek the next note pair and collect some data on it
         addBlock(new TorqueRun(() -> deployIntakeRightAway = !noteSequence.peekNext().end.isMidline()));
         addBlock(new TorqueRun(() -> isFarSide = noteSequence.peekNext().end.isFarSide()));
+        addBlock(new TorqueRun(() -> {
+            int note = noteSequence.peekNext().end.getID();
+            useAI = note == 10 || note == 30 || note == 40;
+        }));
         // // Set paths that are "dangerous"
         // addBlock(new TorqueRun(() -> {
         // int start = noteSequence.peekNext().start().getID();
@@ -80,7 +85,7 @@ public class CollectAndShootNote extends TorqueSequence implements Subsystems {
                         },
                         () -> endedEarly).command(),
                 new NoteAlign(
-                        () -> !deployIntakeRightAway,
+                        () -> useAI,
                         () -> {
                             return deployIntakeRightAway || field.isXPast(perception.getPose(), 6) || lastEndedEarly;
                         }).command());
