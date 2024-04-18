@@ -88,7 +88,7 @@ public class Climber extends TorqueStatorSubsystem<Climber.State> implements Sub
         double rightSpeed = desiredState.rightVolts;
 
         left.setVolts(leftSpeed);
-        right.setVolts(rightSpeed);
+        right.setVolts(-rightSpeed);
 
         Debug.log("Climb servo state", servoState.toString());
 

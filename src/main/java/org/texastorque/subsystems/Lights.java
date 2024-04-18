@@ -96,15 +96,15 @@ public final class Lights extends TorqueStatelessSubsystem implements Subsystems
     public static final double HERTZ = 15;
 
     // Leave all these combinations
-    private LightAction rainbow = new Rainbow(), 
+    private LightAction rainbow = new Rainbow(),
 
-        red = new Solid(() -> Color.kRed), 
-      
-        green = new Solid(() -> Color.kGreen),
-        blinkGreen = new Blink(() -> Color.kGreen, HERTZ),
+            red = new Solid(() -> Color.kRed),
 
-        purple = new Solid(() -> Color.kPurple),
-        blinkPurple = new Blink(() -> Color.kPurple, HERTZ);
+            green = new Solid(() -> Color.kGreen),
+            blinkGreen = new Blink(() -> Color.kGreen, HERTZ),
+
+            purple = new Solid(() -> Color.kPurple),
+            blinkPurple = new Blink(() -> Color.kPurple, HERTZ);
 
     private Lights() {
         lights = new ArrayList<>();
@@ -146,23 +146,22 @@ public final class Lights extends TorqueStatelessSubsystem implements Subsystems
     public final LightAction getColor(final TorqueMode mode) {
         // Not prsent: first we check if we are in debug mode and blink yellow
 
-        // We must check the vision status of vision and return the 
+        // We must check the vision status of vision and return the
         // failure conditions if necessary
         // final Status visionStatus = perception.getMostFatalVisionStatus();
         // if (visionStatus == Status.STALE) {
-        //     return blinkYellow;
-        // } 
-        // if (visionStatus == Status.DOWN) {
-        //     return blinkRed;
+        // return blinkYellow;
         // }
-
+        // if (visionStatus == Status.DOWN) {
+        // return blinkRed;
+        // }
 
         // We go rainbow if we are in climb mode
         if (Input.getInstance().isClimbing()) {
             return rainbow;
         }
 
-        if (perception.isUsingDetectionLock()) {
+        if (mode.isAuto() && perception.isUsingDetectionLock()) {
             return blinkPurple;
         }
 

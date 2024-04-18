@@ -81,8 +81,8 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         // 1500 still high on soft
         // 1400 decent on soft
         // 1300 too low on hard
-        AMP(new Shot(1450, Rotation2d.fromDegrees(87)), false), // 80.7 <-- real angle
-        AMP_INIITAL(new Shot(1450, Rotation2d.fromDegrees(125)), false),
+        AMP(new Shot(1650, Rotation2d.fromDegrees(87)), new Shot(1450, Rotation2d.fromDegrees(87)), false), // 80.7 <-- real angle
+        AMP_INIITAL(new Shot(1650, Rotation2d.fromDegrees(125)), false),
         LEAVE_AMP(new Shot(0, Rotation2d.fromDegrees(115)), false),
         CLIMB(new Shot(0, Rotation2d.fromDegrees(96)), false),
         TRAP(new Shot(1850, Rotation2d.fromDegrees(68)), false),
@@ -96,7 +96,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         LASER_UNDER_STAGE(new Shot(4000, Rotation2d.fromDegrees(54)), false),
 
         MID(new Shot(5400, Rotation2d.fromDegrees(32)), true),
-        SAFEZONE(new Shot(4600, Rotation2d.fromDegrees(37)), new Shot(4300, Rotation2d.fromDegrees(148)), true),
+        SAFEZONE(new Shot(4600, Rotation2d.fromDegrees(39)), new Shot(4300, Rotation2d.fromDegrees(148)), true),
         RELEASE_TRAP_HOOK(new Shot(0, Rotation2d.fromDegrees(124)), false),
 
         // Future and Smart shots are special.
@@ -151,7 +151,8 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
      * Chute state is a specialty state used for the flap motor.
      */
     public static enum ChuteState implements TorqueState {
-        IN(Rotation2d.fromDegrees(170)), OUT(Rotation2d.fromDegrees(343)), TRAP(Rotation2d.fromDegrees(200)), HIGH(Rotation2d.fromDegrees(360));
+        IN(Rotation2d.fromDegrees(170)), OUT(Rotation2d.fromDegrees(343)), TRAP(Rotation2d.fromDegrees(200)),
+        HIGH(Rotation2d.fromDegrees(360));
 
         private Rotation2d position;
 
@@ -353,6 +354,12 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
             distances[i] = entry.getKey();
             rpms[i] = entry.getValue().bottomVelocity;
             angles[i] = entry.getValue().angle.getDegrees();
+
+            // This is a hack for tuning
+            if (distances[i] > 2.5) {
+                angles[i] += 4;
+            }
+
             i++;
         }
 
@@ -470,7 +477,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
      * If the shooter wants to climb
      */
     public boolean wantsToClimb() {
-        return wantsState(State.CLIMB) || wantsState(State.TRAP);
+        return wantsState(State.CLIMB) || wantsState(State.TRAP) || wantsState(State.RELEASE_TRAP_HOOK);
     }
 
     public boolean isChuteReadyForAmp() {
@@ -499,12 +506,12 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
                 && flywheelTop.getCurrent() >= FLYWHEEL_INTAKE_CURRENT_SPIKE;
     }
 
-
     public boolean escapeAmp = false;
 
     public void setEscapeAmp(boolean leave) {
         escapeAmp = leave;
     }
+
     @Override
     public void update(TorqueMode mode) {
         // *** SMARTDASHBOARD ENTRIES FOR DEBUG PURPOSES ***
@@ -525,7 +532,6 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         Debug.log("Is Aligned", getIsAligned());
         Debug.log("Drivebase has been aligned", drivebase.hasBeenAligned());
         Debug.log("Chute Degrees", getChuteEncoderDegrees());
-        
 
         // Handle intaking. If we are in teleop and the intake says that we are
         // intaking, then
@@ -658,7 +664,8 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         if (getRotaryEncoderDegrees() >= State.AMP_INIITAL.shot.angle.getDegrees() + 3)
             chuteState = ChuteState.IN;
 
-        if (wantsState(State.TRAP)) chuteState = ChuteState.TRAP;
+        if (wantsState(State.TRAP))
+            chuteState = ChuteState.TRAP;
 
         if (setAmpRampHigh) {
             chuteState = ChuteState.HIGH;
@@ -676,7 +683,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
                         chuteFF.calculate(getChuteSetpointActualRadians(chuteState.position.getDegrees()),
                                 0),
                         getAmpRampVolts()));
-                        
+
         double rotaryVolts = rotaryPID.calculate(getRotaryEncoderDegrees(), shot.angle.getDegrees())
                 + rotaryFF.calculate(shot.angle.getRadians(), 0);
 
@@ -710,8 +717,10 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
     }
 
     public double getAmpRampVolts() {
-        if (wantsState(State.TRAP)) return 1;
-        else return 6;
+        if (wantsState(State.TRAP))
+            return 1;
+        else
+            return 6;
     }
 
     /**
