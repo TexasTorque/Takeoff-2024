@@ -81,11 +81,13 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         // 1500 still high on soft
         // 1400 decent on soft
         // 1300 too low on hard
-        AMP(new Shot(1650, Rotation2d.fromDegrees(87)), new Shot(1450, Rotation2d.fromDegrees(87)), false), // 80.7 <-- real angle
-        AMP_INIITAL(new Shot(1650, Rotation2d.fromDegrees(125)), false),
+        AMP(new Shot(1600, Rotation2d.fromDegrees(87)), new Shot(1400, Rotation2d.fromDegrees(87)), false), // 80.7 <--
+                                                                                                            // real
+                                                                                                            // angle
+        AMP_INIITAL(new Shot(1600, Rotation2d.fromDegrees(125)), new Shot(1400, Rotation2d.fromDegrees(125)), false),
         LEAVE_AMP(new Shot(0, Rotation2d.fromDegrees(115)), false),
         CLIMB(new Shot(0, Rotation2d.fromDegrees(96)), false),
-        TRAP(new Shot(1850, Rotation2d.fromDegrees(68)), false),
+        TRAP(new Shot(2100, Rotation2d.fromDegrees(68)), false),
 
         // Layup, black line, and safe zone backup shots. These have reversable "shift
         // shots"
@@ -180,7 +182,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
      * RPM regression is 1st order. y ~ x
      * Angle regression is inv. second order y ~ x^-2
      */
-    private final TorquePolyRegression rpmRegression, angleRegression;
+    private TorquePolyRegression rpmRegression, angleRegression;
 
     /**
      * Timers used for various functionality:
@@ -315,6 +317,19 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
 
         // *** CONFIGURE SHOOTER REGRESSION DATAPOINTS ***
 
+        setupRegression(true);
+
+        // *** SMARTDASHBOARD ENTRIES FOR DEBUG MODE ***
+
+        SmartDashboard.putNumber("Shot Velocity", 0);
+        SmartDashboard.putNumber("Shot Angle", 0);
+        SmartDashboard.putNumber("Rotary Max Volts", 8);
+        SmartDashboard.putNumber("Amp Ramp Position", 170);
+        SmartDashboard.putNumber("Amp Ramp Volts", 6);
+    }
+
+    public void setupRegression(boolean isAuto) {
+
         final TreeMap<Double, Shot> shotTable = new TreeMap<Double, Shot>();
 
         shotTable.put(1.19, new Shot(4200, Rotation2d.fromDegrees(64)));
@@ -357,7 +372,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
 
             // This is a hack for tuning
             if (distances[i] > 2.5) {
-                angles[i] += 3;
+                angles[i] += isAuto ? 0 : 3;
             }
 
             i++;
@@ -365,18 +380,11 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
 
         rpmRegression = new TorquePolyRegression(distances, rpms, 1);
         angleRegression = new TorquePolyRegression(distances, angles, 2);
-
-        // *** SMARTDASHBOARD ENTRIES FOR DEBUG MODE ***
-
-        SmartDashboard.putNumber("Shot Velocity", 0);
-        SmartDashboard.putNumber("Shot Angle", 0);
-        SmartDashboard.putNumber("Rotary Max Volts", 8);
-        SmartDashboard.putNumber("Amp Ramp Position", 170);
-        SmartDashboard.putNumber("Amp Ramp Volts", 6);
     }
 
     @Override
     public void initialize(TorqueMode mode) {
+        setupRegression(mode.isAuto());
     }
 
     /** Does the shooter have a note inside? */
@@ -616,8 +624,9 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
             } else if (mode.isAuto()) {
                 // If we are in auto then we just need to check that we are not in pathing mode.
 
-                final boolean aligned = drivebase.hasBeenAligned()
-                        || !drivebase.wantsState(Drivebase.State.ALIGN_TO_ANGLE);
+                // final boolean aligned = drivebase.hasBeenAligned()
+                // || !drivebase.wantsState(Drivebase.State.ALIGN_TO_ANGLE);
+                boolean aligned = true;
                 if (!drivebase.wantsState(Drivebase.State.PATHING) && aligned) {
                     gateState = GateState.OUT;
                 }

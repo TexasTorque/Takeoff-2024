@@ -56,15 +56,18 @@ public class CollectAndShootNote extends TorqueSequence implements Subsystems {
 
     public CollectAndShootNote(final NoteSequence noteSequence) {
 
+        Debug.log("use ai", false);
+
         addBlock(new TorqueRun(() -> lastEndedEarly = noteSequence.peekNext().fragmented));
 
         // Peek the next note pair and collect some data on it
         addBlock(new TorqueRun(() -> deployIntakeRightAway = !noteSequence.peekNext().end.isMidline()));
         addBlock(new TorqueRun(() -> isFarSide = noteSequence.peekNext().end.isFarSide()));
         addBlock(new TorqueRun(() -> {
-            int note = noteSequence.peekNext().end.getID();
-            useAI = note == 10 || note == 30 || note == 40;
+            useAI = noteSequence.peekNext().end.useAI();
+            Debug.log("use ai", useAI);
         }));
+
         // // Set paths that are "dangerous"
         // addBlock(new TorqueRun(() -> {
         // int start = noteSequence.peekNext().start().getID();

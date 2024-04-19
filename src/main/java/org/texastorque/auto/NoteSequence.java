@@ -9,10 +9,9 @@ import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.networktables.NetworkTableEntry;
 import edu.wpi.first.networktables.NetworkTableInstance;
 
-
 /**
  * A NoteSequence is a list of pairs of locations to describe all the little
- * sub paths that an auto can take. 
+ * sub paths that an auto can take.
  * 
  * Note indexes work as so. The first three notes that are placed inside the
  * alliance wing
@@ -26,12 +25,25 @@ import edu.wpi.first.networktables.NetworkTableInstance;
  * Adapative is super top secret, email <jus@justusl.com>
  */
 public class NoteSequence {
-    
+
     public static interface Location {
         public String get();
-        public default boolean isMidline() { return false; }
-        public default boolean isFarSide() { return false; }
-        public default int getID() { return 0; }
+
+        public default boolean isMidline() {
+            return false;
+        }
+
+        public default boolean isFarSide() {
+            return false;
+        }
+
+        public default boolean useAI() {
+            return false;
+        }
+
+        public default int getID() {
+            return 0;
+        }
     }
 
     public static enum StartPoint implements Location {
@@ -45,7 +57,9 @@ public class NoteSequence {
         FAR,
         DASH;
 
-        public String get() { return toString(); }
+        public String get() {
+            return toString();
+        }
     }
 
     public static enum NotePoint implements Location {
@@ -62,11 +76,30 @@ public class NoteSequence {
         N_50(50);
 
         private final int id;
-        private NotePoint(int id) { this.id = id; }
-        public String get() { return "" + id; }
-        public boolean isMidline() { return id >= 10; }
-        public boolean isFarSide() { return id >= 20; } 
-        public int getId() { return id; }
+
+        private NotePoint(int id) {
+            this.id = id;
+        }
+
+        public String get() {
+            return "" + id;
+        }
+
+        public boolean isMidline() {
+            return id >= 10;
+        }
+
+        public boolean isFarSide() {
+            return id >= 20;
+        }
+
+        public boolean useAI() {
+            return id == 10 || id == 30 || id == 40;
+        }
+
+        public int getId() {
+            return id;
+        }
 
         @Override
         public String toString() {
@@ -86,17 +119,29 @@ public class NoteSequence {
         N_40_OR_50(50, 40);
 
         private final int def, alt;
+
         private Adapative(int def, int alt) {
             this.def = def;
             this.alt = alt;
         }
+
         public String get() {
             if (isAlternateRequested())
                 return "" + alt;
             return "" + def;
         }
-        public boolean isMidline() { return true; }
-        public boolean isFarSide() { return def == 40 || def == 50 || alt == 40 || alt == 50; }
+
+        public boolean isMidline() {
+            return true;
+        }
+
+        public boolean isFarSide() {
+            return def == 40 || def == 50 || alt == 40 || alt == 50;
+        }
+
+        public boolean useAI() {
+            return false;
+        }
 
         @Override
         public String toString() {
@@ -104,7 +149,8 @@ public class NoteSequence {
         }
     }
 
-    private static final NetworkTableEntry altEntry = NetworkTableInstance.getDefault().getTable("toast").getEntry("do_alt");
+    private static final NetworkTableEntry altEntry = NetworkTableInstance.getDefault().getTable("toast")
+            .getEntry("do_alt");
 
     public static boolean isAlternateRequested() {
         return altEntry.getBoolean(false);
@@ -125,7 +171,8 @@ public class NoteSequence {
         private String getPathName() {
             final String prefix = fragmented ? "ee" : "go";
             return prefix + "_" + start.get() + "_to_" + end.get();
-        } 
+        }
+
         /**
          * Calculates the name of and loads the path that will take the robot from the
          * current note we are at to the next note in the sequence.
@@ -135,6 +182,7 @@ public class NoteSequence {
         public PathPlannerPath getPath() {
             return AutoManager.getInstance().getPath(getPathName());
         }
+
         /** Look at the first path and check the robots starting position. */
         public Pose2d getStartingPose() {
             return getPath().getPreviewStartingHolonomicPose();
@@ -142,7 +190,7 @@ public class NoteSequence {
 
         @Override
         public final boolean equals(final Object other) {
-            final LocationPair cast = (LocationPair)other;
+            final LocationPair cast = (LocationPair) other;
             return start.equals(cast.start) && end.equals(cast.end);
         }
     }
@@ -170,7 +218,7 @@ public class NoteSequence {
         return output;
     }
 
-   /**
+    /**
      * Get and remove the next note pair in the sequence.
      * 
      * @return The next note pair.
@@ -178,7 +226,7 @@ public class NoteSequence {
     public LocationPair popNext() {
         if (hasNext()) {
             return pairs.remove(0);
-        } 
+        }
         return LocationPair.NONE;
     }
 
@@ -190,7 +238,7 @@ public class NoteSequence {
     public LocationPair peekNext() {
         if (hasNext()) {
             return pairs.get(0);
-        } 
+        }
         return LocationPair.NONE;
     }
 
