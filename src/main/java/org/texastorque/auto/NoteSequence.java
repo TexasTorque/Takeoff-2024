@@ -94,7 +94,7 @@ public class NoteSequence {
         }
 
         public boolean useAI() {
-            return id == 10 || id == 30 || id == 40;
+            return id == 10 || id == 20 || id == 30 || id == 40;
         }
 
         public int getId() {
