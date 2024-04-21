@@ -372,7 +372,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
 
             // This is a hack for tuning
             if (distances[i] > 2.5) {
-                angles[i] += isAuto ? 0 : 3;
+                angles[i] += isAuto ? 2 : 3;
             }
 
             i++;
