@@ -81,7 +81,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         // 1500 still high on soft
         // 1400 decent on soft
         // 1300 too low on hard
-        AMP(new Shot(1600, Rotation2d.fromDegrees(87)), new Shot(1450, Rotation2d.fromDegrees(87)), false), // 80.7 <--
+        AMP(new Shot(1550, Rotation2d.fromDegrees(87)), new Shot(1400, Rotation2d.fromDegrees(87)), false), // 80.7 <--
                                                                                                             // real
                                                                                                             // angle
         AMP_INIITAL(new Shot(1600, Rotation2d.fromDegrees(125)), new Shot(1450, Rotation2d.fromDegrees(125)), false),
