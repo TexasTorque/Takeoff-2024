@@ -94,8 +94,8 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         LAYUP(new Shot(4200, Rotation2d.fromDegrees(64)), new Shot(4200, Rotation2d.fromDegrees(124)), true),
 
         // Used for tossing a note across the field
-        LASER(new Shot(4000, Rotation2d.fromDegrees(54)), false),
-        LASER_UNDER_STAGE(new Shot(4000, Rotation2d.fromDegrees(54)), false),
+        LASER(new Shot(4500, Rotation2d.fromDegrees(54)), false),
+        LASER_UNDER_STAGE(new Shot(4500, Rotation2d.fromDegrees(54)), false),
 
         MID(new Shot(5400, Rotation2d.fromDegrees(32)), true),
         SAFEZONE(new Shot(4600, Rotation2d.fromDegrees(39)), new Shot(4300, Rotation2d.fromDegrees(148)), true),
