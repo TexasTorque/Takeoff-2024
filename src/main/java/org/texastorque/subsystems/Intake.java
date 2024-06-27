@@ -111,10 +111,28 @@ public class Intake extends TorqueStatorSubsystem<Intake.State> implements Subsy
 
         rollers.setVolts(desiredState.rollerSpeed);
 
+        double intakeFixVolts = 0;
+        if (desiredState == State.OFF) {
+            intakeFixVolts = -3;
+        } else if (desiredState == State.INTAKE) {
+            intakeFixVolts = 3;
+        } else if (desiredState == State.SMART_INTAKE) {
+            intakeFixVolts = 3;
+        } else if (desiredState == State.OUTTAKE) {
+            intakeFixVolts = 3;
+        } else if (desiredState == State.OUT) {
+            intakeFixVolts = 3;
+        }
+
         rotaryLeft.setVolts(rotaryLeftPID.calculate(rotaryLeft.getPosition(),
                 desiredState.rotaryPosition));
         rotaryRight.setVolts(rotaryRightPID.calculate(rotaryRight.getPosition(),
                 desiredState.rotaryPosition));
+
+        if (intakeFixVolts != 0) {
+            rotaryLeft.setVolts(intakeFixVolts);
+            rotaryRight.setVolts(intakeFixVolts);
+        }
 
         // If intake rotary breaks, comment ^ above rotary statements out and comment
         // below in.
