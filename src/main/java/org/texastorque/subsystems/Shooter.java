@@ -729,7 +729,7 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
         if (wantsState(State.TRAP))
             return 1;
         else
-            return 6;
+            return 3;
     }
 
     /**
