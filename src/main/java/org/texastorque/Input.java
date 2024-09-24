@@ -25,7 +25,7 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
             runDumbIntake, runOuttake, speakerSmartShot, speakerLayup, speakerSafeZone, amp, trap,
             deaccelerateClick, deaccelerateHold, manualGateOut, manualGateIn, babyBird, speakerMid,
             shooterIdle, shooterShift, climbUp, climbDown, climbLeftUp, climbRightUp, climbLeftDown, climbRightDown,
-            shooterClimbMode, laser, operatorClimbUp, debugMode, releaseTrap, pullTrapBack, laserUnderStage, kiddieMode;
+            shooterClimbMode, laser, operatorClimbUp, debugMode, releaseTrap, pullTrapBack, laserUnderStage;
 
     private Input() {
         driver = new TorqueController(0, 0.1);
@@ -85,7 +85,7 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
 
         laserUnderStage = new TorqueBoolSupplier(operator::isRightBumperDown);
 
-        kiddieMode = new TorqueBoolSupplier(driver::isDPADLeftDown);
+        kiddieMode = new TorqueToggleSupplier(driver::isDPADLeftDown);
     }
 
     @Override
@@ -95,6 +95,7 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
         updateShooter();
         updateClimber();
         updateRumble();
+        updateKiddieMode();
     }
 
     public void updateIntake() {
@@ -107,8 +108,6 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
     }
 
     public void updateShooter() {
-        kiddieMode.onTrue(() -> shooter.setFlywheelCurrentLimits(20))
-
         speakerLayup.onTrue(() -> shooter.setState(Shooter.State.LAYUP));
         speakerSafeZone.onTrue(() -> shooter.setState(Shooter.State.SAFEZONE));
         speakerMid.onTrue(() -> shooter.setState(Shooter.State.MID));
@@ -166,7 +165,9 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
         if (!deaccelerateHold.get() && !isClimbing())
             drivebase.speedSetting = Drivebase.SpeedSetting.FAST;
 
-        kiddieMode.onTrue(() -> drivebase.speedSetting = Drivebase.SpeedSetting.SLOW)
+        if (kiddieMode.get()) {
+            drivebase.speedSetting = Drivebase.SpeedSetting.SLOW;
+        }
 
         final double xVelocity = TorqueMath.scaledLinearDeadband(-driver.getLeftYAxis(), CONTROLLER_DEADBAND)
                 * Drivebase.MAX_VELOCITY;
@@ -222,6 +223,19 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
             operator.setRumbleRight(rumbleRight);
         }
 
+    }
+
+    public void updateKiddieMode() {
+        if (kiddieMode.get()) {
+            shooter.setKiddieMode(true);
+            shooter.setFlywheelCurrentLimits(20);
+            intake.setKiddieMode(true);
+            speakerSmartShot = false
+        }
+        else {
+            shooter.setKiddieMode(false)
+            intake.setKiddieMode(false)
+        }
     }
 
     public void setRumbleFor(final double duration) {

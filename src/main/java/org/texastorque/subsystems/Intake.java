@@ -25,6 +25,10 @@ public class Intake extends TorqueStatorSubsystem<Intake.State> implements Subsy
 
     private final static double ROTARY_DOWN = 14;
 
+    public void setKiddieMode(boolean kiddieMode) {
+        kiddieModeStatus = kiddieMode;
+    }
+
     public static enum State implements TorqueState {
         OFF(0, 0), INTAKE(ROTARY_DOWN, 10),
         SMART_INTAKE(ROTARY_DOWN, 10), OUTTAKE(ROTARY_DOWN, -10), AUTO_PRIME(6, 0), PRIME(4.5, 0),
@@ -34,6 +38,9 @@ public class Intake extends TorqueStatorSubsystem<Intake.State> implements Subsy
 
         private State(final double rotaryPosition, final double rollerSpeed) {
             this.rotaryPosition = rotaryPosition;
+            if (kiddieModeStatus) {
+                rollerSpeed = 5;
+            }
             this.rollerSpeed = rollerSpeed;
         }
     }

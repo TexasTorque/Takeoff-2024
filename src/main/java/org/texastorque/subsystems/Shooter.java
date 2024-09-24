@@ -37,12 +37,19 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Subsystems {
     private static volatile Shooter instance;
 
+    public void setKiddieMode(boolean kiddieMode) {
+        kiddieModeStatus = kiddieMode;
+    }
+
     /**
      * Shot record contains information about the shot that the shooter should
      * shoot.
      */
     public static record Shot(double topVelocity, double bottomVelocity, Rotation2d angle) {
         public Shot(double velocity, Rotation2d angle) {
+            if (kiddieModeStatus && velocity > 2000) {
+                velocity = 2000;
+            }
             this(velocity, velocity, angle);
         }
 
