@@ -24,6 +24,7 @@ public class Intake extends TorqueStatorSubsystem<Intake.State> implements Subsy
     private static volatile Intake instance;
 
     private final static double ROTARY_DOWN = 14;
+    private static boolean kiddieModeStatus;
 
     public void setKiddieMode(boolean kiddieMode) {
         kiddieModeStatus = kiddieMode;
@@ -36,7 +37,7 @@ public class Intake extends TorqueStatorSubsystem<Intake.State> implements Subsy
 
         public final double rotaryPosition, rollerSpeed;
 
-        private State(final double rotaryPosition, final double rollerSpeed) {
+        private State(final double rotaryPosition, double rollerSpeed) {
             this.rotaryPosition = rotaryPosition;
             if (kiddieModeStatus) {
                 rollerSpeed = 5;

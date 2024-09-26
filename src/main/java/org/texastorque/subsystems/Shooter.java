@@ -36,6 +36,7 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
  */
 public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Subsystems {
     private static volatile Shooter instance;
+    private static boolean kiddieModeStatus;
 
     public void setKiddieMode(boolean kiddieMode) {
         kiddieModeStatus = kiddieMode;
@@ -46,11 +47,12 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
      * shoot.
      */
     public static record Shot(double topVelocity, double bottomVelocity, Rotation2d angle) {
+        
         public Shot(double velocity, Rotation2d angle) {
+            this(velocity, velocity, angle);
             if (kiddieModeStatus && velocity > 2000) {
                 velocity = 2000;
             }
-            this(velocity, velocity, angle);
         }
 
         private static final Shot empty = new Shot(0, 0, new Rotation2d(0));
@@ -604,6 +606,10 @@ public class Shooter extends TorqueStatorSubsystem<Shooter.State> implements Sub
             final double velocity = SmartDashboard.getNumber("Shot Velocity", -1);
             final double angle = TorqueMath.constrain(SmartDashboard.getNumber("Shot Angle", -1), 0, 190);
             shot = new Shot(velocity, Rotation2d.fromDegrees(angle));
+        }
+
+        if (kiddieModeStatus) {
+            
         }
 
         // Handle shooter readiness counter. Increment every loop the shooter is

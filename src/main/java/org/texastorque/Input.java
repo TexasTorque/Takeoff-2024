@@ -21,9 +21,9 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
 
     private final TorqueRequestableTimeout rumbleTimeout;
 
-    private final TorqueBoolSupplier resetGyro, runSmartIntake,
+    private TorqueBoolSupplier resetGyro, runSmartIntake,
             runDumbIntake, runOuttake, speakerSmartShot, speakerLayup, speakerSafeZone, amp, trap,
-            deaccelerateClick, deaccelerateHold, manualGateOut, manualGateIn, babyBird, speakerMid,
+            deaccelerateClick, deaccelerateHold, manualGateOut, manualGateIn, babyBird, speakerMid, kiddieMode,
             shooterIdle, shooterShift, climbUp, climbDown, climbLeftUp, climbRightUp, climbLeftDown, climbRightDown,
             shooterClimbMode, laser, operatorClimbUp, debugMode, releaseTrap, pullTrapBack, laserUnderStage;
 
@@ -108,48 +108,64 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
     }
 
     public void updateShooter() {
-        speakerLayup.onTrue(() -> shooter.setState(Shooter.State.LAYUP));
-        speakerSafeZone.onTrue(() -> shooter.setState(Shooter.State.SAFEZONE));
-        speakerMid.onTrue(() -> shooter.setState(Shooter.State.MID));
+        if (kiddieMode.get()) {
+            speakerLayup.onTrue(() -> shooter.setState(Shooter.State.LAYUP));
+            speakerMid.onTrue(() -> shooter.setState(Shooter.State.MID));
 
-        amp.onTrue(() -> shooter.setState(Shooter.State.AMP));
-        trap.onTrue(() -> shooter.setState(Shooter.State.TRAP));
+            amp.onTrue(() -> shooter.setState(Shooter.State.AMP));
 
-        manualGateOut.onTrue(() -> shooter.setGateState(Shooter.GateState.OUT));
+            manualGateOut.onTrue(() -> shooter.setGateState(Shooter.GateState.OUT));
 
-        manualGateIn.onTrue(() -> shooter.setGateState(Shooter.GateState.IN));
+            manualGateIn.onTrue(() -> shooter.setGateState(Shooter.GateState.IN));
 
-        babyBird.onTrue(() -> {
-            shooter.setState(Shooter.State.BABYBIRD);
-            shooter.setGateState(Shooter.GateState.IN);
-        });
+            shooter.setShift(shooterShift.get());
 
-        shooter.setIdle(!shooterIdle.get());
+            shooterClimbMode.onTrue(() -> shooter.setState(Shooter.State.CLIMB));
+        } else {
 
-        shooter.setConsent(TorqueMath.toleranced(operator.getLeftYAxis(), 0, CONTROLLER_DEADBAND)
-                && TorqueMath.toleranced(operator.getLeftXAxis(), 0, CONTROLLER_DEADBAND));
+            speakerLayup.onTrue(() -> shooter.setState(Shooter.State.LAYUP));
+            speakerSafeZone.onTrue(() -> shooter.setState(Shooter.State.SAFEZONE));
+            speakerMid.onTrue(() -> shooter.setState(Shooter.State.MID));
 
-        shooter.setDebugMode(debugMode.get());
+            amp.onTrue(() -> shooter.setState(Shooter.State.AMP));
+            trap.onTrue(() -> shooter.setState(Shooter.State.TRAP));
 
-        shooter.setEscapeAmp(operator.getRightYAxis() < -.1);
-        shooter.setAmpRampHigh(operator.getRightYAxis() > .1);
-        shooter.setEmergencyCurrentLimit(driver.isAButtonDown());
-        shooter.setShift(shooterShift.get());
+            manualGateOut.onTrue(() -> shooter.setGateState(Shooter.GateState.OUT));
 
-        if (!isClimbing()) {
-            laser.onTrue(() -> shooter.setState(Shooter.State.LASER));
+            manualGateIn.onTrue(() -> shooter.setGateState(Shooter.GateState.IN));
+
+            babyBird.onTrue(() -> {
+                shooter.setState(Shooter.State.BABYBIRD);
+                shooter.setGateState(Shooter.GateState.IN);
+            });
+
+            shooter.setIdle(!shooterIdle.get());
+
+            shooter.setConsent(TorqueMath.toleranced(operator.getLeftYAxis(), 0, CONTROLLER_DEADBAND)
+                    && TorqueMath.toleranced(operator.getLeftXAxis(), 0, CONTROLLER_DEADBAND));
+
+            shooter.setDebugMode(debugMode.get());
+
+            shooter.setEscapeAmp(operator.getRightYAxis() < -.1);
+            shooter.setAmpRampHigh(operator.getRightYAxis() > .1);
+            shooter.setEmergencyCurrentLimit(driver.isAButtonDown());
+            shooter.setShift(shooterShift.get());
+
+            if (!isClimbing()) {
+                laser.onTrue(() -> shooter.setState(Shooter.State.LASER));
+            }
+
+            shooterClimbMode.onTrue(() -> shooter.setState(Shooter.State.CLIMB));
+
+            trap.onTrue(() -> shooter.setState(Shooter.State.TRAP));
+
+            speakerSmartShot.onTrue(() -> shooter.setState(Shooter.State.SMART));
+
+            if (shooterClimbMode.get())
+                pullTrapBack.onTrue(() -> shooter.setState(Shooter.State.RELEASE_TRAP_HOOK));
+
+            laserUnderStage.onTrue(() -> shooter.setState(Shooter.State.LASER_UNDER_STAGE));
         }
-
-        shooterClimbMode.onTrue(() -> shooter.setState(Shooter.State.CLIMB));
-
-        trap.onTrue(() -> shooter.setState(Shooter.State.TRAP));
-
-        speakerSmartShot.onTrue(() -> shooter.setState(Shooter.State.SMART));
-
-        if (shooterClimbMode.get())
-            pullTrapBack.onTrue(() -> shooter.setState(Shooter.State.RELEASE_TRAP_HOOK));
-
-        laserUnderStage.onTrue(() -> shooter.setState(Shooter.State.LASER_UNDER_STAGE));
     }
 
     public void updateDrivebase() {
@@ -228,13 +244,11 @@ public final class Input extends TorqueInput<TorqueController> implements Subsys
     public void updateKiddieMode() {
         if (kiddieMode.get()) {
             shooter.setKiddieMode(true);
-            shooter.setFlywheelCurrentLimits(20);
             intake.setKiddieMode(true);
-            speakerSmartShot = false
-        }
-        else {
-            shooter.setKiddieMode(false)
-            intake.setKiddieMode(false)
+            speakerSmartShot = new TorqueBoolSupplier(() -> false);
+        } else {
+            shooter.setKiddieMode(false);
+            intake.setKiddieMode(false);
         }
     }
 
