@@ -21,6 +21,7 @@ import org.texastorque.torquelib.base.TorqueStatorSubsystem;
 import org.texastorque.torquelib.swerve.TorqueSwerveSpeeds;
 import org.texastorque.torquelib.swerve.base.TorqueSwerveModule;
 import org.texastorque.torquelib.swerve.TorqueSwerveModuleKraken;
+import org.texastorque.torquelib.swerve.TorqueSwerveModuleNEO;
 import org.texastorque.torquelib.util.TorqueMath;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.geometry.Pose2d;
@@ -168,17 +169,10 @@ public final class Drivebase extends TorqueStatorSubsystem<Drivebase.State>
         Debug.log("Set Speeds", "");
         Debug.log("Override Speeds", "");
 
-        // For Bravo -- using the swerve-x Neo.
-        // fl = new TorqueSwerveModuleNEO("Front Left", Ports.FL_MOD);
-        // fr = new TorqueSwerveModuleNEO("Front Right", Ports.FR_MOD);
-        // bl = new TorqueSwerveModuleNEO("Back Left", Ports.BL_MOD);
-        // br = new TorqueSwerveModuleNEO("Back Right", Ports.BR_MOD);
-
-        // For Charlie -- using the swerve-x Kraken.
-        fl = new TorqueSwerveModuleKraken("Front Left", Ports.FL_MOD);
-        fr = new TorqueSwerveModuleKraken("Front Right", Ports.FR_MOD);
-        bl = new TorqueSwerveModuleKraken("Back Left", Ports.BL_MOD);
-        br = new TorqueSwerveModuleKraken("Back Right", Ports.BR_MOD);
+        fl = new TorqueSwerveModuleNEO("Front Left", Ports.FL_MOD);
+        fr = new TorqueSwerveModuleNEO("Front Right", Ports.FR_MOD);
+        bl = new TorqueSwerveModuleNEO("Back Left", Ports.BL_MOD);
+        br = new TorqueSwerveModuleNEO("Back Right", Ports.BR_MOD);
 
         inputSpeeds = new TorqueSwerveSpeeds(0, 0, 0);
         kinematics = new SwerveDriveKinematics(LOC_FL, LOC_FR, LOC_BL, LOC_BR);
